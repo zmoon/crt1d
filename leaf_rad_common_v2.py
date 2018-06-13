@@ -123,8 +123,10 @@ class model:
         except KeyError:
             print 'LAI vertical profile not provided. Using default (Borden 1995 late June).'
             lai, z = distribute_lai(cdd_default, nlayers)
-            self.lai = lai  # lai dist
+            self.lai = lai  # LAI dist (cumulative)
             self.z   = z    # height above ground (layer bottoms; m)
+
+        self.lai_tot = self.lai.max()  # total canopy LAI
         
         for varname in mi_cd_keys1:
             if not varname in mi:
@@ -170,6 +172,17 @@ class model:
         except KeyError:
             print 'Soil r not provided. Using default.'
             self.soil_r = soil_r_default
+
+        #> allocate arrays for the spectral profile solutions
+        #  all in units W/m^2
+        #  though could also save conversion factor to umol/m^2/s ?
+        self.nwl = self.wl.size
+        self.nlevs = self.lai.size
+        self.I_dr = np.zeros((self.nt, self.nlevs, self.nwl))  # direct irradiance
+        self.I_df_d = np.zeros_like(self.I_dr)  # downward diffuse irradiance
+        self.I_df_u = np.zeros_like(self.I_dr)
+        self.F = np.zeros_like(self.I_dr)  # actinic flux
+
         
 
         #> inputs related to model output
@@ -189,8 +202,8 @@ class model:
     def run(self):
         """ """
 
-        for i in np.arange(0, self.nt, 1):
-            print i
+        for self.it in np.arange(0, self.nt, 1):
+            print self.it
             
             #> pre calculations
             #  
@@ -245,6 +258,7 @@ class model:
         leaf_r = self.leaf_r
         leaf_t = self.leaf_t
 #        soil_r = self.soil_r
+        L = self.lai_tot
         # ------------------------------------------------
         
 
@@ -275,14 +289,17 @@ class model:
             K = K_b * k_prime  # approx extinction coeff for non-black leaves; ref Moneith & Unsworth p. 120
         
             # calculate profiles
+            #   here I_df is just downward diffuse
             I_dr = I_dr0 * np.exp(-K_b * lai)
             I_df = I_df0 * np.exp(-K_df_fn(lai[:-1]) * lai[:-1])  # doesn't work for L=0 since L in denom
             I_df = np.append(I_df, I_df0)
     
             # approximate the contribution of scattering of the direct beam to diffuse irradiance within canopy
+            #   using the grey leaf K
             I_df_dr = I_dr0 * (np.exp(-K * lai) - np.exp(-K_b * lai))
     
-            # approximate the contribution to diffuse from scattered direct. 1/2 since downward only
+            # approximate the contribution to diffuse from scattered direct.
+            #   assume 1/2 downward, 1/2 upward for now
             #   though a more appropriate fraction (downward vs upward) could be computed, following the Z&Q methods
             I_df += 0.5 * I_df_dr
     
@@ -291,8 +308,11 @@ class model:
             I_df_d_all[:,i] = I_df
             F_all[:,i] = I_dr / mu + 2 * I_df  # actinic flux (upward + downward hemisphere components)
 
-
         #> update class attrs
+        self.I_dr[self.it,:,:] = I_dr_all
+        self.I_df_d[self.it,:,:] = I_df_d_all
+        self.I_df_u[self.it,:,:] = I_df_d_all  # assume u and d equiv for now..
+        self.F[self.it,:,:] = F_all
         
         
 
@@ -345,168 +365,165 @@ class model:
 
 
 
-def two_stream(mi, ID='2s', savedir='./', save_figs=False, write_output=True):
-    """ 2-stream model
-    mi: model input dictionary
-    """
+    def two_stream(self):
+        """ 2-stream model
+        """
 
-    # unpack from model input dict ------------------
-    mean_leaf_angle = mi['mean_leaf_angle']
-    orient = mi['orient']
-    green = mi['green']
-    lai = mi['lai']
-#    z = mi['z']
-    psi = mi['psi']
-    mu = mi['mu']
-    wl = mi['wl']
-    dwl = mi['dwl']
-    I_dr0_all = mi['I_dr0_all']
-    I_df0_all = mi['I_df0_all']
-    leaf_r = mi['leaf_r']
-    leaf_t = mi['leaf_t']
-    soil_r = mi['soil_r']
-    # ------------------------------------------------
+        #> grab model class attributes that we need
+        #  to make solver code easier to read
+#        mean_leaf_angle = self.mean_leaf_angle
+#        orient = self.orient
+#        G = self.G
+        K_b = self.K_b
+        K_b_fn = self.K_b_fn
+        green = self.green
+        lai = self.lai
+#        z = self.z
+#        psi = self.psi
+        mu = self.mu
+        wl = self.wl
+        dwl = self.dwl
+        I_dr0_all = self.I_dr0
+        I_df0_all = self.I_df0
+        leaf_r = self.leaf_r
+        leaf_t = self.leaf_t
+#        soil_r = self.soil_r
+        # ------------------------------------------------
 
+        theta_bar = np.deg2rad(mean_leaf_angle)  # mean leaf inclination angle; eq. 3
 
-    # function for black leaf extinction coeff
-    G_fn = lambda psi: G_ellipsoidal(psi, orient)
-    K_b_fn = lambda psi: G_fn(psi) / np.cos(psi)
+        # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
+        #   sa: angle of scattered flux
+        mu_bar  = si.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
+        mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
+        assert( mu_bar == mu_bar2 )
 
+        # where does this stuff with Pi come from ???
+        # Dickinson 1983 ?
+        if orient > 1:
+            bigpi = (1 - orient**-2)**0.5  # the big pi
+            theta = 1 + (np.log( (1+bigpi) / (1-bigpi) ) / (2 * bigpi * orient**2))  # theta
+        else:
+            bigpi = (1 - orient**2)**0.5;
+            theta = (1 + np.arcsin(bigpi) ) / (orient * bigpi)  #
+        muave = theta * orient / (orient + 1)  # mu_bar for spherical canopy? we don't seem to need this...
 
-    theta_bar = np.deg2rad(mean_leaf_angle)  # mean leaf inclination angle; eq. 3
+        L_T = lai[0]  # total LAI
 
-    # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
-    #   sa: angle of scattered flux
-    mu_bar  = si.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
-    mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
-    assert( mu_bar == mu_bar2 )
+        K = K_b_fn(psi)  # for black leaves; should grey leaf version, K_b * k_prime, be used ???
 
-    # where does this stuff with Pi come from ???
-    # Dickinson 1983 ?
-    if orient > 1:
-        bigpi = (1 - orient**-2)**0.5  # the big pi
-        theta = 1 + (np.log( (1+bigpi) / (1-bigpi) ) / (2 * bigpi * orient**2))  # theta
-    else:
-        bigpi = (1 - orient**2)**0.5;
-        theta = (1 + np.arcsin(bigpi) ) / (orient * bigpi)  #
-    muave = theta * orient / (orient + 1)  # mu_bar for spherical canopy? we don't seem to need this...
+        I_dr_all = np.zeros((lai.size, wl.size))
+        I_df_d_all = np.zeros_like(I_dr_all)
+        F_all = np.zeros_like(I_dr_all)
 
-    L_T = lai[0]  # total LAI
+        for i, band_width in enumerate(dwl):  # run for each band individually
 
-    K = K_b_fn(psi)  # for black leaves; should grey leaf version, K_b * k_prime, be used ???
+        #    if i > 20:
+        #        break
 
-    I_dr_all = np.zeros((lai.size, wl.size))
-    I_df_d_all = np.zeros_like(I_dr_all)
-    F_all = np.zeros_like(I_dr_all)
+            # calculate top-of-canopy irradiance present in the band
+            I_dr0 = I_dr0_all[i] * band_width  # W / m^2
+            I_df0 = I_df0_all[i] * band_width
 
-    for i, band_width in enumerate(dwl):  # run for each band individually
+            # load canopy optical properties
+            alpha = green * leaf_r[i]  # leaf element reflectance
+            tau   = green * leaf_t[i]  # leaf element transmittance
+            rho_s = soil_r[i]         # soil reflectivity
 
-    #    if i > 20:
-    #        break
+            omega = alpha + tau  # scattering coefficient := omega = alpha + tau
 
-        # calculate top-of-canopy irradiance present in the band
-        I_dr0 = I_dr0_all[i] * band_width  # W / m^2
-        I_df0 = I_df0_all[i] * band_width
+            # diffuse beam upscatter param; eq. 3
+            beta = ( 0.5 * ( alpha + tau + (alpha - tau) * np.cos(theta_bar)**2) ) / omega
 
-        # load canopy optical properties
-        alpha = green * leaf_r[i]  # leaf element reflectance
-        tau   = green * leaf_t[i]  # leaf element transmittance
-        rho_s = soil_r[i]         # soil reflectivity
+            # single scattering albeo a_s; Table 2, p. 1339
+            #   strictly should use the ellipsoidal version, but the orientation/eccentricity param is ~ 1,
+            #   so spherical is good approx, and the form is much simpler
+            a_s = omega/2 * ( 1 - mu * np.log( (mu + 1) / mu) )
 
-        omega = alpha + tau  # scattering coefficient := omega = alpha + tau
-
-        # diffuse beam upscatter param; eq. 3
-        beta = ( 0.5 * ( alpha + tau + (alpha - tau) * np.cos(theta_bar)**2) ) / omega
-
-        # single scattering albeo a_s; Table 2, p. 1339
-        #   strictly should use the ellipsoidal version, but the orientation/eccentricity param is ~ 1,
-        #   so spherical is good approx, and the form is much simpler
-        a_s = omega/2 * ( 1 - mu * np.log( (mu + 1) / mu) )
-
-        # direct beam upscatter param; eq. 4
-        beta_0 = (1 + mu_bar * K ) / ( omega * mu_bar * K ) * a_s
+            # direct beam upscatter param; eq. 4
+            beta_0 = (1 + mu_bar * K ) / ( omega * mu_bar * K ) * a_s
 
 
-        # ----------------------------------------------------------------------------
-        # intermediate params used in calculation of solns
+            # ----------------------------------------------------------------------------
+            # intermediate params used in calculation of solns
 
-        b = (1 - (1 - beta)*omega)
-        c = omega * beta
-        d = omega * mu_bar * K * beta_0
-        f = omega * mu_bar * K * (1 - beta_0)
-        h = (b**2 - c**2)**0.5 / mu_bar
-        sigma = (mu_bar * K)**2 + c**2 - b**2
+            b = (1 - (1 - beta)*omega)
+            c = omega * beta
+            d = omega * mu_bar * K * beta_0
+            f = omega * mu_bar * K * (1 - beta_0)
+            h = (b**2 - c**2)**0.5 / mu_bar
+            sigma = (mu_bar * K)**2 + c**2 - b**2
 
-        u1 = b - c / rho_s
-        u2 = b - c * rho_s
-        u3 = f + c * rho_s
-        S1 = np.exp(-h * L_T)
-        S2 = np.exp(-K * L_T)
-        p1 = b + mu_bar * h
-        p2 = b - mu_bar * h
-        p3 = b + mu_bar * K
-        p4 = b - mu_bar * K
-        D1 = p1 * (u1 - mu_bar * h) * S1**-1 - p2 * (u1 + mu_bar * h) * S1
-        D2 = (u2 + mu_bar * h) * S1**-1 - (u2 - mu_bar * h) * S1
+            u1 = b - c / rho_s
+            u2 = b - c * rho_s
+            u3 = f + c * rho_s
+            S1 = np.exp(-h * L_T)
+            S2 = np.exp(-K * L_T)
+            p1 = b + mu_bar * h
+            p2 = b - mu_bar * h
+            p3 = b + mu_bar * K
+            p4 = b - mu_bar * K
+            D1 = p1 * (u1 - mu_bar * h) * S1**-1 - p2 * (u1 + mu_bar * h) * S1
+            D2 = (u2 + mu_bar * h) * S1**-1 - (u2 - mu_bar * h) * S1
 
-        h1 = - d * p4 - c * f
-        h2 = D1**-1 * ( (d - h1 / sigma * p3) * (u1 - mu_bar * h) * S1**-1          \
-                        - p2 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2       \
-                      )
-        h3 = -D1**-1  * ( (d - h1 / sigma * p3) * (u1 + mu_bar * h) * S1           \
-                          - p1 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2    \
-                         )
-        h4 = -f * p3 - c * d
-        h5 = -D2**-1 * ( h4 / sigma * (u2 + mu_bar * h) / S1 \
-                         + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
-                       )
-        h6 = D2**-1  * ( h4 / sigma * (u2 - mu_bar * h) * S1 \
-                         + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
-                       )
-        h7 =  c / D1 * (u1 - mu_bar * h) / S1
-        h8 = -c / D1 * (u1 + mu_bar * h) * S1
-        h9 =   D2**-1  * (u2 + mu_bar * h) / S1
-        h10 = -D2**-1  * (u2 - mu_bar * h) * S1
-
-
-        # ----------------------------------------------------------------------------
-        # direct beam soln ???
-        #   contributions to downward and upward diffuse by scattering of direct radiation by leaves
-
-        # I feel like this should work vector-ly without needing to use vectorize
-        # maybe it is the dividing by sigma that is the issue
-        # I know I wouldn't have done this if there wasn't one
-        I_df_u_dr_fn = np.vectorize( lambda L: h1 * np.exp(-K * L) / sigma + h2 * np.exp(-h * L) + h3 * np.exp(h * L) )
-        I_df_d_dr_fn = np.vectorize( lambda L: h4 * np.exp(-K * L) / sigma + h5 * np.exp(-h * L) + h6 * np.exp(h * L) )
+            h1 = - d * p4 - c * f
+            h2 = D1**-1 * ( (d - h1 / sigma * p3) * (u1 - mu_bar * h) * S1**-1          \
+                            - p2 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2       \
+                        )
+            h3 = -D1**-1  * ( (d - h1 / sigma * p3) * (u1 + mu_bar * h) * S1           \
+                            - p1 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2    \
+                            )
+            h4 = -f * p3 - c * d
+            h5 = -D2**-1 * ( h4 / sigma * (u2 + mu_bar * h) / S1 \
+                            + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
+                        )
+            h6 = D2**-1  * ( h4 / sigma * (u2 - mu_bar * h) * S1 \
+                            + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
+                        )
+            h7 =  c / D1 * (u1 - mu_bar * h) / S1
+            h8 = -c / D1 * (u1 + mu_bar * h) * S1
+            h9 =   D2**-1  * (u2 + mu_bar * h) / S1
+            h10 = -D2**-1  * (u2 - mu_bar * h) * S1
 
 
-        # ----------------------------------------------------------------------------
-        # diffuse soln ???
-        #   contributions to downward and upward diffuse by attenuation/scattering of top-of-canopy diffuse
+            # ----------------------------------------------------------------------------
+            # direct beam soln ???
+            #   contributions to downward and upward diffuse by scattering of direct radiation by leaves
 
-        I_df_u_df_fn = np.vectorize( lambda L: h7 * np.exp(-h * L) +  h8 * np.exp(h * L) )
-        I_df_d_df_fn = np.vectorize( lambda L: h9 * np.exp(-h * L) + h10 * np.exp(h * L) )
-
-
-        # apply them fns
-        I_df_u_dr = I_df_u_dr_fn(lai) * I_dr0
-        I_df_d_dr = I_df_d_dr_fn(lai) * I_dr0
-        I_df_u_df = I_df_u_df_fn(lai) * I_df0
-        I_df_d_df = I_df_d_df_fn(lai) * I_df0
-
-        # combine the contributions
-        I_df_u = I_df_u_dr + I_df_u_df
-        I_df_d = I_df_d_dr + I_df_d_df
+            # I feel like this should work vector-ly without needing to use vectorize
+            # maybe it is the dividing by sigma that is the issue
+            # I know I wouldn't have done this if there wasn't one
+            I_df_u_dr_fn = np.vectorize( lambda L: h1 * np.exp(-K * L) / sigma + h2 * np.exp(-h * L) + h3 * np.exp(h * L) )
+            I_df_d_dr_fn = np.vectorize( lambda L: h4 * np.exp(-K * L) / sigma + h5 * np.exp(-h * L) + h6 * np.exp(h * L) )
 
 
-        # Beer--Lambert direct beam attenuation
-        I_dr = I_dr0 * np.exp(-K * lai)
+            # ----------------------------------------------------------------------------
+            # diffuse soln ???
+            #   contributions to downward and upward diffuse by attenuation/scattering of top-of-canopy diffuse
+
+            I_df_u_df_fn = np.vectorize( lambda L: h7 * np.exp(-h * L) +  h8 * np.exp(h * L) )
+            I_df_d_df_fn = np.vectorize( lambda L: h9 * np.exp(-h * L) + h10 * np.exp(h * L) )
 
 
-        # save
-        I_dr_all[:,i] = I_dr
-        I_df_d_all[:,i] = I_df_d
-        F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
+            # apply them fns
+            I_df_u_dr = I_df_u_dr_fn(lai) * I_dr0
+            I_df_d_dr = I_df_d_dr_fn(lai) * I_dr0
+            I_df_u_df = I_df_u_df_fn(lai) * I_df0
+            I_df_d_df = I_df_d_df_fn(lai) * I_df0
+
+            # combine the contributions
+            I_df_u = I_df_u_dr + I_df_u_df
+            I_df_d = I_df_d_dr + I_df_d_df
+
+
+            # Beer--Lambert direct beam attenuation
+            I_dr = I_dr0 * np.exp(-K * lai)
+
+
+            # save
+            I_dr_all[:,i] = I_dr
+            I_df_d_all[:,i] = I_df_d
+            F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
 
