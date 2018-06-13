@@ -258,7 +258,7 @@ class model:
         leaf_r = self.leaf_r
         leaf_t = self.leaf_t
 #        soil_r = self.soil_r
-        L = self.lai_tot
+#        L = self.lai_tot
         # ------------------------------------------------
         
 
@@ -315,65 +315,16 @@ class model:
         self.F[self.it,:,:] = F_all
         
         
-
-
-    def figs_make_save(self):
-        """ """
-        
-        #> grab model class attrs
-        ID = self.scheme_ID
-        I_dr_all = self.I_dr_all
-        I_df_d_all = self.I_df_d_all
-        lai = self.lai
-        z = self.z
-
-        plt.close('all')
-
-        fig1, [ax1, ax2, ax3] = plt.subplots(1, 3, figsize=(9.5, 6), num='diffuse-vs-direct_{:s}'.format(ID),
-              gridspec_kw={'wspace':0.05, 'hspace':0})
-
-        ax1.plot(lai, z, '.-', ms=8)
-        ax1.set_xlabel(r'cum. LAI (m$^2$ m$^{-2}$)')
-        ax1.set_ylabel('h (m)')
-
-        ax2.plot(I_dr_all.sum(axis=1), z, '.-', ms=8, label='direct')
-        ax2.plot(I_df_d_all.sum(axis=1), z, '.-', ms=8, label='downward diffuse')
-
-        ax2.set_xlabel(r'irradiance (W m$^{-2}$)')
-        ax2.yaxis.set_major_formatter(plt.NullFormatter())
-        ax2.legend()
-
-        ax3.plot(I_df_d_all.sum(axis=1) / (I_dr_all.sum(axis=1) + I_df_d_all.sum(axis=1)), z, '.-', ms=8)
-        ax3.set_xlabel('diffuse fraction')
-        ax3.yaxis.set_major_formatter(plt.NullFormatter())
-
-        for ax in [ax1, ax2, ax3]:
-            ax.set_xlim(xmin=0)
-            ax.set_ylim(ymin=0)
-            ax.grid('on')
-
-
-        for num in plt.get_fignums():
-            fig = plt.figure(num)
-            figname = fig.canvas.get_window_title()
-            fig.savefig('{savedir:s}/{figname:s}.pdf'.format(savedir=self.save_dir, figname=figname),
-                        transparent=True,
-                        bbox_inches='tight', pad_inches=0.05,
-                        )
-
-
-
-
-
     def two_stream(self):
         """ 2-stream model
         """
 
         #> grab model class attributes that we need
         #  to make solver code easier to read
-#        mean_leaf_angle = self.mean_leaf_angle
-#        orient = self.orient
+        mean_leaf_angle = self.mean_leaf_angle
+        orient = self.orient
 #        G = self.G
+        G_fn = self.G_fn
         K_b = self.K_b
         K_b_fn = self.K_b_fn
         green = self.green
@@ -523,7 +474,64 @@ class model:
             # save
             I_dr_all[:,i] = I_dr
             I_df_d_all[:,i] = I_df_d
+            I_df_u_all[:,i] = I_df_u
             F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
+
+        #> update class attrs
+        self.I_dr[self.it,:,:] = I_dr_all
+        self.I_df_d[self.it,:,:] = I_df_d_all
+        self.I_df_u[self.it,:,:] = I_df_u_all
+        self.F[self.it,:,:] = F_all
+
+
+
+
+    def figs_make_save(self):
+        """ """
+        
+        #> grab model class attrs
+        ID = self.scheme_ID
+        I_dr_all = self.I_dr
+        I_df_d_all = self.I_df_d
+        lai = self.lai
+        z = self.z
+
+        plt.close('all')
+
+        fig1, [ax1, ax2, ax3] = plt.subplots(1, 3, figsize=(9.5, 6), num='diffuse-vs-direct_{:s}'.format(ID),
+              gridspec_kw={'wspace':0.05, 'hspace':0})
+
+        ax1.plot(lai, z, '.-', ms=8)
+        ax1.set_xlabel(r'cum. LAI (m$^2$ m$^{-2}$)')
+        ax1.set_ylabel('h (m)')
+
+        ax2.plot(I_dr_all.sum(axis=1), z, '.-', ms=8, label='direct')
+        ax2.plot(I_df_d_all.sum(axis=1), z, '.-', ms=8, label='downward diffuse')
+
+        ax2.set_xlabel(r'irradiance (W m$^{-2}$)')
+        ax2.yaxis.set_major_formatter(plt.NullFormatter())
+        ax2.legend()
+
+        ax3.plot(I_df_d_all.sum(axis=1) / (I_dr_all.sum(axis=1) + I_df_d_all.sum(axis=1)), z, '.-', ms=8)
+        ax3.set_xlabel('diffuse fraction')
+        ax3.yaxis.set_major_formatter(plt.NullFormatter())
+
+        for ax in [ax1, ax2, ax3]:
+            ax.set_xlim(xmin=0)
+            ax.set_ylim(ymin=0)
+            ax.grid('on')
+
+
+        for num in plt.get_fignums():
+            fig = plt.figure(num)
+            figname = fig.canvas.get_window_title()
+            fig.savefig('{savedir:s}/{figname:s}.pdf'.format(savedir=self.save_dir, figname=figname),
+                        transparent=True,
+                        bbox_inches='tight', pad_inches=0.05,
+                        )
+
+
+
 
 
 
