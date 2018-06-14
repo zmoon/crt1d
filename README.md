@@ -20,6 +20,11 @@ Goudriaan one-stream | gdr | [Goudriaan (1977)](http://library.wur.nl/WebQuery/w
 Discrete ordinates one-angle | do1a | [Myneni et al. (1988)](https://doi-org.ezaccess.libraries.psu.edu/10.1016/0168-1923(88)90063-9)
 
 
-[//](comments: 
- [](https://dx.doi.org)
-)
+<!-- comments
+Apparently these ire supposed to create an invisible comment (once rendered):
+
+  [//]: # "Comment" and [//]: # (Comment
+
+Url for doi links
+  [](https://dx.doi.org)
+-->
