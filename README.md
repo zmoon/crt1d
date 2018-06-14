@@ -3,6 +3,7 @@ Testbed for 1-D canopy radiative transfer schemes
 
 ## Schemes
 Current list of schemes
+
 Scheme Name | Scheme ID in code | Reference(s)
 --- | ---: | ---
 Beer&ndash;Lambert | bl | [Cambell & Norman (1998)](https://www.springer.com/us/book/9780387949376), ...
@@ -12,6 +13,7 @@ Four-stream | 4s | [Tian et al. (2007)](https://dx.doi.org/10.1029/2006JD007545)
 Zhao & Qualls multi-scattering | zq | [Zhao and Qualls (2005)](https://dx.doi.org/10.1029/2005WR004016)
 
 Schemes planning to add in the future
+
 Scheme Name | Scheme ID in code | Reference(s)
 --- | ---: | ---
 Sun/shade 1.5 stream | bf | [Bodin and Franklin (2012)](https://dx.doi.org/10.5194/gmd-5-535-2012)
