@@ -33,6 +33,8 @@ goals for v2:
 @author: zmoon
 """
 
+from __future__ import print_function
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate as si
@@ -112,7 +114,7 @@ class model:
         try:
             self.scheme = self._scheme_IDs[self.scheme_ID]
         except KeyError:
-            print '{:s} is not a valid scheme ID'.format(scheme_ID)
+            print('{:s} is not a valid scheme ID'.format(scheme_ID))
             # self.terminate() or yield error
 
         #> if not enough canopy description, use default
@@ -121,7 +123,7 @@ class model:
         try:
             self.lai, self.z = mi['lai'], mi['z']
         except KeyError:
-            print 'LAI vertical profile not provided. Using default (Borden 1995 late June).'
+            print('LAI vertical profile not provided. Using default (Borden 1995 late June).')
             lai, z = distribute_lai(cdd_default, nlayers)
             self.lai = lai  # LAI dist (cumulative)
             self.z   = z    # height above ground (layer bottoms; m)
@@ -130,7 +132,7 @@ class model:
         
         for varname in mi_cd_keys1:
             if not varname in mi:
-                print '{:s} not provided. Using default'.format(varname)
+                print('{:s} not provided. Using default'.format(varname))
                 mi[varname] = cdd_default[varname]
         
         self.mean_leaf_angle = mi['mean_leaf_angle']
@@ -149,7 +151,7 @@ class model:
             self.I_dr0, self.I_df0 = mi['I_dr0'], mi['I_df0']
             self.wl, self.dwl = mi['wl'], mi['dwl']
         except KeyError:
-            print 'Top-of-canopy irradiance BC not properly provided.\nUsing default.'
+            print('Top-of-canopy irradiance BC not properly provided.\nUsing default.')
             self.I_dr0 = I_dr0_default
             self.I_df0 = I_df0_default
             self.wl    = wl_default
@@ -158,19 +160,19 @@ class model:
         try:
             self.leaf_r, self.leaf_t = mi['leaf_t'], mi['leaf_r']
             if self.leaf_r.size != self.wl.size:
-                print 'Leaf props size different from BC. Switching to default.'
+                print('Leaf props size different from BC. Switching to default.')
                 self.leaf_r, self.leaf_t = leaf_r_default, leaf_t_default
         except KeyError:
-            print 'Leaf r and t not provided. Using default.'
+            print('Leaf r and t not provided. Using default.')
             self.leaf_r, self.leaf_t = leaf_r_default, leaf_t_default
             
         try:
             self.soil_r = mi['soil_r']
             if self.soil_r.size != self.wl.size:
-                print 'Soil props size different from BC. Switching to default.'
+                print('Soil props size different from BC. Switching to default.')
                 self.soil_r = soil_r_default
         except KeyError:
-            print 'Soil r not provided. Using default.'
+            print('Soil r not provided. Using default.')
             self.soil_r = soil_r_default
 
         #> allocate arrays for the spectral profile solutions
@@ -203,7 +205,7 @@ class model:
         """ """
 
         for self.it in np.arange(0, self.nt, 1):
-            print self.it
+            print(self.it)
             
             #> pre calculations
             #  
@@ -212,10 +214,10 @@ class model:
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
             
             if self.save_figs:
-                print 'figs'
+                print('figs')
                 
             if self.write_output:
-                print 'out'
+                print('out')
 
 
 
@@ -1185,7 +1187,7 @@ class layer:
         fun = lambda X: si.quad(lambda h: self.pdf0(h, lai_mult=X), h1, h2)[0] - LAI
         self.lai_mult = so.fsolve(fun, 0.1)
         if self.lai_mult <= 0:
-            print 'desired LAI too small'
+            print('desired LAI too small')
 #        self.lai_mult = 0.04
 #        print self.lai_mult
 
