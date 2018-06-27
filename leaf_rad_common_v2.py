@@ -43,6 +43,7 @@ import scipy.integrate as si
 import scipy.optimize as so
 from scipy.sparse.linalg import spsolve  # for Z&Q model
 #from scipy.stats import gamma
+import xarray as xr
 
 
 def G_ellipsoidal(psi, x):
@@ -89,7 +90,8 @@ class model:
     """
 
     def __init__(self, scheme_ID='bl', mi={}, psi=0., nlayers=60,
-                 save_dir= './', save_ID='blah', save_figs=False, write_output=True):
+                 save_dir= './', save_ID='blah', 
+                 save_figs=False, write_output=True):
         """
         ;scheme_id
         ;mi model input dict (canopy description, top-of-canopy BC, leaf and soil scattering props)
@@ -107,19 +109,27 @@ class model:
         self.nlayers = nlayers
 
         #> assign scheme
-        self._schemes = [dict(ID='bl', solver=self.solve_bl, name='Beer--Lambert'),
+        self._schemes = [dict(ID='bl', solver=self.solve_bl, name='Beer–Lambert'),
+                         dict(ID='2s', solver=self.solve_2s, name='2-stream'),
+                         dict(ID='4s', solver=self.solve_4s, name='4-stream'),
+                         dict(ID='zq', solver=self.solve_zq, name='Zhao & Qualls multi-scattering'),
                          ]
         self._scheme_IDs = {d['ID']: d for d in self._schemes}
         self.scheme_ID = scheme_ID
         try:
-            self.scheme = self._scheme_IDs[self.scheme_ID]
+            self.solve = self._scheme_IDs[self.scheme_ID]['solver']
+            print('\n\n')
+            print('='*40)
+            print('scheme:', self.scheme_ID)
+            print('-'*40)
         except KeyError:
-            print('{:s} is not a valid scheme ID'.format(scheme_ID))
-            # self.terminate() or yield error
+            print('{:s} is not a valid scheme ID!'.format(scheme_ID))
+            # self.terminate() or yield error or set flag
 
         #> if not enough canopy description, use default
         cdd_default = load_canopy_descrip('default_canopy_descrip.csv')
         
+        # assuming lai profile is const for now
         try:
             self.lai, self.z = mi['lai'], mi['z']
         except KeyError:
@@ -186,12 +196,11 @@ class model:
         self.F = np.zeros_like(self.I_dr)  # actinic flux
 
         
-
         #> inputs related to model output
         self.save_dir = save_dir
-        self.save_id = 'blah'
-        self.save_figs = False
-        self.write_output = True
+        self.save_id = save_ID
+        self.save_figs = save_figs
+        self.write_output = write_output
 
 
 
@@ -204,8 +213,12 @@ class model:
     def run(self):
         """ """
 
+        print('\n')
+        print('-'*40)
+        print('now running the model...\n')
+        
         for self.it in np.arange(0, self.nt, 1):
-            print(self.it)
+            print('it:', self.it)
             
             #> pre calculations
             #  
@@ -213,11 +226,14 @@ class model:
             self.G = self.G_fn(self.psi)  # leaf angle dist factor
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
             
+            self.solve()
+            
             if self.save_figs:
-                print('figs')
+                print('making them figs...')
                 
             if self.write_output:
-                print('out')
+                print('writing output...')
+                self.write_output_nc()
 
 
 
@@ -1045,6 +1061,48 @@ class model:
                         )
 
 
+    def write_output_nc(self):
+        """
+        """
+        
+        inds = np.arange(0, self.nt, 1)
+        z = self.z
+        wl = self.wl
+        
+        dwl = self.dwl
+        sdt = ['' for _ in inds]  # temporary..
+        lai = self.lai
+        info = ''
+        
+        Idr = self.I_dr
+        Idfd = self.I_df_d
+        Idfu = self.I_df_u
+        F = self.F
+        crds = ['i', 'z', 'wl']
+        
+        #> create dataset
+        dset = xr.Dataset(\
+            coords={'wl': ('wl', wl, {'units': 'um', 'longname': 'wavelength'}),
+                    'z': ('z', z, {'units': 'm', 'longname': 'height above ground'}),
+                    'i': inds,
+                    },
+            data_vars={\
+                'Idr':  (crds, Idr,  {'units': 'W m^-2 um^-1', 'longname': 'direct beam solar irradiance'}),
+                'Idfd': (crds, Idfd, {'units': 'W m^-2 um^-1', 'longname': 'downward diffuse solar irradiance'}),
+                'Idfu': (crds, Idfu, {'units': 'W m^-2 um^-1', 'longname': 'upward diffuse solar irradiance'}),
+                'F':    (crds, F,    {'units': 'W m^-2 um^-1', 'longname': 'actinic flux'}),
+                'dwl':  ('wl', dwl, {'units': 'um', 'longname': 'wavelength band width'}),
+                'sdt':  ('i', sdt, {'longname': 'datetime string'}),
+                'lai':  ('z', lai, {'units': 'm^2 m^-2', 'longname': 'leaf area index (cumulative)'})
+                },
+            attrs={'save_id': self.save_id, 'info': info},
+        )
+        
+        #> save dataset
+        ofname = '{:s}/{:s}.nc'.format(self.save_dir, self.save_id)
+        dset.to_netcdf(ofname)
+        
+        
 
 
 
@@ -1116,7 +1174,7 @@ def load_canopy_descrip(fname):
     d_raw = {varnames[i]: vals[i] for i in range(n)}
 #    print d_raw
     
-    d = d_raw
+    d = d_raw  # could copy instead
     for k, v in d.items():
         if ';' in v:            
             d[k] = [float(x) for x in v.split(';')]
@@ -1166,6 +1224,7 @@ def load_spectral_props(DOY, hhmm):
 
     # also eliminate < 0 values ??
     #   this was added to the leaf optical props generation
+    #   but still having problem with some values == 0
 
 
     # ----------------------------------------------------------------------------------------------
@@ -1185,6 +1244,8 @@ def load_spectral_props(DOY, hhmm):
     leaf_t = leaf_data[:,1][leaf_data_wls]
     leaf_r = leaf_data[:,2][leaf_data_wls]
 
+    leaf_t[leaf_t == 0] = 1e-10
+    leaf_r[leaf_r == 0] = 1e-10
 
     return wl, dwl, I_dr0, I_df0, leaf_r, leaf_t, soil_r
 
