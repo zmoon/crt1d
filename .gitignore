@@ -1,5 +1,6 @@
 # other
 .vscode
+.DS_Store
 /out
 
 # default .gitignore below
