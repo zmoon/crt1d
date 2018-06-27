@@ -1,6 +1,6 @@
 # other
 .vscode
-
+/out
 
 # default .gitignore below
 #------------------------------------------------------------
