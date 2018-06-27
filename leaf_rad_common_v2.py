@@ -109,7 +109,7 @@ class model:
         #> assign scheme
         self._schemes = [dict(ID='bl', solver=self.solve_bl, name='Beer--Lambert'),
                          ]
-        self._scheme_IDs = [d['ID'] for d in self._schemes]
+        self._scheme_IDs = {d['ID']: d for d in self._schemes}
         self.scheme_ID = scheme_ID
         try:
             self.scheme = self._scheme_IDs[self.scheme_ID]
@@ -123,7 +123,7 @@ class model:
         try:
             self.lai, self.z = mi['lai'], mi['z']
         except KeyError:
-            print('LAI vertical profile not provided. Using default (Borden 1995 late June).')
+            print('\nLAI vertical profile not provided. Using default (Borden 1995 late June).')
             lai, z = distribute_lai(cdd_default, nlayers)
             self.lai = lai  # LAI dist (cumulative)
             self.z   = z    # height above ground (layer bottoms; m)
@@ -132,7 +132,7 @@ class model:
         
         for varname in mi_cd_keys1:
             if not varname in mi:
-                print('{:s} not provided. Using default'.format(varname))
+                print("\n`{:s}' not provided. Using default.".format(varname))
                 mi[varname] = cdd_default[varname]
         
         self.mean_leaf_angle = mi['mean_leaf_angle']
@@ -151,7 +151,7 @@ class model:
             self.I_dr0, self.I_df0 = mi['I_dr0'], mi['I_df0']
             self.wl, self.dwl = mi['wl'], mi['dwl']
         except KeyError:
-            print('Top-of-canopy irradiance BC not properly provided.\nUsing default.')
+            print('\nTop-of-canopy irradiance BC not properly provided.\nUsing default.')
             self.I_dr0 = I_dr0_default
             self.I_df0 = I_df0_default
             self.wl    = wl_default
@@ -160,19 +160,19 @@ class model:
         try:
             self.leaf_r, self.leaf_t = mi['leaf_t'], mi['leaf_r']
             if self.leaf_r.size != self.wl.size:
-                print('Leaf props size different from BC. Switching to default.')
+                print('\nLeaf props size different from BC. Switching to default.')
                 self.leaf_r, self.leaf_t = leaf_r_default, leaf_t_default
         except KeyError:
-            print('Leaf r and t not provided. Using default.')
+            print('\nLeaf r and t not provided. Using default.')
             self.leaf_r, self.leaf_t = leaf_r_default, leaf_t_default
             
         try:
             self.soil_r = mi['soil_r']
             if self.soil_r.size != self.wl.size:
-                print('Soil props size different from BC. Switching to default.')
+                print('\nSoil props size different from BC. Switching to default.')
                 self.soil_r = soil_r_default
         except KeyError:
-            print('Soil r not provided. Using default.')
+            print('\nSoil r not provided. Using default.')
             self.soil_r = soil_r_default
 
         #> allocate arrays for the spectral profile solutions
@@ -791,8 +791,8 @@ class model:
         #  to make solver code easier to read
 #        mean_leaf_angle = self.mean_leaf_angle
 #        orient = self.orient
-        G = self.G
-        G_fn = self.G_fn
+#        G = self.G
+#        G_fn = self.G_fn
 #        K_b = self.K_b
         K_b_fn = self.K_b_fn
         green = self.green
@@ -844,6 +844,7 @@ class model:
     
     
         #> lai subset??
+        #  since diffuse at top level is inflated above the measured value otherwise...
         lai_plot = np.copy(lai)
         #lai = lai[:-1]  # upper boundary included in model
     
