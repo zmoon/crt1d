@@ -1014,6 +1014,42 @@ class model:
         self.F[self.it,:,:] = F_all
 
 
+    def solve_bf(self):
+        """
+        Bodin and Franklin (2012)
+        improved Goudriaan (1977) scheme (~ 1.5 streams)
+        
+        based on Saylor's ACCESS v3.0 code 
+        in subroutine CalcRadProfiles of module CanopyPhysics
+        
+
+        """
+
+        #> grab model class attributes that we need
+        #  to make solver code easier to read
+        mean_leaf_angle = self.mean_leaf_angle
+        orient = self.orient
+#        G = self.G
+        G_fn = self.G_fn
+#        K_b = self.K_b
+        K_b_fn = self.K_b_fn
+        green = self.green
+        lai = self.lai
+#        z = self.z
+        psi = self.psi
+        mu = self.mu
+        wl = self.wl
+        dwl = self.dwl
+        I_dr0_all = self.I_dr0
+        I_df0_all = self.I_df0
+        leaf_r = self.leaf_r
+        leaf_t = self.leaf_t
+        soil_r = self.soil_r
+        # ------------------------------------------------        
+
+
+
+
 
 
     def figs_make_save(self):
