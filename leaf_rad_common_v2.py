@@ -130,6 +130,8 @@ class model:
         cdd_default = load_canopy_descrip('default_canopy_descrip.csv')
         
         # assuming lai profile is const for now
+        # could have a check that `z[0]` is the lowest not highest level
+        # and that cumulative LAI `lai` corresponds accordingly
         try:
             self.lai, self.z = mi['lai'], mi['z']
         except KeyError:
@@ -225,6 +227,8 @@ class model:
             self.orient = (1.0 / self.mean_leaf_angle - 0.0107) / 0.0066  # leaf orientation dist. parameter for leaf angle > 57 deg.
             self.G = self.G_fn(self.psi)  # leaf angle dist factor
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
+            # ^ should/could also incorporate clumping index for K_b
+            # also need to define K_b_fn here 
             
             self.solve()
             
@@ -1035,14 +1039,15 @@ class model:
 
         #> grab model class attributes that we need
         #  to make solver code easier to read
-        mean_leaf_angle = self.mean_leaf_angle
-        orient = self.orient
+#        mean_leaf_angle = self.mean_leaf_angle
+#        orient = self.orient
 #        G = self.G
         G_fn = self.G_fn
-#        K_b = self.K_b
-        K_b_fn = self.K_b_fn
+        K_b = self.K_b
+#        K_b_fn = self.K_b_fn
         green = self.green
         lai = self.lai
+        lai_tot = self.lai_tot
 #        z = self.z
         psi = self.psi
         mu = self.mu
@@ -1055,8 +1060,60 @@ class model:
         soil_r = self.soil_r
         # ------------------------------------------------        
 
+        #> following variables in B&F.
+        #  except I for irradiance, instead of the R B&F uses for...
+        
+        k_b = K_b  # direct beam attenuation coeff
 
+        for i, band_width in enumerate(dwl):  # run for each band individually
+    
+            #> calculate top-of-canopy irradiance present in the band
+            I_dr0 = I_dr0_all[i] * band_width  # W / m^2
+            I_df0 = I_df0_all[i] * band_width
+    
+            #> relevant properties for the band (using values at waveband LHS)
+            r_l = leaf_r[i]
+            t_l = leaf_t[i]
+            W = soil_r[i]  # ground-sfc albedo, assume equal to soil reflectivity
+            sigma = green * (r_l + t_l)
+            alpha = 1 - sigma  # absorbed by leaf
+            k_prime = np.sqrt(alpha)  # bulk attenuation coeff for a leaf; Moneith & Unsworth eq. 4.16
+            #K = K_b * k_prime  # approx extinction coeff for non-black leaves; ref Moneith & Unsworth p. 120
+        
+            #> (total) canopy reflectance
+            #  Spitters (1986) eq. 1, based on Goudriaan 1977
+            #    note k_prime = (1-sigma)^0.5 as defined above
+            #    and mu = cos(psi) = sin(beta)
+            rho_c = ((1-k_prime)/(1+k_prime)) * (2 / (1 + 1.6*mu))
+        
+            #> diffuse light attenuation coeff
+            k_d = 0.8*np.sqrt(1-sigma)  # B&F eq. 2
+            
+            #> attenuation of incoming diffuse
+            #  B&F eq. 1
+            I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai) 
+            
+            #> fraction of leaves / leaf area in the direct beam
+            A_sl = np.exp(-k_b*lai)  # "fraction of sunlit leaves" B&F eq. 3
+            
+            #> downwelling scattered radiation (from direct beam)
+            #  B&F eq. 8
+            I_sc_d = I_dr0 * t_l * \
+                ( (np.exp(-k_b*lai) - np.exp(-k_d*lai)) / (k_d - k_b) ) 
 
+            #> upwelling scattered radiation (from direct beam)
+            #  B&F eq. 9
+            I_sc_u = I_dr0 * r_l * \
+                ( (np.exp(-k_b*lai) - np.exp(+k_d*lai - (k_b+k_d)*lai_tot)) / (k_d + k_b) )
+
+            #> total scattered (from direct beam)
+            #  B&F eq. 10
+            I_sc = I_sc_d + I_sc_u
+            
+            #> ground-sfc reflectance term
+            #  B&F eq. 11
+            # L_tot should correspond to index 0: `z[0]` is lowest level
+            I_sr = W * (I_dr0*A_sl[0] + I_df[0] + I_sc_d[0]) * np.exp(-k_d * (lai_tot-lai))
 
 
 
