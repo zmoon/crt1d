@@ -1022,6 +1022,14 @@ class model:
         based on Saylor's ACCESS v3.0 code 
         in subroutine CalcRadProfiles of module CanopyPhysics
         
+        Saylor's description:
+          Uses algorithms of Bodin & Franklin (2012) Efficient modeling of sun/shade canopy radiation dynamics
+            explicitly accounting for scattering, Geoscientific Model Development, 5, 535-541. 
+          ... with elliptical kb from Campbell & Norman (1998) pp. 247-259
+          ... clear-sky effective emissivity of Prata (1996) Q.J.R. Meteorol. Soc., 122, 1127-1151.
+          ... cloudy-sky correction algorithm of Crawford and Duchon (1999) J. Appl. Meteorol., 48, 474-480.
+          ... based on evaluations of Flerchinger et al. (2009) Water Resour. Res., 45, W03423, doi:10.1029/2008WR007394.
+        
 
         """
 
