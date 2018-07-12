@@ -109,10 +109,11 @@ class model:
         self.nlayers = nlayers
 
         #> assign scheme
-        self._schemes = [dict(ID='bl', solver=self.solve_bl, name='Beer–Lambert'),
-                         dict(ID='2s', solver=self.solve_2s, name='2-stream'),
-                         dict(ID='4s', solver=self.solve_4s, name='4-stream'),
-                         dict(ID='zq', solver=self.solve_zq, name='Zhao & Qualls multi-scattering'),
+        self._schemes = [dict(ID='bl', solver=self.solve_bl, shortname='B–L', longname='Beer–Lambert'),
+                         dict(ID='2s', solver=self.solve_2s, shortname='2s', longname='Dickinson–Sellers two-stream'),
+                         dict(ID='4s', solver=self.solve_4s, shortname='4s', longname='four-stream'),
+                         dict(ID='zq', solver=self.solve_zq, shortname='ZQ', longname='Zhao & Qualls multi-scattering'),
+                         dict(ID='bf', solver=self.solve_bf, shortname='BF', longname='Bodin & Franklin improved Goudriaan'),
                          ]
         self._scheme_IDs = {d['ID']: d for d in self._schemes}
         self.scheme_ID = scheme_ID
@@ -228,7 +229,7 @@ class model:
             self.G = self.G_fn(self.psi)  # leaf angle dist factor
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
             # ^ should/could also incorporate clumping index for K_b
-            # also need to define K_b_fn here 
+            #   could also use the class method
             
             self.solve()
             
@@ -1064,6 +1065,11 @@ class model:
         #  except I for irradiance, instead of the R B&F uses for...
         
         k_b = K_b  # direct beam attenuation coeff
+        
+        I_dr_all = np.zeros((lai.size, wl.size))
+        I_df_d_all = np.zeros_like(I_dr_all)
+        I_df_u_all = np.zeros_like(I_dr_all)
+        F_all = np.zeros_like(I_dr_all)
 
         for i, band_width in enumerate(dwl):  # run for each band individually
     
@@ -1091,7 +1097,11 @@ class model:
             
             #> attenuation of incoming diffuse
             #  B&F eq. 1
-            I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai) 
+            I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai)
+            
+            #> attenuation of direct beam due to absorption and scattering
+            #
+            I_dr = I_dr0 * np.exp(-k_b*lai)
             
             #> fraction of leaves / leaf area in the direct beam
             A_sl = np.exp(-k_b*lai)  # "fraction of sunlit leaves" B&F eq. 3
@@ -1106,14 +1116,43 @@ class model:
             I_sc_u = I_dr0 * r_l * \
                 ( (np.exp(-k_b*lai) - np.exp(+k_d*lai - (k_b+k_d)*lai_tot)) / (k_d + k_b) )
 
-            #> total scattered (from direct beam)
+            #> total direct beam radiation scattered by foliage elements
             #  B&F eq. 10
             I_sc = I_sc_d + I_sc_u
             
-            #> ground-sfc reflectance term
+            #> ground-sfc reflectance term (upward)
             #  B&F eq. 11
             # L_tot should correspond to index 0: `z[0]` is lowest level
             I_sr = W * (I_dr0*A_sl[0] + I_df[0] + I_sc_d[0]) * np.exp(-k_d * (lai_tot-lai))
+
+
+            #> rad absorbed by shaded leaves
+            #  B&F eq. 14
+            I_sh_a = (1-A_sl) * \
+                ( k_d/k_prime*I_df + k_d/np.sqrt(1-r_l)*I_sc_u + k_d/np.sqrt(1-t_l)*I_sc_d )
+
+            #> rad absorbed by sunlit leaves (direct beam term added to the end)
+            #  B&F eq. 15
+            #  
+            I_sl_a = A_sl * \
+                ( k_d/k_prime*I_df + k_d/np.sqrt(1-r_l)*I_sc_u + k_d/np.sqrt(1-t_l)*I_sc_d + \
+                  k_b*I_dr0 )
+                 
+            #> final downward and upward diffuse
+            I_df_d = I_sc_d + I_df
+            I_df_u = I_sc_u + I_sr
+            
+            #> save
+            I_dr_all[:,i] = I_dr
+            I_df_d_all[:,i] = I_df_d
+            I_df_u_all[:,i] = I_df_u
+            F_all[:,i] = I_dr/mu + 2*I_df_u + 2*I_df_d
+
+        #> update class attrs
+        self.I_dr[self.it,:,:] = I_dr_all
+        self.I_df_d[self.it,:,:] = I_df_d_all
+        self.I_df_u[self.it,:,:] = I_df_u_all
+        self.F[self.it,:,:] = F_all 
 
 
 

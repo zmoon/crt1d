@@ -24,7 +24,8 @@ reload(lrc)
 
 #%% test each scheme
 
-scheme_ids = ['bl', '2s', '4s', 'zq']
+#scheme_ids = ['bl', '2s', '4s', 'zq']
+scheme_ids = ['bf']
 
 for sid in scheme_ids:
 
