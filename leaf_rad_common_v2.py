@@ -100,6 +100,7 @@ class model:
         """
 
         #> inputs related to model input (can have time dimension)
+        #  also want to have datetime string input for inputs with multiple time steps
         self.psi = psi
         self.mu = np.cos(self.psi)  # use abs here??
         try:
@@ -1273,9 +1274,10 @@ def distribute_lai(cdd, n):
         layers.append(layer)
     
     
-    cld = canopy_lai_dist(h_bottom, layers, LAI)  # form dist of leaf area
+    cld = canopy_lai_dist(h_bottom, layers[::-1], LAI)  # form dist of leaf area
 
-    h_canopy = cld.lds[-1]['h_top']  # canopy height is the top of the upper-most layer
+#    h_canopy = cld.lds[-1]['h_top']  # canopy height is the top of the upper-most layer
+    h_canopy = cdd['h_canopy']
 
     dlai = float(LAI) / (n - 1)  # desired const lai increment
 #    print dlai
