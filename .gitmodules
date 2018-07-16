@@ -1,0 +1,3 @@
+[submodule "submodules/radtran"]
+	path = submodules/radtran
+	url = https://github.com/zmoon92/radtran
