@@ -3,6 +3,7 @@
 .DS_Store
 /out
 /fig
+/test_lrc_v2.py
 
 # default .gitignore below
 #------------------------------------------------------------
