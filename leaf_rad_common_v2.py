@@ -110,6 +110,7 @@ class model:
         self.nlayers = nlayers
 
         #> assign scheme
+        #  could use obj here instead of dict?
         self._schemes = [\
             dict(ID='bl', solver=self.solve_bl, shortname='B–L', longname='Beer–Lambert'),
             dict(ID='2s', solver=self.solve_2s, shortname='2s', longname='Dickinson–Sellers two-stream'),
@@ -121,14 +122,17 @@ class model:
         self._scheme_IDs = {d['ID']: d for d in self._schemes}
         self.scheme_ID = scheme_ID
         try:
-            self.solve = self._scheme_IDs[self.scheme_ID]['solver']
+            self.scheme = self._scheme_IDs[self.scheme_ID]
+            self.solve = self.scheme['solver']
             print('\n\n')
             print('='*40)
             print('scheme:', self.scheme_ID)
             print('-'*40)
         except KeyError:
             print('{:s} is not a valid scheme ID!'.format(scheme_ID))
-            # self.terminate() or yield error or set flag
+            print('Defaulting to Dickinson-Sellers two-stream')
+            self.scheme = self._scheme_IDs['2s']
+            # also could self.terminate() or yield error or set flag
 
         #> if not enough canopy description, use default
         cdd_default = load_canopy_descrip('default_canopy_descrip.csv')
@@ -1336,7 +1340,11 @@ class model:
         dwl = self.dwl
         sdt = ['' for _ in inds]  # temporary..
         lai = self.lai
-        info = ''
+        
+        info = ''  # info passed in at model init?
+        scheme_lname = self.scheme['longname']
+        scheme_sname = self.scheme['shortname']
+        scheme_id = self.scheme_ID
         
         Idr = self.I_dr
         Idfd = self.I_df_d
@@ -1351,15 +1359,17 @@ class model:
                     'i': inds,
                     },
             data_vars={\
-                'Idr':  (crds, Idr,  {'units': 'W m^-2 um^-1', 'longname': 'direct beam solar irradiance'}),
-                'Idfd': (crds, Idfd, {'units': 'W m^-2 um^-1', 'longname': 'downward diffuse solar irradiance'}),
-                'Idfu': (crds, Idfu, {'units': 'W m^-2 um^-1', 'longname': 'upward diffuse solar irradiance'}),
-                'F':    (crds, F,    {'units': 'W m^-2 um^-1', 'longname': 'actinic flux'}),
+                'Idr':  (crds, Idr,  {'units': 'W m^-2', 'longname': 'direct beam solar irradiance'}),
+                'Idfd': (crds, Idfd, {'units': 'W m^-2', 'longname': 'downward diffuse solar irradiance'}),
+                'Idfu': (crds, Idfu, {'units': 'W m^-2', 'longname': 'upward diffuse solar irradiance'}),
+                'F':    (crds, F,    {'units': 'W m^-2', 'longname': 'actinic flux'}),
                 'dwl':  ('wl', dwl, {'units': 'um', 'longname': 'wavelength band width'}),
                 'sdt':  ('i', sdt, {'longname': 'datetime string'}),
                 'lai':  ('z', lai, {'units': 'm^2 m^-2', 'longname': 'leaf area index (cumulative)'})
                 },
-            attrs={'save_id': self.save_id, 'info': info},
+            attrs={'save_id': self.save_id, 'info': info, 
+                   'scheme_id': scheme_id, 'scheme_longname': scheme_lname, 'scheme_shortname': scheme_sname,
+                   },
         )
         
         #> save dataset
