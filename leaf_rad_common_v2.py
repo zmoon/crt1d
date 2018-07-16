@@ -34,6 +34,8 @@ goals for v2:
 """
 
 from __future__ import print_function
+import os
+this_dir = os.path.dirname(os.path.realpath(__file__))
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -135,7 +137,7 @@ class model:
             # also could self.terminate() or yield error or set flag
 
         #> if not enough canopy description, use default
-        cdd_default = load_canopy_descrip('default_canopy_descrip.csv')
+        cdd_default = load_canopy_descrip(this_dir+'/'+'default_canopy_descrip.csv')
         
         # assuming lai profile is const for now
         # could have a check that `z[0]` is the lowest not highest level
