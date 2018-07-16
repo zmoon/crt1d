@@ -11,7 +11,7 @@ Dickinson-Sellers two-stream | 2s | Dickinson-Sellers: [Dickinson (1983)](https:
 Four-stream | 4s | [Tian et al. (2007)](https://dx.doi.org/10.1029/2006JD007545)
 Zhao & Qualls multi-scattering | zq | [Zhao and Qualls (2005)](https://dx.doi.org/10.1029/2005WR004016)
 Sun/shade 1.5 stream | bf | [Bodin and Franklin (2012)](https://dx.doi.org/10.5194/gmd-5-535-2012)
-Goudriaan one-stream | gdr | [Goudriaan (1977)](http://library.wur.nl/WebQuery/wurpubs/70980)
+Goudriaan one-stream | gd | [Goudriaan (1977)](http://library.wur.nl/WebQuery/wurpubs/70980)
 
 Schemes planning to add in the future
 
