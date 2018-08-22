@@ -91,7 +91,7 @@ class model:
     """ general class for testing 1-D canopy radiative transfer schemes
     """
 
-    def __init__(self, scheme_ID='bl', mi={}, psi=0., nlayers=60,
+    def __init__(self, scheme_ID='bl', mi={}, psi=0., dts=[], nlayers=60,  # could use **kwargs instead of mi dict?
                  save_dir= './', save_ID='blah', 
                  save_figs=False, write_output=True):
         """
@@ -103,13 +103,15 @@ class model:
 
         #> inputs related to model input (can have time dimension)
         #  also want to have datetime string input for inputs with multiple time steps
-        self.psi = psi
-        self.mu = np.cos(self.psi)  # use abs here??
+        #  need to np.newaxis if the input is only one number
+        self.psi_all = psi
+        self.mu_all = np.cos(self.psi_all)  # use abs here??
         try:
             self.nt = psi.size
         except AttributeError:
             self.nt = 1
-        self.nlayers = nlayers
+        self.dts = dts  # array of datetime objects. pref np.datetime64
+        self.nlayers = nlayers  # only used if no lai profile is input
 
         #> assign scheme
         #  could use obj here instead of dict?
@@ -170,7 +172,7 @@ class model:
         soil_r_default = load_spectral_props(173, '1212')
         
         try:
-            self.I_dr0, self.I_df0 = mi['I_dr0'], mi['I_df0']
+            self.I_dr0_all, self.I_df0_all = mi['I_dr0'], mi['I_df0']
             self.wl, self.dwl = mi['wl'], mi['dwl']
         except KeyError:
             print('\nTop-of-canopy irradiance BC not properly provided.\nUsing default.')
@@ -229,8 +231,17 @@ class model:
         print('-'*40)
         print('now running the model...\n')
         
+#        if self.nt == 1:
+#            self.I_dr0 = self.I_dr0_all
+#            self.I_df0 = self.I_df0_all
+        
         for self.it in np.arange(0, self.nt, 1):
             print('it:', self.it)
+            
+            self.psi = self.psi_all[self.it]
+            self.mu = self.mu_all[self.it]
+            self.I_dr0 = self.I_dr0_all[self.it,:]
+            self.I_df0 = self.I_df0_all[self.it,:]
             
             #> pre calculations
             #  
@@ -1340,7 +1351,8 @@ class model:
         wl = self.wl
         
         dwl = self.dwl
-        sdt = ['' for _ in inds]  # temporary..
+        sdt = self.dts #['' for _ in inds]  # temporary..
+        psi = self.psi_all
         lai = self.lai
         
         info = ''  # info passed in at model init?
@@ -1367,6 +1379,7 @@ class model:
                 'F':    (crds, F,    {'units': 'W m^-2', 'longname': 'actinic flux'}),
                 'dwl':  ('wl', dwl, {'units': 'um', 'longname': 'wavelength band width'}),
                 'sdt':  ('i', sdt, {'longname': 'datetime string'}),
+                'sza':  ('sza', psi, {'units': 'deg.', 'longname': 'solar zenith angle'}),
                 'lai':  ('z', lai, {'units': 'm^2 m^-2', 'longname': 'leaf area index (cumulative)'})
                 },
             attrs={'save_id': self.save_id, 'info': info, 
@@ -1478,7 +1491,7 @@ def load_spectral_props(DOY, hhmm):
     # ----------------------------------------------------------------------------------------------
     # radiation data from SPCTRAL2
 
-    spectral_data_file = '../SPCTRAL2_xls/Borden_DOY{DOY:d}/EDT{hhmm:s}.csv'.format(DOY=DOY, hhmm=hhmm)
+    spectral_data_file = '{base:s}/../SPCTRAL2_xls/Borden_DOY{DOY:d}/EDT{hhmm:s}.csv'.format(base=this_dir, DOY=DOY, hhmm=hhmm)
     spectral_data = np.loadtxt(spectral_data_file,
                                delimiter=',', skiprows=1)
     wl = spectral_data[:,0]    # wavelength (um); can't use 'lambda' because it is reserved
@@ -1515,7 +1528,7 @@ def load_spectral_props(DOY, hhmm):
     # ----------------------------------------------------------------------------------------------
     # green leaf properties
 
-    leaf_data_file = '../ideal-leaf-optical-props/leaf-idealized-rad_SPCTRAL2_wavelengths_extended.csv'
+    leaf_data_file = '{base:s}/../ideal-leaf-optical-props/leaf-idealized-rad_SPCTRAL2_wavelengths_extended.csv'.format(base=this_dir)
     leaf_data = np.loadtxt(leaf_data_file,
                            delimiter=',', skiprows=1)
     leaf_t = leaf_data[:,1][leaf_data_wls]
