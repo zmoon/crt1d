@@ -146,7 +146,7 @@ def solve_bl(cnpy_rad_state, cnpy_descrip):
         # calculate profiles
         #   here I_df is just downward diffuse
         I_dr = I_dr0 * np.exp(-K_b * lai)
-        I_df = I_df0 * np.exp(-K_df_fn(lai[:-1]) * lai[:-1])  # doesn't work for L=0 since L in denom
+        I_df = I_df0 * np.exp(-1*K_df_fn(lai[:-1]) * lai[:-1])  # doesn't work for L=0 since L in denom
         I_df = np.append(I_df, I_df0)
 
         # approximate the contribution of scattering of the direct beam to diffuse irradiance within canopy
@@ -163,6 +163,12 @@ def solve_bl(cnpy_rad_state, cnpy_descrip):
         I_df_d_all[:,i] = I_df
         I_df_u_all[:,i] = I_df  # assume u and d equiv for now...
         F_all[:,i] = I_dr / mu + 2 * I_df  # actinic flux (upward + downward hemisphere components)
+
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
 
     # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
     # return cnpy_rad_state  # shouldn't be strictly necessary but whatevs
@@ -197,7 +203,7 @@ def solve_2s(cnpy_rad_state, cnpy_descrip):
 
     I_dr0_all = cnpy_rad_state['I_dr0_all']
     I_df0_all = cnpy_rad_state['I_df0_all']
-    psi = cnpy_rad_state['psi']
+    #psi = cnpy_rad_state['psi']
     mu = cnpy_rad_state['mu']
     K_b = cnpy_rad_state['K_b']
     #K_b_fn = cnpy_rad_state['K_b_fn']
@@ -341,7 +347,14 @@ def solve_2s(cnpy_rad_state, cnpy_descrip):
         I_df_u_all[:,i] = I_df_u
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
-    return cnpy_rad_state
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
+
+    # return cnpy_rad_state
+    return
 
 
 #------------------------------------------------------------------------------------------------
@@ -636,7 +649,14 @@ def solve_4s(cnpy_rad_state, cnpy_descrip,
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
-    return cnpy_rad_state
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
+
+    # return cnpy_rad_state
+    return
 
 
 
@@ -667,7 +687,7 @@ def solve_zq(cnpy_rad_state, cnpy_descrip):
     psi = cnpy_rad_state['psi']
     mu = cnpy_rad_state['mu']
     K_b = cnpy_rad_state['K_b']
-    #K_b_fn = cnpy_rad_state['K_b_fn']
+    K_b_fn = cnpy_rad_state['K_b_fn']
     wl = cnpy_rad_state['wl']
     dwl = cnpy_rad_state['dwl']
 
@@ -694,8 +714,8 @@ def solve_zq(cnpy_rad_state, cnpy_descrip):
     #  most dlai vals are the same, so just calculate one tau_i and tau_psi value for now
     #  using Cambell & Norman eq. 15.5 fns defined above
     dlai_mean = np.abs(np.mean(dlai[dlai != 0]))
-    tau_i_mean = tau_df_fn(dlai_mean)
-    tau_b_mean = tau_b_fn(psi, dlai_mean)
+    tau_i_mean = tau_df_fn(K_b_fn, dlai_mean)
+    tau_b_mean = tau_b_fn(K_b_fn, psi, dlai_mean)
 
 
 #        LAI = lai[0]  # total LAI
@@ -850,11 +870,11 @@ def solve_zq(cnpy_rad_state, cnpy_descrip):
         I_dr_all[:,i] = I_dr0 * np.exp(-K * lai)
 
 
-    #> update class attrs
-    self.I_dr[self.it,:,:] = I_dr_all
-    self.I_df_d[self.it,:,:] = I_df_d_all
-    self.I_df_u[self.it,:,:] = I_df_u_all
-    self.F[self.it,:,:] = F_all
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
 
     return
 
@@ -862,7 +882,7 @@ def solve_zq(cnpy_rad_state, cnpy_descrip):
 
 #------------------------------------------------------------------------------------------------
 # bf -- Bodin & Franklin improved Goudriaan
-def solve_bf(self):
+def solve_bf(cnpy_rad_state, cnpy_descrip):
     """
     Bodin and Franklin (2012)
     improved Goudriaan (1977) scheme (~ 1.5 streams)
@@ -881,28 +901,32 @@ def solve_bf(self):
 
     """
 
-    #> grab model class attributes that we need
-    #  to make solver code easier to read
-#        mean_leaf_angle = self.mean_leaf_angle
-#        orient = self.orient
-#        G = self.G
-    G_fn = self.G_fn
-    K_b = self.K_b
-#        K_b_fn = self.K_b_fn
-    green = self.green
-    lai = self.lai
-    lai_tot = self.lai_tot
-#        z = self.z
-    psi = self.psi
-    mu = self.mu
-    wl = self.wl
-    dwl = self.dwl
-    I_dr0_all = self.I_dr0
-    I_df0_all = self.I_df0
-    leaf_r = self.leaf_r
-    leaf_t = self.leaf_t
-    soil_r = self.soil_r
-    # ------------------------------------------------        
+    #
+    #> Get canopy description and radiation parameters that we need
+    #
+    #L = cnpy_descrip['L']  # total LAI
+    lai = cnpy_descrip['lai']  # (cumulative) LAI profile
+    #mean_leaf_angle = cnpy_descrip['mean_leaf_angle']  # (deg.)
+    #orient = cnpy_descrip['orient']
+    #G_fn = cnpy_descrip['G_fn']
+    green = cnpy_descrip['green']  # canopy green-ness factor
+    leaf_t = cnpy_descrip['leaf_t']
+    leaf_r = cnpy_descrip['leaf_r']
+    soil_r = cnpy_descrip['soil_r']
+
+    I_dr0_all = cnpy_rad_state['I_dr0_all']
+    I_df0_all = cnpy_rad_state['I_df0_all']
+    #psi = cnpy_rad_state['psi']
+    mu = cnpy_rad_state['mu']
+    K_b = cnpy_rad_state['K_b']
+    #K_b_fn = cnpy_rad_state['K_b_fn']
+    wl = cnpy_rad_state['wl']
+    dwl = cnpy_rad_state['dwl']
+
+
+    lai_tot = lai[0]
+    assert(lai_tot == lai.max())
+
 
     #> following variables in B&F.
     #  except I for irradiance, instead of the R B&F uses for...
@@ -991,44 +1015,50 @@ def solve_bf(self):
         I_df_u_all[:,i] = I_df_u
         F_all[:,i] = I_dr/mu + 2*I_df_u + 2*I_df_d
 
-    #> update class attrs
-    self.I_dr[self.it,:,:] = I_dr_all
-    self.I_df_d[self.it,:,:] = I_df_d_all
-    self.I_df_u[self.it,:,:] = I_df_u_all
-    self.F[self.it,:,:] = F_all 
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
+
+    return
 
 
 #------------------------------------------------------------------------------------------------
 # gd -- Goudriaan
-def solve_gd(self):
+def solve_gd(cnpy_rad_state, cnpy_descrip):
     """
     Goudriaan (1977) scheme, 
     according to Bodin and Franklin (2012)
 
     """
 
-    #> grab model class attributes that we need
-    #  to make solver code easier to read
-#        mean_leaf_angle = self.mean_leaf_angle
-#        orient = self.orient
-#        G = self.G
-    G_fn = self.G_fn
-    K_b = self.K_b
-#        K_b_fn = self.K_b_fn
-    green = self.green
-    lai = self.lai
-    lai_tot = self.lai_tot
-#        z = self.z
-    psi = self.psi
-    mu = self.mu
-    wl = self.wl
-    dwl = self.dwl
-    I_dr0_all = self.I_dr0
-    I_df0_all = self.I_df0
-    leaf_r = self.leaf_r
-    leaf_t = self.leaf_t
-    soil_r = self.soil_r
-    # ------------------------------------------------        
+    #
+    #> Get canopy description and radiation parameters that we need
+    #
+    #L = cnpy_descrip['L']  # total LAI
+    lai = cnpy_descrip['lai']  # (cumulative) LAI profile
+    #mean_leaf_angle = cnpy_descrip['mean_leaf_angle']  # (deg.)
+    #orient = cnpy_descrip['orient']
+    #G_fn = cnpy_descrip['G_fn']
+    green = cnpy_descrip['green']  # canopy green-ness factor
+    leaf_t = cnpy_descrip['leaf_t']
+    leaf_r = cnpy_descrip['leaf_r']
+    soil_r = cnpy_descrip['soil_r']
+
+    I_dr0_all = cnpy_rad_state['I_dr0_all']
+    I_df0_all = cnpy_rad_state['I_df0_all']
+    #psi = cnpy_rad_state['psi']
+    mu = cnpy_rad_state['mu']
+    K_b = cnpy_rad_state['K_b']
+    #K_b_fn = cnpy_rad_state['K_b_fn']
+    wl = cnpy_rad_state['wl']
+    dwl = cnpy_rad_state['dwl']
+
+
+    lai_tot = lai[0]
+    assert(lai_tot == lai.max())
+
 
     #> following variables in B&F.
     #  except I for irradiance, instead of the R B&F uses for...
@@ -1113,11 +1143,13 @@ def solve_gd(self):
         I_df_u_all[:,i] = I_df_u
         F_all[:,i] = I_dr/mu + 2*I_df_u + 2*I_df_d
 
-    #> update class attrs
-    self.I_dr[self.it,:,:] = I_dr_all
-    self.I_df_d[self.it,:,:] = I_df_d_all
-    self.I_df_u[self.it,:,:] = I_df_u_all
-    self.F[self.it,:,:] = F_all 
+    #> update values in cnpy_rad_state
+    cnpy_rad_state['I_dr_all'] = I_dr_all
+    cnpy_rad_state['I_df_d_all'] = I_df_d_all
+    cnpy_rad_state['I_df_u_all'] = I_df_u_all
+    cnpy_rad_state['F_all'] = F_all
+
+    return
 
 
 

@@ -21,7 +21,7 @@ Scheme Name | Scheme ID in code | Reference(s)
 --- | :---: | ---
 Discrete ordinates one-angle | do1a | [Myneni et al. (1988)](https://doi-org.ezaccess.libraries.psu.edu/10.1016/0168-1923(88)90063-9); [jgomezdans/radtran](https://github.com/jgomezdans/radtran)
 Discrete ordinates two-angle | do2a | [Myneni (1988)](https://dx.doi.org/); [jgomezdans/radtran](https://github.com/jgomezdans/radtran); 
-4SAIL | 4s_sail | [Verhoef et al. (2007)](https://dx.doi.org/10.1109/TGRS.2007.895844); [jgomezdans/prosail](https://github.com/jgomezdans/prosail/blob/master/prosail/FourSAIL.py)
+4SAIL | 4s_sail | [Verhoef et al. (2007)](https://dx.doi.org/10.1109/TGRS.2007.895844); [jgomezdans/prosail](https://github.com/jgomezdans/prosail/blob/master/prosail/FourSAIL.py) or [hectornieto/pyPro4Sail](https://github.com/hectornieto/pyPro4Sail)
 Semi-discrete (SOSA) | sd | [Gobron (1997)](https://dx.doi.org/10.1029/96JD04013)
 Pinty two-stream | 2s_pinty | [Pinty et al. (2006)](https://dx.doi.org/10.1029/2005JD005952)
 Yuan two-stream | 2s_yuan | [Yuan et al. (2017)](https://dx.doi.org/10.1002/2016MS000773)

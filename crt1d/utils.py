@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from . import input_data_dir
 from .leaf_area_alloc import canopy_lai_dist
 
 
@@ -88,26 +89,22 @@ def load_canopy_descrip(fname):
     
 
 
-def load_spectral_props(DOY, hhmm):
+def load_default_leaf_soil_props():
     """
-    returns: wl, dwl, I_dr0, I_df0, leaf_r, leaf_t, soil_r
-
-    radiation data for top-of-canopy must already exist
+    Returns
+    -------
+    
 
     """
 
     # ----------------------------------------------------------------------------------------------
-    # radiation data from SPCTRAL2
+    # green leaf properties (alread at SPCTRAL2 wavelengths)
 
-    spectral_data_file = \
-        '{base:s}/../SPCTRAL2_xls/Borden_DOY{DOY:d}/EDT{hhmm:s}.csv'.format(base=this_dir, DOY=DOY, hhmm=hhmm)
-    spectral_data = np.loadtxt(spectral_data_file,
-                               delimiter=',', skiprows=1)
-    wl = spectral_data[:,0]    # wavelength (um); can't use 'lambda' because it is reserved
+    leaf_data_file = '{data:s}/ideal-green-leaf/leaf-idealized-rad_SPCTRAL2_wavelengths_extended.csv'.format(data=input_data_dir)
+    leaf_data = np.loadtxt(leaf_data_file,
+                           delimiter=',', skiprows=1)
+    wl  = leaf_data[:,0]  # all SPCTRAL2 wavelengths (to 4 um); assume band center (though may be left...)
     dwl = np.append(np.diff(wl), np.nan)  # um; UV region more important so add nan to end instead of beginning, though doesn't really matter since outside leaf data bounds
-    # note: could also do wl band midpoints instead..
-    I_dr0 = spectral_data[:,1]  # direct (spectral) irradiance impinging on canopy (W/m^2/um)
-    I_df0 = spectral_data[:,2]  # diffuse
 
 #    wl_a = 0.35  # lower limit of leaf data; um
     wl_a = 0.30  # lower limit of leaf data, extended; um
@@ -118,8 +115,12 @@ def load_spectral_props(DOY, hhmm):
     #  initially, everything should be at the SPCTRAL2 wls
     wl    = wl[leaf_data_wls]
     dwl   = dwl[leaf_data_wls]
-    I_dr0 = I_dr0[leaf_data_wls]
-    I_df0 = I_df0[leaf_data_wls]
+
+    leaf_t = leaf_data[:,1][leaf_data_wls]
+    leaf_r = leaf_data[:,2][leaf_data_wls]
+
+    leaf_t[leaf_t == 0] = 1e-10
+    leaf_r[leaf_r == 0] = 1e-10
 
     # also eliminate < 0 values ??
     #   this was added to the leaf optical props generation
@@ -127,25 +128,11 @@ def load_spectral_props(DOY, hhmm):
 
 
     # ----------------------------------------------------------------------------------------------
-    # soil reflectivity
+    # soil reflectivity (assume these for now (used in Fuentes 2007)
 
     soil_r = np.ones_like(wl)
     soil_r[wl <= 0.7] = 0.1100  # this is the PAR value
     soil_r[wl > 0.7]  = 0.2250  # near-IR value
 
-
-    # ----------------------------------------------------------------------------------------------
-    # green leaf properties
-
-    leaf_data_file = '{base:s}/../ideal-leaf-optical-props/leaf-idealized-rad_SPCTRAL2_wavelengths_extended.csv'.format(base=this_dir)
-    leaf_data = np.loadtxt(leaf_data_file,
-                           delimiter=',', skiprows=1)
-    leaf_t = leaf_data[:,1][leaf_data_wls]
-    leaf_r = leaf_data[:,2][leaf_data_wls]
-
-    leaf_t[leaf_t == 0] = 1e-10
-    leaf_r[leaf_r == 0] = 1e-10
-
-    return wl, dwl, I_dr0, I_df0, leaf_r, leaf_t, soil_r
-
+    return wl, dwl, leaf_r, leaf_t, soil_r
 
