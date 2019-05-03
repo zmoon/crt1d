@@ -216,7 +216,8 @@ def solve_2s(cnpy_rad_state, cnpy_descrip):
     #   sa: angle of scattered flux
     mu_bar  = si.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
     mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
-    assert( mu_bar == mu_bar2 )
+    #assert( mu_bar == mu_bar2 )
+    assert( np.isclose(mu_bar, mu_bar2) )
 
     # where does this stuff with Pi come from ??? 
     # Dickinson 1983 ?

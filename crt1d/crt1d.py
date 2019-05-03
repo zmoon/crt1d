@@ -20,7 +20,7 @@ from scipy.sparse.linalg import spsolve  # for Z&Q model
 import xarray as xr
 
 from . import input_data_dir
-from .leaf_angle_dist import G_ellipsoidal
+from .leaf_angle_dist import G_ellipsoidal, G_ellipsoidal_approx
 from .leaf_area_alloc import canopy_lai_dist
 from .solvers import available_schemes  # also loaded in __init__.py
 from .utils import distribute_lai, load_default_leaf_soil_props, load_canopy_descrip
@@ -237,7 +237,9 @@ class model:
             
             #> pre calculations
             #  
-            self.orient = (1.0 / self.mean_leaf_angle - 0.0107) / 0.0066  # leaf orientation dist. parameter for leaf angle > 57 deg.
+            #self.orient = (1.0 / self.mean_leaf_angle - 0.0107) / 0.0066  # leaf orientation dist. parameter for leaf angle > 57 deg. (Wang and Jarvis 1988 eq. 2a)
+            self.orient = (np.deg2rad(self.mean_leaf_angle)/9.65)**(-1./1.65) - 3.  # inversion of Campbell (1990) eq. 16, valid for x < and > 1
+            assert(self.orient > 0)
             self.G = self.G_fn(self.psi)  # leaf angle dist factor
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
             # ^ should/could also incorporate clumping index for K_b
@@ -277,10 +279,11 @@ class model:
             if self.save_figs:  # figs for each time step
                 print('making them figs...')
                 self.figs_make_save()
-                
-            if self.write_output:
-                print('writing output...')
-                self.write_output_nc()
+        
+        #> write combined output file
+        if self.write_output:
+            print('writing output...')
+            self.write_output_nc()
 
         # end iteration through time
 
@@ -290,7 +293,8 @@ class model:
         """ 
         for ellipsoidal leaf dist. could include choice of others... 
         """
-        return G_ellipsoidal(psi, self.orient)
+        #return G_ellipsoidal(psi, self.orient)
+        return G_ellipsoidal_approx(psi, self.orient)
     
     
     def K_b_fn(self, psi):
@@ -374,6 +378,9 @@ class model:
             time = self.dts
         except:  # e.g., of dts=[] or not convertable
             sdt = ['' for _ in inds]
+            time = inds
+        if sdt == []:
+            sdt = ['' for _ in inds]  # temporary fix since dts=[] not caught
             time = inds
         
         psi = self.psi_all
