@@ -1,16 +1,17 @@
 """
 Parameterizations of the impact of leaf angles on canopy RT.
 
+Leaf angle factor G and the extinction coeff K have the following relationship
+    K = G / cos(psi)
+
 """
 
 import numpy as np
 
 def G_ellipsoidal(psi, x):
-    """Leaf angle factor ("big G") for the ellipsoidal leaf angle distribution.
+    """G for the ellipsoidal leaf angle distribution.
 
     ref: Campbell (1986) eqs. 5, 6
-
-    the ROB@UVa code set x = 0.96 instead of using the calculated 'orient' value ???
 
     Inputs
     ------
@@ -36,8 +37,10 @@ def G_ellipsoidal(psi, x):
 
 
 def G_ellipsoidal_approx(psi, x):
-    """Campbell approximate form.
+    """Campbell G approximate form.
 
+    References
+    ----------
     area ratio term: Campbell (1990) eq. 14
     exact formula:   Cambell & Norman (1996) eq. 15.4
 
