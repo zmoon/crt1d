@@ -10,11 +10,16 @@ In future may add gamma distribution version.
 """
 
 
+
 import numpy as np
 import scipy.integrate as si
 #from scipy.interpolate import interp1d
 import scipy.optimize as so
-#from scipy.stats import gamma
+from scipy.stats import gamma
+
+
+
+
 
 class layer:
     """Leaf area distribution between two points (local minima in the overall LAI profile)
@@ -244,7 +249,111 @@ class canopy_lai_dist:
 
 
 
+def distribute_lai_from_cdd(cdd, n):
+    """Create LAI profile based on input descriptors of the leaf area distribution.
+
+    Inputs
+    ------
+    cdd:  canopy description dict. contains many things. see the default CSV for example
+    n:    number of layers we want
+
+    """
+    LAI = cdd['lai_tot']  # total canopy LAI
+    h_bottom = cdd['h_bot'][-1]  # canopy bottom is the bottom of the bottom-most layer
+    
+    #> form inputs to the layer class
+    nlayers = len(cdd['lai_frac'])
+    layers = []
+    for i in range(nlayers):
+        layer = dict(h_max=cdd['h_max_lad'][i],
+                     h_top=cdd['h_top'][i], 
+                     lad_h_top=cdd['lad_h_top'][i],
+                     fLAI=cdd['lai_frac'][i])
+        layers.append(layer)
+    
+    
+    cld = canopy_lai_dist(h_bottom, layers[::-1], LAI)  # form dist of leaf area
+
+#    h_canopy = cld.lds[-1]['h_top']  # canopy height is the top of the upper-most layer
+    h_canopy = cdd['h_canopy']
+
+    dlai = float(LAI) / (n - 1)  # desired const lai increment
+#    print dlai
+
+    lai = np.zeros((n, ))
+    z = h_canopy * np.ones_like(lai)  # bottoms of layers?
+
+    ub = h_canopy
+    LAIcum = 0
+    for i in range(n-2, -1, -1):  # build from top down
+
+        if LAI - LAIcum < dlai:
+            assert( i == 0 )
+            z[0] = h_bottom
+            lai[0] = LAI
+
+        else:
+            lb = cld.inv_cdf(ub, dlai)
+            z[i] = lb
+            lai[i] = lai[i+1] + dlai
+
+            ub = lb
+            LAIcum += dlai
+
+    return lai, z
+
+
+
+def distribute_lai_gamma(h_c, LAI, n):
+    """Create LAI profile using Gamma distribution.
+
+    Inputs
+    ------
+    h_c : float or int
+        canopy height 
+    n : int
+        number of layers
+    LAI : float
+        total LAI
+
+    Returns
+    -------
+    lai, z
+
+    """
+    h_max_lad = 0.7*h_c  # could be a param
+    d_max_lad = h_c-h_max_lad  # canopy depth
+
+    b = 3.5
+    a = d_max_lad/b + 1
+
+    # a = 2.5
+    # b = d_max_lad/(a-1)
+
+    g = gamma(a, b)
+
+    #lad = np.zeros((n, ))
+    lai = np.zeros((n, ))
+    z   = np.zeros((n, ))
+
+    lai_cum_pct = np.linspace(0.99, 0.1, n-2)
+
+    z[-1] = h_c
+    z[1:-1] = h_c - g.ppf(lai_cum_pct)  # Gamma ppf depends on depth into the canopy
+    z[0] = 0
+
+    lai[-1] = 0
+    lai[1:-1] = lai_cum_pct*LAI
+    lai[0] = LAI
+
+    return lai, z
+
+
+
 if __name__ == '__main__':
+
+    import matplotlib.pyplot as plt
+
 
     # --------------------------------------------------------------------------------------------------
     # graphical tests of the layer class alone
@@ -287,7 +396,7 @@ if __name__ == '__main__':
     l3 = {'h_max': 16, 'h_top': 20, 'lad_h_top': 0.05, 'fLAI': 0.35}
     l4 = {'h_max': 21.5, 'h_top': 23, 'lad_h_top': 0, 'fLAI': 0.1}
     
-    cld1 = canopy_lai_dist2(0.5, [l1, l2, l3, l4], 5)
+    cld1 = canopy_lai_dist(0.5, [l1, l2, l3, l4], 5)
     
     h = np.linspace(0, 24, 200)
     
@@ -302,4 +411,6 @@ if __name__ == '__main__':
     plt.plot(lai, h)
     plt.xlim(xmin=0)
     # -------------------------------------------------------------------------------------------------
+
+    # TODO: graphical test of new Gamma leaf area dist
 

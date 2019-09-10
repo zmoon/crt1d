@@ -3,61 +3,7 @@
 import numpy as np
 
 from . import input_data_dir
-from .leaf_area_alloc import canopy_lai_dist
-
-
-def distribute_lai(cdd, n):
-    """Create LAI profile based on input descriptors of the leaf area distribution.
-
-    Inputs
-    ------
-    cdd:  canopy description dict. contains many things. see the default CSV for example
-    n:    number of layers we want
-
-    """
-    LAI = cdd['lai_tot']  # total canopy LAI
-    h_bottom = cdd['h_bot'][-1]  # canopy bottom is the bottom of the bottom-most layer
-    
-    #> form inputs to the layer class
-    nlayers = len(cdd['lai_frac'])
-    layers = []
-    for i in range(nlayers):
-        layer = dict(h_max=cdd['h_max_lad'][i],
-                     h_top=cdd['h_top'][i], 
-                     lad_h_top=cdd['lad_h_top'][i],
-                     fLAI=cdd['lai_frac'][i])
-        layers.append(layer)
-    
-    
-    cld = canopy_lai_dist(h_bottom, layers[::-1], LAI)  # form dist of leaf area
-
-#    h_canopy = cld.lds[-1]['h_top']  # canopy height is the top of the upper-most layer
-    h_canopy = cdd['h_canopy']
-
-    dlai = float(LAI) / (n - 1)  # desired const lai increment
-#    print dlai
-
-    lai = np.zeros((n, ))
-    z = h_canopy * np.ones_like(lai)  # bottoms of layers?
-
-    ub = h_canopy
-    LAIcum = 0
-    for i in range(n-2, -1, -1):  # build from top down
-
-        if LAI - LAIcum < dlai:
-            assert( i == 0 )
-            z[0] = h_bottom
-            lai[0] = LAI
-
-        else:
-            lb = cld.inv_cdf(ub, dlai)
-            z[i] = lb
-            lai[i] = lai[i+1] + dlai
-
-            ub = lb
-            LAIcum += dlai
-
-    return lai, z
+from .leaf_area_alloc import distribute_lai_from_cdd, distribute_lai_gamma
 
 
 def load_canopy_descrip(fname):
@@ -130,9 +76,33 @@ def load_default_leaf_soil_props():
     # ----------------------------------------------------------------------------------------------
     # soil reflectivity (assume these for now (used in Fuentes 2007)
 
-    soil_r = np.ones_like(wl)
+    # soil_r = np.ones_like(wl)
+    soil_r = np.ones(wl.shape)  # < please pylint
     soil_r[wl <= 0.7] = 0.1100  # this is the PAR value
     soil_r[wl > 0.7]  = 0.2250  # near-IR value
 
     return wl, dwl, leaf_r, leaf_t, soil_r
+
+
+
+def load_default_toc_spectra():
+    """Load sample top-of-canopy spectra (direct and diffuse).
+
+    """
+
+    fp = '{data:s}/sample_pyspctral2.csv'.format(data=input_data_dir)
+
+    wl, dwl, I_dr0, I_df0 = np.loadtxt(fp, delimiter=',', unpack=True)
+
+    wl_a = 0.30  # lower limit of leaf data, extended; um
+    wl_b = 2.6   # upper limit of leaf data; um
+    leaf_data_wls = (wl >= wl_a) & (wl <= wl_b)
+
+    # use only the region where we have leaf data
+    wl    = wl[leaf_data_wls]
+    dwl   = dwl[leaf_data_wls]
+    I_dr0 = I_dr0[leaf_data_wls][np.newaxis,:]  # expects multiple cases
+    I_df0 = I_df0[leaf_data_wls][np.newaxis,:]
+
+    return wl, dwl, I_dr0, I_df0
 

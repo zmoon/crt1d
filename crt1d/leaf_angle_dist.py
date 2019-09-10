@@ -42,7 +42,7 @@ def G_ellipsoidal_approx(psi, x):
     References
     ----------
     area ratio term: Campbell (1990) eq. 14
-    exact formula:   Cambell & Norman (1996) eq. 15.4
+    exact formula:   Campbell & Norman (1996) eq. 15.4
 
     """
 
@@ -53,3 +53,16 @@ def G_ellipsoidal_approx(psi, x):
     return K * np.cos(psi)  # K = G / cos(psi)
 
 
+
+# ----------------------------------------------------------------------------------------
+# some misc stuff related to leaf angle that I translated from the original matlab codes:
+#
+# where does this stuff with Pi come from ??? 
+# Dickinson 1983 ?
+# if orient > 1:
+#     bigpi = (1 - orient**-2)**0.5  # the big pi
+#     theta = 1 + (np.log( (1+bigpi) / (1-bigpi) ) / (2 * bigpi * orient**2))  # theta
+# else:
+#     bigpi = (1 - orient**2)**0.5;
+#     theta = (1 + np.arcsin(bigpi) ) / (orient * bigpi)  #
+# muave = theta * orient / (orient + 1)  # mu_bar for spherical canopy? we don't seem to need this...

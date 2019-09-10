@@ -9,7 +9,8 @@ __email__ = "zlm1@psu.edu"
 #spectral_lib = get_spectra()
 
 from .solvers import available_schemes
-print('scheme IDs available: {:s}'.format(' '.join([as_['ID'] for as_ in available_schemes])))
+# print('scheme IDs available: {:s}'.format(' '.join([as_['ID'] for as_ in available_schemes])))
+print('scheme IDs available: ' + ', '.join(available_schemes.keys() ))
 
 import os
 crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))

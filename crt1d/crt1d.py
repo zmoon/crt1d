@@ -3,7 +3,7 @@
 
 """
 
-from __future__ import print_function
+from __future__ import print_function, division
 # import os
 # this_dir = os.path.dirname(os.path.realpath(__file__))
 import sys
@@ -23,7 +23,8 @@ from . import input_data_dir
 from .leaf_angle_dist import G_ellipsoidal, G_ellipsoidal_approx
 from .leaf_area_alloc import canopy_lai_dist
 from .solvers import available_schemes  # also loaded in __init__.py
-from .utils import distribute_lai, load_default_leaf_soil_props, load_canopy_descrip
+from .utils import distribute_lai_gamma, distribute_lai_from_cdd, \
+    load_default_leaf_soil_props, load_default_toc_spectra, load_canopy_descrip
 
 
 
@@ -58,6 +59,11 @@ class model:
     ------------------------
     scheme_ID : str
         identifier for the radiation transfer model to use
+    psi : float
+        solar zenith angle (radians)
+    nlayers : int
+        number of in-canopy layers to use in the solver
+    
     mi : dict
         model input dict (canopy description, top-of-canopy BC, leaf and soil scattering props)
     dts : np.array or list
@@ -65,22 +71,25 @@ class model:
     nlayers : int
         number of layers to use in the solver
     
+    save_dir : str
+        where to save the output nc files
+    save_ID : str
+        basename for the output nc filename
+    save_figs : bool
+    write_output : bool
     
 
 
     """
 
+    # param defaults here?
+
     def __init__(self, scheme_ID='bl', nlayers=60,
-                 psi=0, dts=[], 
+                 psi=[0], dts=[], 
                  mi={},  # could use **kwargs instead of mi dict?
                  save_dir= './', save_ID='blah', 
-                 save_figs=False, write_output=True):
-        """
-        
-        scheme_id
-        ;mi model input dict (canopy description, top-of-canopy BC, leaf and soil scattering props)
-        ;psi solar zenith angle (radians)
-        """
+                 save_figs=False, write_output=False):
+
 
         #> inputs related to model input (can have time dimension)
         #  also want to have datetime string input for inputs with multiple time steps
@@ -97,11 +106,13 @@ class model:
         #> assign scheme
         #  could use obj here instead of dict?
         self._schemes = available_schemes
-        self._scheme_IDs = {d['ID']: d for d in self._schemes}
+        # self._scheme_IDs = {d['ID']: d for d in self._schemes}
+        self._scheme_IDs = list(self._schemes.keys())
         self.scheme_ID = scheme_ID
         try:
-            self.scheme = self._scheme_IDs[self.scheme_ID]
+            self.scheme = self._schemes[self.scheme_ID]
             self.solve = self.scheme['solver']
+            self.solver_args = self.scheme['args']
             print('\n\n')
             print('='*40)
             print('scheme:', self.scheme_ID)
@@ -109,7 +120,7 @@ class model:
         except KeyError:
             print('{:s} is not a valid scheme ID!'.format(scheme_ID))
             print('Defaulting to Dickinson-Sellers two-stream')
-            self.scheme = self._scheme_IDs['2s']
+            self.scheme = self._schemes['2s']
             # also could self.terminate() or yield error or set flag
 
         #> if not enough canopy description, use default
@@ -121,8 +132,11 @@ class model:
         try:
             self.lai, self.z = mi['lai'], mi['z']
         except KeyError:
-            print('\nLAI vertical profile not provided. Using default (Borden 1995 late June).')
-            lai, z = distribute_lai(cdd_default, nlayers)
+            # print('\nLAI vertical profile not provided. Using default (Borden 1995 late June).')
+            # lai, z = distribute_lai_from_cdd(cdd_default, nlayers)
+            print('\nLAI vertical profile not provided. Using sample Gamma.')
+            lai, z = distribute_lai_gamma(20.0, 5.0, 30)
+
             self.lai = lai  # LAI dist (cumulative)
             self.z   = z    # height above ground (layer bottoms; m)
 
@@ -131,11 +145,10 @@ class model:
         for varname in mi_cd_keys1:
             if not varname in mi:
                 print("\n`{:s}' not provided. Using default.".format(varname))
-                mi[varname] = cdd_default[varname]
-        
-        self.mean_leaf_angle = mi['mean_leaf_angle']
-        self.clump = mi['clump'][0]
-        self.green = mi['green']
+                # mi[varname] = cdd_default[varname]
+                v = cdd_default[varname] if varname != 'clump' else cdd_default[varname][0]
+                setattr(self, varname, v)
+
         
         #> spectral things
         #  includes: top-of-canopy BC, leaf reflectivity and trans., soil refl, 
@@ -155,8 +168,9 @@ class model:
             self.I_dr0_all, self.I_df0_all = mi['I_dr0'], mi['I_df0']
         except KeyError:
             # raise()
-            print('\nTop-of-canopy irradiance BC not provided.\nNoooo...')
+            print('\nTop-of-canopy irradiance BC not provided.\nLoading a sample.')
             # sys.exit()
+            _, _, self.I_dr0_all, self.I_df0_all = load_default_toc_spectra()
 
 
 
@@ -178,7 +192,15 @@ class model:
             print('\nSoil r not provided. Using default.')
             self.soil_r = soil_r_default
 
+        #
         #> build the dicts for input into schemes
+        #  the params in cnpy_descrip do not change with time (for now)
+        #
+
+        #self.orient = (1.0 / self.mean_leaf_angle - 0.0107) / 0.0066  # leaf orientation dist. parameter for leaf angle > 57 deg. (Wang and Jarvis 1988 eq. 2a)
+        self.orient = (np.deg2rad(self.mean_leaf_angle)/9.65)**(-1./1.65) - 3.  # inversion of Campbell (1990) eq. 16, valid for x < and > 1
+        assert(self.orient > 0)
+
         self.cnpy_descrip = dict(\
             lai=self.lai*self.clump,  # use effective LAI (*clump) for CRT model
             mean_leaf_angle=self.mean_leaf_angle,
@@ -186,6 +208,9 @@ class model:
             leaf_t=self.leaf_t, 
             leaf_r=self.leaf_r,
             soil_r=self.soil_r,
+            orient=self.orient,  # both should be moved to init
+            G_fn=self.G_fn,
+            K_b_fn=self.K_b_fn,
             )
 
 
@@ -194,10 +219,14 @@ class model:
         #  though could also save conversion factor to umol/m^2/s ?
         self.nwl = self.wl.size
         self.nlevs = self.lai.size
-        self.I_dr = np.zeros((self.nt, self.nlevs, self.nwl))  # direct irradiance
-        self.I_df_d = np.zeros_like(self.I_dr)  # downward diffuse irradiance
-        self.I_df_u = np.zeros_like(self.I_dr)
-        self.F = np.zeros_like(self.I_dr)  # actinic flux
+        # self.I_dr = np.zeros((self.nt, self.nlevs, self.nwl))  # direct irradiance
+        # self.I_df_d = np.zeros_like(self.I_dr)  # downward diffuse irradiance
+        # self.I_df_u = np.zeros_like(self.I_dr)
+        # self.F = np.zeros_like(self.I_dr)  # actinic flux
+        self.I_dr = np.zeros((self.nt, self.nlevs, self.nwl))  # < please pylint
+        self.I_df_d = np.zeros((self.nt, self.nlevs, self.nwl))
+        self.I_df_u = np.zeros((self.nt, self.nlevs, self.nwl))
+        self.F = np.zeros((self.nt, self.nlevs, self.nwl))
 
         
         #> inputs related to model output
@@ -237,18 +266,11 @@ class model:
             
             #> pre calculations
             #  
-            #self.orient = (1.0 / self.mean_leaf_angle - 0.0107) / 0.0066  # leaf orientation dist. parameter for leaf angle > 57 deg. (Wang and Jarvis 1988 eq. 2a)
-            self.orient = (np.deg2rad(self.mean_leaf_angle)/9.65)**(-1./1.65) - 3.  # inversion of Campbell (1990) eq. 16, valid for x < and > 1
-            assert(self.orient > 0)
             self.G = self.G_fn(self.psi)  # leaf angle dist factor
             self.K_b = self.G / self.mu  # black leaf extinction coeff for direct solar beam
-            # ^ should/could also incorporate clumping index for K_b
+            # ^ should?/could also incorporate clumping index for K_b
             #   could also use the class method
 
-            #> add to canopy descrip
-            self.cnpy_descrip.update(dict(\
-                orient=self.orient,  # both should be moved to init
-                G_fn=self.G_fn))
             
             #> build dict for input at time t_i
             self.cnpy_rad_state = dict(\
@@ -257,7 +279,6 @@ class model:
                 wl=self.wl, dwl=self.dwl,
                 psi=self.psi,
                 mu=self.mu,
-                K_b_fn=self.K_b_fn,
                 K_b=self.K_b,
                 I_dr_all=np.zeros_like(self.I_dr[self.it,:,:]),  # create empty arrays for solutions
                 I_df_d_all=np.zeros_like(self.I_dr[self.it,:,:]),
@@ -268,14 +289,21 @@ class model:
             #> run selected solver for all wavelengths
             #  currently cnpy_rad_state dict is modified by the solver
             #self.cnpy_rad_state = self.solve(self.cnpy_rad_state, self.cnpy_descrip)
-            self.solve(self.cnpy_rad_state, self.cnpy_descrip)
+            # self.solve(self.cnpy_rad_state, self.cnpy_descrip)
+            d = {**self.cnpy_rad_state, **self.cnpy_descrip}
+            args = {k:d[k] for k in self.solver_args}
+            I_dr_all, I_df_d_all, I_df_u_all, F_all = self.solve(**args)
 
             #> update history class attrs from values in cnpy_rad_state
-            self.I_dr[self.it,:,:] = self.cnpy_rad_state['I_dr_all']
-            self.I_df_d[self.it,:,:] = self.cnpy_rad_state['I_df_d_all']
-            self.I_df_u[self.it,:,:] = self.cnpy_rad_state['I_df_u_all']
-            self.F[self.it,:,:] = self.cnpy_rad_state['F_all']
-            
+            # self.I_dr[self.it,:,:] = self.cnpy_rad_state['I_dr_all']
+            # self.I_df_d[self.it,:,:] = self.cnpy_rad_state['I_df_d_all']
+            # self.I_df_u[self.it,:,:] = self.cnpy_rad_state['I_df_u_all']
+            # self.F[self.it,:,:] = self.cnpy_rad_state['F_all']
+            self.I_dr[self.it,:,:] = I_dr_all
+            self.I_df_d[self.it,:,:] = I_df_d_all
+            self.I_df_u[self.it,:,:] = I_df_u_all
+            self.F[self.it,:,:] = F_all
+
             if self.save_figs:  # figs for each time step
                 print('making them figs...')
                 self.figs_make_save()
@@ -319,8 +347,8 @@ class model:
 
         plt.close('all')
 
-        fig1, [ax1, ax2, ax3] = plt.subplots(1, 3, figsize=(9.5, 6), num='diffuse-vs-direct_{:s}'.format(ID),
-              gridspec_kw={'wspace':0.05, 'hspace':0})
+        _, [ax1, ax2, ax3] = plt.subplots(1, 3, figsize=(9.5, 6), num='diffuse-vs-direct_{:s}'.format(ID),
+            gridspec_kw={'wspace':0.05, 'hspace':0})
 
         ax1.plot(lai, z, '.-', ms=8)
         ax1.set_xlabel(r'cum. LAI (m$^2$ m$^{-2}$)')
@@ -387,8 +415,8 @@ class model:
         lai = self.lai
         
         info = ''  # info passed in at model init?
-        scheme_lname = self.scheme['longname']
-        scheme_sname = self.scheme['shortname']
+        scheme_lname = self.scheme['long_name']
+        scheme_sname = self.scheme['short_name']
         scheme_id = self.scheme_ID
         
         Idr = self.I_dr
@@ -400,21 +428,21 @@ class model:
         #> create dataset
         dset = xr.Dataset(\
             coords={'time': time,
-                    'z': ('z', z, {'units': 'm', 'longname': 'height above ground'}),
-                    'wl': ('wl', wl, {'units': 'um', 'longname': 'wavelength'}),
+                    'z': ('z', z, {'units': 'm', 'long_name': 'height above ground'}),
+                    'wl': ('wl', wl, {'units': 'um', 'long_name': 'wavelength'}),
                     },
             data_vars={\
-                'Idr':  (crds, Idr,  {'units': 'W m^-2', 'longname': 'direct beam solar irradiance'}),
-                'Idfd': (crds, Idfd, {'units': 'W m^-2', 'longname': 'downward diffuse solar irradiance'}),
-                'Idfu': (crds, Idfu, {'units': 'W m^-2', 'longname': 'upward diffuse solar irradiance'}),
-                'F':    (crds, F,    {'units': 'W m^-2', 'longname': 'actinic flux'}),
-                'dwl':  ('wl', dwl, {'units': 'um', 'longname': 'wavelength band width'}),
-                'sdt':  ('time', sdt, {'longname': 'datetime string'}),
-                'sza':  ('time', np.rad2deg(psi), {'units': 'deg.', 'longname': 'solar zenith angle'}),
-                'lai':  ('z', lai, {'units': 'm^2 m^-2', 'longname': 'leaf area index (cumulative)'})
+                'Idr':  (crds, Idr,  {'units': 'W m^-2', 'long_name': 'direct beam solar irradiance'}),
+                'Idfd': (crds, Idfd, {'units': 'W m^-2', 'long_name': 'downward diffuse solar irradiance'}),
+                'Idfu': (crds, Idfu, {'units': 'W m^-2', 'long_name': 'upward diffuse solar irradiance'}),
+                'F':    (crds, F,    {'units': 'W m^-2', 'long_name': 'actinic flux'}),
+                'dwl':  ('wl', dwl, {'units': 'um', 'long_name': 'wavelength band width'}),
+                'sdt':  ('time', sdt, {'long_name': 'datetime string'}),
+                'sza':  ('time', np.rad2deg(psi), {'units': 'deg.', 'long_name': 'solar zenith angle'}),
+                'lai':  ('z', lai, {'units': 'm^2 m^-2', 'long_name': 'leaf area index (cumulative)'})
                 },
             attrs={'save_id': self.save_id, 'info': info, 
-                   'scheme_id': scheme_id, 'scheme_longname': scheme_lname, 'scheme_shortname': scheme_sname,
+                   'scheme_id': scheme_id, 'scheme_long_name': scheme_lname, 'scheme_shortname': scheme_sname,
                    },
         )
         
