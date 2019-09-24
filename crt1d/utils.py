@@ -3,7 +3,6 @@
 import numpy as np
 
 from . import input_data_dir
-from .leaf_area_alloc import distribute_lai_from_cdd, distribute_lai_gamma
 
 
 def load_canopy_descrip(fname):

@@ -21,10 +21,10 @@ import xarray as xr
 
 from . import input_data_dir
 from .leaf_angle_dist import G_ellipsoidal, G_ellipsoidal_approx
-from .leaf_area_alloc import canopy_lai_dist
+from .leaf_area_alloc import canopy_lai_dist, \
+    distribute_lai_gamma, distribute_lai_beta, distribute_lai_from_cdd
 from .solvers import available_schemes  # also loaded in __init__.py
-from .utils import distribute_lai_gamma, distribute_lai_from_cdd, \
-    load_default_leaf_soil_props, load_default_toc_spectra, load_canopy_descrip
+from .utils import load_default_leaf_soil_props, load_default_toc_spectra, load_canopy_descrip
 
 
 
@@ -135,7 +135,8 @@ class model:
             # print('\nLAI vertical profile not provided. Using default (Borden 1995 late June).')
             # lai, z = distribute_lai_from_cdd(cdd_default, nlayers)
             print('\nLAI vertical profile not provided. Using sample Gamma.')
-            lai, z = distribute_lai_gamma(20.0, 5.0, 30)
+            # lai, z = distribute_lai_gamma(20.0, 5.0, self.nlayers)
+            lai, z = distribute_lai_beta(20.0, 5.0, self.nlayers)
 
             self.lai = lai  # LAI dist (cumulative)
             self.z   = z    # height above ground (layer bottoms; m)

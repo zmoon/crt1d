@@ -56,6 +56,8 @@ def solve_bf(*, psi,
     lai_tot = lai[0]
     assert(lai_tot == lai.max())
 
+    dlai = np.append(-(lai[1:]-lai[:-1]), 0)
+
 
     #> following variables in B&F.
     #  except I for irradiance, instead of the R B&F uses for...
@@ -124,7 +126,7 @@ def solve_bf(*, psi,
         
         #> ground-sfc reflectance term (upward)
         #  B&F eq. 11
-        # L_tot should correspond to index 0: `z[0]` is lowest level
+        #  L_tot should correspond to index 0: `z[0]` is lowest level
         I_sr = W * (I_dr0*A_sl[0] + I_df[0] + I_sc_d[0]) * np.exp(-k_d * (lai_tot-lai))
 
 
@@ -142,7 +144,7 @@ def solve_bf(*, psi,
 
         #> final downward and upward diffuse
         I_df_d = I_sc_d + I_df
-        I_df_u = I_sc_u + I_sr
+        I_df_u = I_sc_u + I_sr  # or I_sc_u[z=0] = or += I_sr?
         
         #> check that the absorbed matches what we would expect
         # I_a = I_sh_a + I_sl_a
@@ -150,14 +152,60 @@ def solve_bf(*, psi,
         # j = np.arange(1, lai.size)
         # jm1 = j - 1
         # I_sh_a_2 = (1-A_sl[j])*( I_df_d[j] - I_df_d[jm1] + I_df_u[jm1] - I_df_u[j] )
-        # I_sh_a_2 = ( I_df_d[j] - I_df_d[jm1] + I_df_u[jm1] - I_df_u[j] )
-        j = np.arange(0, lai.size-1)
-        jp1 = j + 1
-        I_sh_a_2 = (1-A_sl[j])*( I_df_d[jp1] - I_df_d[j] + I_df_u[j] - I_df_u[jp1] )
+        # j = np.arange(0, lai.size-1)
+        # jp1 = j + 1
+        # I_sh_a_2 = (1-A_sl[j])*( I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] )
+        # I_sl_a_2 =     A_sl[j]*( I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] + \
+        #                          I_dr[jp1]-I_dr[j] ) 
+        # I_sh_a_3 = (1-A_sl[j])*( I_df_d[jp1] + I_df_u[j] )
+        # I_sl_a_3 =     A_sl[j]*( I_df_d[jp1] + I_df_u[j] + I_dr[jp1]-I_dr[j] )
 
-        # print('1:', I_sh_a)
-        # print('2:', I_sh_a_2)
+        # I_a_2 = I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] + \
+        #         I_dr[jp1]-I_dr[j]
+
+
+        # print('1 sh:', I_sh_a)
+        # print('1 sh diff:', np.diff(I_sh_a))
+        # print('1 sh*dlai:', dlai*I_sh_a)
+        # print('2 sh:', I_sh_a_2)
+        # print('1 sl:', I_sl_a)
+        # print('1 sl diff:', np.diff(I_sl_a))
+        # print('1 sh*dlai:', dlai*I_sl_a)
+        # print('2 sl:', I_sl_a_2)
         # assert(np.allclose( I_sh_a[1:], I_sh_a_2 ))
+        # print('3 sh:', I_sh_a_3)
+
+        # print('sl abs prof:', A_sl*I_sl_a)  # < wrong, they already have A_sl factors
+        # print('sh abs prof:', (1-A_sl)*I_sh_a)
+        # print('abs prof:', (1-A_sl)*I_sh_a + A_sl*I_sl_a)
+
+        # print('incoming :', I_df0+I_dr0)
+        # print('upwelling:', I_df_u[-1])
+        # print('in-upwell:', I_df0+I_dr0-I_df_u[-1])
+        # print('in-upwell-grnd:', I_df0+I_dr0-I_df_u[-1]-I_sr[0]/W*(1-W))
+        # print('in-blwcnpy:', I_df0+I_dr0-(I_df_d[0]+I_dr[0]))
+        # print()
+        # print('leaf abs??:', (I_sh_a+I_sl_a).sum())
+        # print('leaf abs???:', ((I_sh_a+I_sl_a)*dlai).sum())
+        # print('leaf abs?:', ((I_sh_a+I_sl_a)*dlai).sum()*alpha)
+        # print('leaf abs?:', ((I_sh_a+I_sl_a)*dlai).sum()*(1-rho_c))
+        # print('leaf abs0:', (I_sh_a+I_sl_a)[0]*lai_tot)
+        # print('leaf abs1:', (k_b*(I_sh_a+I_sl_a)*dlai).sum())
+        # I_a_mid = (I_sh_a[:-1]+I_sl_a[:-1] + I_sh_a[1:]+I_sl_a[1:])/2
+        # print('leaf abs2:', (k_b*I_a_mid*dlai[:-1]).sum())
+        # print('leaf abs2:', )
+        # print('leaf abs3:',  (I_a_mid*dlai[:-1]).sum()*alpha)
+        # print('leaf abs4:', ((I_sh_a_2+I_sl_a_2)).sum())
+        # print('cnpy abs?:', (I_dr+I_df_d)[-1]-(I_dr+I_df_d)[0])
+        # print('leaf abs5:', ((I_sh_a_2+I_sl_a_2)*dlai[:-1]).sum())
+        # print('leaf abs5:', ((I_sh_a_2+I_sl_a_2)/dlai[:-1]).sum())
+        # print('leaf abs6:', ((I_sh_a_3+I_sl_a_3)).sum())
+        # print('leaf abs7', I_a_2.sum())
+        # print()
+        # print('appar. grnd abs:', I_df_d[0]+I_dr[0]-I_df_u[0])
+        # print('BF grnd abs:', I_sr[0]/W*(1-W))
+        # print()
+        # print()
 
         #> save
         I_dr_all[:,i] = I_dr

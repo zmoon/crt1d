@@ -15,7 +15,7 @@ import numpy as np
 import scipy.integrate as si
 #from scipy.interpolate import interp1d
 import scipy.optimize as so
-from scipy.stats import gamma
+from scipy.stats import gamma, beta
 
 
 
@@ -304,8 +304,9 @@ def distribute_lai_from_cdd(cdd, n):
 
 
 
+# needs work!
 def distribute_lai_gamma(h_c, LAI, n):
-    """Create LAI profile using Gamma distribution.
+    """Create LAI profile using Gamma distribution for leaf area density.
 
     Inputs
     ------
@@ -345,6 +346,34 @@ def distribute_lai_gamma(h_c, LAI, n):
     lai[-1] = 0
     lai[1:-1] = lai_cum_pct*LAI
     lai[0] = LAI
+
+    return lai, z
+
+
+def distribute_lai_beta(h_c, LAI, n):
+    """Create LAI profile using beta distribution for leaf area density.
+
+    """
+    h_max_lad = 0.7*h_c
+    d_max_lad = h_c - h_max_lad
+
+    # mode is (a-1)/(a+b-2)
+    d = d_max_lad/h_c  # relative depth = desired mode
+    b = 3
+    a = -((b-2)*d + 1)/(d-1)
+
+    #lad = np.zeros((n, ))
+    lai = np.zeros((n, ))
+    z   = np.zeros((n, ))
+
+    dist = beta(a, b)
+
+    lai_cum_pct = np.linspace(1.0, 0, n)
+    # beta pdf is confined to [0, 1] unlike Gamma
+
+    z = h_c*(1-dist.ppf(lai_cum_pct))
+
+    lai = lai_cum_pct*LAI
 
     return lai, z
 
