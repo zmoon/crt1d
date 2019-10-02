@@ -31,7 +31,6 @@ def load_canopy_descrip(fname):
  
     return d
     
-    
 
 
 def load_default_leaf_soil_props():
@@ -100,8 +99,8 @@ def load_default_toc_spectra():
     # use only the region where we have leaf data
     wl    = wl[leaf_data_wls]
     dwl   = dwl[leaf_data_wls]
-    I_dr0 = I_dr0[leaf_data_wls][np.newaxis,:]  # expects multiple cases
-    I_df0 = I_df0[leaf_data_wls][np.newaxis,:]
+    I_dr0 = I_dr0[leaf_data_wls] #[np.newaxis,:]  # expects multiple cases
+    I_df0 = I_df0[leaf_data_wls] #[np.newaxis,:]
 
     return wl, dwl, I_dr0, I_df0
 
