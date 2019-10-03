@@ -33,6 +33,10 @@ def tau_df_fn(K_b_fn, lai_val):
     return 2 * si.quad(f, 0, np.pi/2, epsrel=1e-9)[0]
 
 
+# TODO: mu version of tau_df and tau_b (or mu/psi choice as input)
+# should also do for G
+# and G integral fn (like in Gu-Barr)
+
 # class Solver():
 #     """Class to call specified solver with necessary arguments 
 #     and loop over wavelengths??.

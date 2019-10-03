@@ -133,4 +133,13 @@ def solve_gd(*, psi,
         F_all[:,i] = I_dr/mu + 2*I_df_u + 2*I_df_d
 
 
-    return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    return dict(\
+        I_dr = I_dr_all, 
+        I_df_d = I_df_d_all, 
+        I_df_u = I_df_u_all, 
+        F = F_all,
+        aI_sl = I_sl_a,
+        aI_sh = I_sh_a,
+        aI = I_sl_a + I_sh_a,
+        )

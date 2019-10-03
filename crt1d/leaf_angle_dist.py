@@ -53,6 +53,10 @@ def G_ellipsoidal_approx(psi, x):
     return K * np.cos(psi)  # K = G / cos(psi)
 
 
+# TODO: mu version of G fns
+
+# TODO: g (leaf angle dist) functions as well as G
+
 
 def orient_to_mean_leaf_angle(orient):
     pass

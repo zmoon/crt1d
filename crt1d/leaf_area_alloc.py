@@ -6,7 +6,6 @@ and desired number of model layers,
 allocate equal increments of dlai to layers,
 and assign heights (z; m) to give the desired leaf area profile.
 
-In future may add gamma distribution version.
 """
 
 
@@ -16,7 +15,7 @@ import scipy.integrate as si
 #from scipy.interpolate import interp1d
 import scipy.optimize as so
 from scipy.stats import gamma, beta
-
+# TODO: move to standard scipy imports
 
 
 
@@ -350,7 +349,7 @@ def distribute_lai_gamma(h_c, LAI, n):
     return lai, z
 
 
-def distribute_lai_beta(h_c, LAI, n):
+def distribute_lai_beta(h_c, LAI, n, h_min=0.5):
     """Create LAI profile using beta distribution for leaf area density.
 
     """
@@ -371,12 +370,15 @@ def distribute_lai_beta(h_c, LAI, n):
     lai_cum_pct = np.linspace(1.0, 0, n)
     # beta pdf is confined to [0, 1] unlike Gamma
 
-    z = h_c*(1-dist.ppf(lai_cum_pct))
+    z = (h_c-h_min)*(1-dist.ppf(lai_cum_pct)) + h_min
+    # TODO: fix the h_min stuff to be consistent with h_max_lad
 
     lai = lai_cum_pct*LAI
 
     return lai, z
 
+
+# TODO: multi-story beta dist
 
 
 if __name__ == '__main__':

@@ -9,12 +9,25 @@ __email__ = "zlm1@psu.edu"
 #spectral_lib = get_spectra()
 
 from .solvers import available_schemes
-# print('scheme IDs available: {:s}'.format(' '.join([as_['ID'] for as_ in available_schemes])))
-print('scheme IDs available: ' + ', '.join(available_schemes.keys() ))
+# print( ))
 
 import os
 crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))
 input_data_dir = '{:s}/data'.format(crt1d_base_dir)
-print('looking for necessary model input data in\n    {:s}'.format(input_data_dir))
+# print()
 
 from .crt1d import model
+
+# print('test')
+
+sconfig = f"""
+scheme IDs available: {', '.join(available_schemes.keys())}
+crt1d base dir
+  {crt1d_base_dir}
+looking for input data for provided cases in
+  {input_data_dir}
+""".strip()
+
+#@property
+def config():
+    print(sconfig)

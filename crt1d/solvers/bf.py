@@ -5,7 +5,7 @@ short_name = 'BF'
 long_name = 'Bodin & Franklin improved Goudriaan'
 
 def solve_bf(*, psi,
-    I_dr0_all, I_df0_all, wl, dwl,
+    I_dr0_all, I_df0_all, #wl, dwl,
     lai,
     leaf_t, leaf_r, green, soil_r, 
     K_b_fn, 
@@ -28,36 +28,12 @@ def solve_bf(*, psi,
 
     """
 
-    #
-    #> Get canopy description and radiation parameters that we need
-    #
-    #L = cnpy_descrip['L']  # total LAI
-    # lai = cnpy_descrip['lai']  # (cumulative) LAI profile
-    # #mean_leaf_angle = cnpy_descrip['mean_leaf_angle']  # (deg.)
-    # #orient = cnpy_descrip['orient']
-    # #G_fn = cnpy_descrip['G_fn']
-    # green = cnpy_descrip['green']  # canopy green-ness factor
-    # leaf_t = cnpy_descrip['leaf_t']
-    # leaf_r = cnpy_descrip['leaf_r']
-    # soil_r = cnpy_descrip['soil_r']
-
-    # I_dr0_all = cnpy_rad_state['I_dr0_all']
-    # I_df0_all = cnpy_rad_state['I_df0_all']
-    # #psi = cnpy_rad_state['psi']
-    # mu = cnpy_rad_state['mu']
-    # K_b = cnpy_rad_state['K_b']
-    # #K_b_fn = cnpy_rad_state['K_b_fn']
-    # wl = cnpy_rad_state['wl']
-    # dwl = cnpy_rad_state['dwl']
-
-
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
     lai_tot = lai[0]
     assert(lai_tot == lai.max())
 
-    dlai = np.append(-(lai[1:]-lai[:-1]), 0)
-
+    # dlai = np.append(-(lai[1:]-lai[:-1]), 0)
 
     #> following variables in B&F.
     #  except I for irradiance, instead of the R B&F uses for...
@@ -65,30 +41,28 @@ def solve_bf(*, psi,
     k_b = K_b  # direct beam attenuation coeff
     
     #> allocate arrays in which to save the solutions for each band
-    # I_dr_all = np.zeros((lai.size, wl.size))
-    # I_df_d_all = np.zeros_like(I_dr_all)
-    # I_df_u_all = np.zeros_like(I_dr_all)
-    # F_all = np.zeros_like(I_dr_all)
-    s = (lai.size, wl.size)  # to make pylint shut up until it supports _like()
+    nbands = I_dr0_all.size
+    nz = lai.size
+    s = (nz, nbands)  # to make pylint shut up until it supports _like()
     I_dr_all   = np.zeros(s)
     I_df_d_all = np.zeros(s)
     I_df_u_all = np.zeros(s)
     F_all      = np.zeros(s)
 
-    for i, band_width in enumerate(dwl):  # run for each band individually
+    for i in range(nbands):  # run for each band individually
 
         #> calculate top-of-canopy irradiance present in the band
-        I_dr0 = I_dr0_all[i] * band_width  # W / m^2
-        I_df0 = I_df0_all[i] * band_width
+        I_dr0 = I_dr0_all[i] # W / m^2
+        I_df0 = I_df0_all[i]
 
-        #> relevant properties for the band (using values at waveband LHS)
+        #> relevant properties for the band (using values at waveband center)
         r_l = leaf_r[i]
         t_l = leaf_t[i]
         W = soil_r[i]  # ground-sfc albedo, assume equal to soil reflectivity
         sigma = green * (r_l + t_l)
         alpha = 1 - sigma  # absorbed by leaf
         k_prime = np.sqrt(alpha)  # bulk attenuation coeff for a leaf; Moneith & Unsworth eq. 4.16
-        #K = K_b * k_prime  # approx extinction coeff for non-black leaves; ref Moneith & Unsworth p. 120
+        # K = K_b * k_prime  # approx extinction coeff for non-black leaves; ref Moneith & Unsworth p. 120
     
         #> (total) canopy reflectance
         #  Spitters (1986) eq. 1, based on Goudriaan 1977
@@ -146,67 +120,6 @@ def solve_bf(*, psi,
         I_df_d = I_sc_d + I_df
         I_df_u = I_sc_u + I_sr  # or I_sc_u[z=0] = or += I_sr?
         
-        #> check that the absorbed matches what we would expect
-        # I_a = I_sh_a + I_sl_a
-        # I_a2 = I_dr[]
-        # j = np.arange(1, lai.size)
-        # jm1 = j - 1
-        # I_sh_a_2 = (1-A_sl[j])*( I_df_d[j] - I_df_d[jm1] + I_df_u[jm1] - I_df_u[j] )
-        # j = np.arange(0, lai.size-1)
-        # jp1 = j + 1
-        # I_sh_a_2 = (1-A_sl[j])*( I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] )
-        # I_sl_a_2 =     A_sl[j]*( I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] + \
-        #                          I_dr[jp1]-I_dr[j] ) 
-        # I_sh_a_3 = (1-A_sl[j])*( I_df_d[jp1] + I_df_u[j] )
-        # I_sl_a_3 =     A_sl[j]*( I_df_d[jp1] + I_df_u[j] + I_dr[jp1]-I_dr[j] )
-
-        # I_a_2 = I_df_d[jp1]-I_df_d[j] + I_df_u[j]-I_df_u[jp1] + \
-        #         I_dr[jp1]-I_dr[j]
-
-
-        # print('1 sh:', I_sh_a)
-        # print('1 sh diff:', np.diff(I_sh_a))
-        # print('1 sh*dlai:', dlai*I_sh_a)
-        # print('2 sh:', I_sh_a_2)
-        # print('1 sl:', I_sl_a)
-        # print('1 sl diff:', np.diff(I_sl_a))
-        # print('1 sh*dlai:', dlai*I_sl_a)
-        # print('2 sl:', I_sl_a_2)
-        # assert(np.allclose( I_sh_a[1:], I_sh_a_2 ))
-        # print('3 sh:', I_sh_a_3)
-
-        # print('sl abs prof:', A_sl*I_sl_a)  # < wrong, they already have A_sl factors
-        # print('sh abs prof:', (1-A_sl)*I_sh_a)
-        # print('abs prof:', (1-A_sl)*I_sh_a + A_sl*I_sl_a)
-
-        # print('incoming :', I_df0+I_dr0)
-        # print('upwelling:', I_df_u[-1])
-        # print('in-upwell:', I_df0+I_dr0-I_df_u[-1])
-        # print('in-upwell-grnd:', I_df0+I_dr0-I_df_u[-1]-I_sr[0]/W*(1-W))
-        # print('in-blwcnpy:', I_df0+I_dr0-(I_df_d[0]+I_dr[0]))
-        # print()
-        # print('leaf abs??:', (I_sh_a+I_sl_a).sum())
-        # print('leaf abs???:', ((I_sh_a+I_sl_a)*dlai).sum())
-        # print('leaf abs?:', ((I_sh_a+I_sl_a)*dlai).sum()*alpha)
-        # print('leaf abs?:', ((I_sh_a+I_sl_a)*dlai).sum()*(1-rho_c))
-        # print('leaf abs0:', (I_sh_a+I_sl_a)[0]*lai_tot)
-        # print('leaf abs1:', (k_b*(I_sh_a+I_sl_a)*dlai).sum())
-        # I_a_mid = (I_sh_a[:-1]+I_sl_a[:-1] + I_sh_a[1:]+I_sl_a[1:])/2
-        # print('leaf abs2:', (k_b*I_a_mid*dlai[:-1]).sum())
-        # print('leaf abs2:', )
-        # print('leaf abs3:',  (I_a_mid*dlai[:-1]).sum()*alpha)
-        # print('leaf abs4:', ((I_sh_a_2+I_sl_a_2)).sum())
-        # print('cnpy abs?:', (I_dr+I_df_d)[-1]-(I_dr+I_df_d)[0])
-        # print('leaf abs5:', ((I_sh_a_2+I_sl_a_2)*dlai[:-1]).sum())
-        # print('leaf abs5:', ((I_sh_a_2+I_sl_a_2)/dlai[:-1]).sum())
-        # print('leaf abs6:', ((I_sh_a_3+I_sl_a_3)).sum())
-        # print('leaf abs7', I_a_2.sum())
-        # print()
-        # print('appar. grnd abs:', I_df_d[0]+I_dr[0]-I_df_u[0])
-        # print('BF grnd abs:', I_sr[0]/W*(1-W))
-        # print()
-        # print()
-
         #> save
         I_dr_all[:,i] = I_dr
         I_df_d_all[:,i] = I_df_d
@@ -214,4 +127,13 @@ def solve_bf(*, psi,
         F_all[:,i] = I_dr/mu + 2*I_df_u + 2*I_df_d
 
 
-    return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    return dict(\
+        I_dr = I_dr_all, 
+        I_df_d = I_df_d_all, 
+        I_df_u = I_df_u_all, 
+        F = F_all,
+        aI_sl = I_sl_a,
+        aI_sh = I_sh_a,
+        aI = I_sl_a + I_sh_a,
+        )

@@ -8,6 +8,7 @@ from copy import deepcopy
 # import os
 # this_dir = os.path.dirname(os.path.realpath(__file__))
 import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +27,8 @@ from .leaf_angle_dist import G_ellipsoidal, G_ellipsoidal_approx
 from .leaf_area_alloc import (\
     distribute_lai_gamma, distribute_lai_beta, distribute_lai_from_cdd )
 from .solvers import ( available_schemes,  # also loaded in __init__.py
-    calc_leaf_absorption )
+    res_keys_all_schemes )
+from .diagnostics import ( calc_leaf_absorption, )
 # from .utils import load_default_leaf_soil_props, load_default_toc_spectra, load_canopy_descrip
 
 
@@ -147,7 +149,7 @@ class model:
 
 
 
-    def assign_scheme(self, scheme_ID, verbose=True):
+    def assign_scheme(self, scheme_ID, verbose=False):
         """Using the available_schemes dict, 
         assign scheme and necessary scheme attrs
         """
@@ -190,6 +192,8 @@ class model:
 
         lai = cd['lai']
         z   = cd['z']
+        dz = np.diff(z)
+        zm = z[:-1] + 0.5*dz  # midpts
         assert( z.size == lai.size )
         self.nlev = lai.size
         assert( z[-1] > z[0] )  # z increasing
@@ -198,8 +202,10 @@ class model:
         cd['lai_tot'] = lai[0]
         cd['lai_eff'] = lai*cd['clump']
         cd['dlai'] = lai[:-1] - lai[1:]
+        cd['zm'] = zm  # z for dlai, layer centers
+        cd['dz'] = dz
 
-        # check mla and orient/x similar to psi/mu
+        # check mla and orient/x, similar to psi/mu
 
         psi = crs['psi']  # precendence to psi
         try:
@@ -213,7 +219,8 @@ class model:
         wl_toc = crs['wl']          # for the toc spectra
         wl_op  = cd['wl_leafsoil']  # for optical properties
         if not np.allclose( wl_toc, wl_op ):
-            print('wl for optical props and toc BC appear to be incompatible')
+            # print('wl for optical props and toc BC appear to be incompatible')
+            warnings.warn('wl for optical props and toc BC appear to be incompatible')
             # or could convert, but which to choose as base?
         self.nwl = wl_toc.size
 
@@ -234,7 +241,7 @@ class model:
     #     """ go to next time step (if necessary) """
 
 
-    def run(self):
+    def run(self, extra_solver_kwargs={}):
         """ 
         TODO: could add verbose option
         """
@@ -255,20 +262,28 @@ class model:
         #  since the solvers are for now written to be fully modular,
         #  the dict must be updated manually  
         #
-        d = {**self.cnpy_rad_state, **self.cnpy_descrip}
+        d = {**self.cnpy_rad_state, **self.cnpy_descrip, **extra_solver_kwargs}
         args = {k:d[k] for k in self.solver_args}
 
-        I_dr, I_df_d, I_df_u, F = self.solve(**args)
+        # I_dr, I_df_d, I_df_u, F = self.solve(**args)
 
-        self.cnpy_rad_state.update(dict(\
-            I_dr=I_dr, I_df_d=I_df_d, I_df_u=I_df_u, F=F,
-            ))
+        # self.cnpy_rad_state.update(dict(\
+        #     I_dr=I_dr, I_df_d=I_df_d, I_df_u=I_df_u, F=F,
+        #     ))
+
+        sol = self.solve(**args)
+
+        self.cnpy_rad_state.update(sol)
+
+        self.extra_solver_results = {k: v for k, v in sol.items() 
+            if k not in res_keys_all_schemes}
 
 
         #> calculate absorption
-        self.cnpy_rad_state.update(\
-            calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
-            )
+        # self.cnpy_rad_state.update(\
+        #     calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
+        #     )
+        self.absorption = calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
 
 
         # if self.save_figs:  # figs for each time step
@@ -367,8 +382,7 @@ class model:
         lai = self.cnpy_descrip['lai']
         dlai = self.cnpy_descrip['dlai']
         z = self.cnpy_descrip['z']  # at lai values (layer interfaces)
-        dz = np.diff(z)
-        zm = z[:-1] + 0.5*dz  # midpts
+        zm = self.cnpy_descrip['zm']
 
         wl = self.cnpy_rad_state['wl']        
         dwl = self.cnpy_rad_state['dwl']
@@ -401,32 +415,52 @@ class model:
         lai_units = dict(units='m^2 leaf m^-2')
 
         #> data vars for absorption (many)
-        aI_suffs = ['', '_sl', '_sh', '_PAR']
-        aI_lns   = ['absorbed irradiance', 'absorbed irradiance by sunlit leaves',
-            'absorbed irradiance by shaded leaves', 
-            'absorbed PAR irradiance',
-            ]
+        # aI_suffs = ['', '_sl', '_sh', '_PAR']
+        # aI_lns   = ['absorbed irradiance', 'absorbed irradiance by sunlit leaves',
+        #     'absorbed irradiance by shaded leaves', 
+        #     'absorbed PAR irradiance',
+        #     ]
         aI_data_vars = {}
-        for s in aI_suffs:
-            k = f'aI{s}'
-            if 'sl' in k:
+        # for s in aI_suffs:
+        #     k = f'aI{s}'
+        for k, v in self.absorption.items():
+            if '_sl' in k:
                 by = ' by sunlit leaves'
-            elif 'sh' in k:
+            elif '_sh' in k:
                 by = ' by shaded leaves'
             else:
                 by = ''
-            if 'PAR' in k:  # need to fix
+            if any(w in k for w in ['_PAR', '_solar']):  # need to fix
                 band = 'PAR '
-                crds_ = ['zm']
+                if 'aI' in k:
+                    crds_ = ['zm']
+                else:
+                    crds_ = ['z']
             else:
                 band = ''
-                crds_ = crds2
-            lni = f'absorbed {band}irradiance{by}'
-            v = self.cnpy_rad_state[k]
+                if k[0] == 'a':
+                    crds_ = crds2
+                else:
+                    crds_ = crds
+            if '_dr' in k:
+                dfdr = 'direct '
+            elif '_df_u' in k:
+                dfdr = 'upward diffuse '
+            elif '_df_d' in k:
+                dfdr = 'downward diffuse '
+            else:
+                dfdr = ''
+            if k[0] == 'a':
+                absorbed = 'absorbed '
+            else:
+                absorbed = ''
+            lni = f'{absorbed}{dfdr}{band}irradiance{by}'
+            # v = self.cnpy_rad_state[k]
             aI_data_vars[k] = (crds_, v, 
                 {**E_units, ln: lni,}
                 )
-        print(aI_data_vars)
+        # print(aI_data_vars)
+        
         
 
         dset = xr.Dataset(\
@@ -436,10 +470,11 @@ class model:
                     'zm': ('zm', zm, {**z_units, ln: 'layer midpoint height'})
                     },
             data_vars={\
-                'Idr':  (crds, Idr,  {**E_units, ln: 'direct beam solar irradiance'}),
-                'Idfd': (crds, Idfd, {**E_units, ln: 'downward diffuse solar irradiance'}),
-                'Idfu': (crds, Idfu, {**E_units, ln: 'upward diffuse solar irradiance'}),
-                'F':    (crds, F,    {**E_units, ln: 'actinic flux'}),
+                'I_dr':  (crds, Idr,  {**E_units, ln: 'direct beam irradiance (binned)'}),
+                'I_df_d': (crds, Idfd, {**E_units, ln: 'downward diffuse irradiance (binned)'}),
+                'I_df_u': (crds, Idfu, {**E_units, ln: 'upward diffuse irradiance (binned)'}),
+                'F':    (crds, F,    {**E_units, ln: 'actinic flux (binned)'}),
+                'I_d':  (crds, Idr+Idfd,  {**E_units, ln: 'downward irradiance (binned)'}),
                 'dwl':  ('wl', dwl,  {**wl_units, ln: 'wavelength band width'}),
                 # 'sdt':  ('time', sdt, {'long_name': 'datetime string'}),
                 # 'sza':  ('time', sza, {'units': 'deg.', 'long_name': 'solar zenith angle'}),
@@ -464,8 +499,91 @@ class model:
         # ofname = '{:s}/{:s}.nc'.format(self.save_dir, self.save_id)
         # dset.to_netcdf(ofname)
         return dset
+
+    def plot_canopy(self):
+        _plot_canopy(self)
         
         
+
+def _plot_canopy(m):
+    """Plot LAI and LAD profiles.
+    
+    m must be model obj
+    """
+    cd = m.cd
+    lai = cd['lai']
+    z = cd['z']
+    dlai = cd['dlai']
+    zm = cd['zm']
+    dz = cd['dz']
+
+    mla = cd['mean_leaf_angle']
+
+    figname = f'{m.save_id}_{m.scheme_ID}'
+    fig, [ax1, ax2, ax3] = plt.subplots(1, 3, sharey=True, num=figname)
+
+    fmt = '.-'
+
+    ax1.plot(lai, z, fmt)
+    ax1.set_title('cumulative LAI')
+    ax1.set_ylabel('height in canopy (m)')
+
+    ax2.plot(dlai, zm, fmt)
+    ax2.set_title('LAI in layer')
+
+    ax3.plot(dlai/dz, zm, fmt)
+    ax3.set_title('LAD')
+
+    for ax in [ax1, ax2, ax3]:
+        ax.grid(True)
+
+    fig.tight_layout()
+    
+
+
+def _plot_spectral(m):
+    """Plot the spectral leaf and soil properties.
+
+    """
+    return
+
+
+def plot_PAR(dsets=[]):
+    """Plot PAR comparison for set dsets."""
+    if not isinstance(dsets, list):
+        print('dsets must be provided as list')
+        return
+
+    varnames = [\
+        ['aI_PAR', 'I_df_d_PAR', 'I_df_u_PAR'],
+        ['I_dr_PAR']
+    ]  # rows, cols
+
+    nrows = len(varnames)
+    ncols = len(varnames[0])
+
+    fig, axs = plt.subplots(nrows, ncols, 
+        sharey=True, figsize=(ncols*3, nrows*3))
+
+
+    vns = [vn for row in varnames for vn in row ]
+    for i, vn in enumerate(vns):
+        ax = axs.flat[i]
+        for dset in dsets:
+            da = dset[vn]
+            y  = da.dims[0]
+            da.plot(y=y, ax=ax, 
+                label=dset.attrs['scheme_long_name'], marker='.')
+    
+    for ax in axs.flat:
+        ax.grid(True)
+
+    # axs.flat[-1].legend()
+    # axs.flat[0].legend()
+    h, l = axs.flat[0].get_legend_handles_labels()
+    fig.legend(handles=h, loc='lower right')
+
+    fig.tight_layout()
 
 
 def run_cases(m0, cases):
