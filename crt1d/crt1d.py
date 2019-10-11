@@ -23,8 +23,8 @@ import xarray as xr
 
 from . import input_data_dir
 from .cases import load_default_case
-from .leaf_angle_dist import G_ellipsoidal, G_ellipsoidal_approx
-from .leaf_area_alloc import (\
+from .leaf_angle import G_ellipsoidal, G_ellipsoidal_approx
+from .leaf_area import (\
     distribute_lai_gamma, distribute_lai_beta, distribute_lai_from_cdd )
 from .solvers import ( available_schemes,  # also loaded in __init__.py
     res_keys_all_schemes )
@@ -241,7 +241,8 @@ class model:
     #     """ go to next time step (if necessary) """
 
 
-    def run(self, extra_solver_kwargs={}):
+    def run(self, extra_solver_kwargs={},
+        band_names_to_calc=['PAR', 'solar']):
         """ 
         TODO: could add verbose option
         """
@@ -275,7 +276,7 @@ class model:
 
         self.cnpy_rad_state.update(sol)
 
-        self.extra_solver_results = {k: v for k, v in sol.items() 
+        self.extra_solver_results = {f'{k}_scheme': v for k, v in sol.items() 
             if k not in res_keys_all_schemes}
 
 
@@ -283,7 +284,12 @@ class model:
         # self.cnpy_rad_state.update(\
         #     calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
         #     )
-        self.absorption = calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
+        self.absorption = calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state, 
+            # band_names_to_calc=['PAR', 'solar'],
+            # band_names_to_calc=[],
+            # band_names_to_calc='all',
+            band_names_to_calc=band_names_to_calc,
+            )
 
 
         # if self.save_figs:  # figs for each time step
@@ -424,15 +430,25 @@ class model:
         # for s in aI_suffs:
         #     k = f'aI{s}'
         for k, v in self.absorption.items():
+            if 'I' in k:
+                baseq = 'irradiance'
+                units = E_units
+            elif 'PFD' in k:
+                baseq = 'PFD'
+                units = pf_units
+            else:
+                baseq = ''
             if '_sl' in k:
                 by = ' by sunlit leaves'
             elif '_sh' in k:
                 by = ' by shaded leaves'
             else:
                 by = ''
-            if any(w in k for w in ['_PAR', '_solar']):  # need to fix
-                band = 'PAR '
-                if 'aI' in k:
+            if any(w in k for w in ['_PAR', '_solar', '_NIR', '_UV']):  # need to fix
+                bn = k.split('_')[-1]
+                band = f'{bn} '
+                # if 'aI' in k:
+                if k[0] == 'a':
                     crds_ = ['zm']
                 else:
                     crds_ = ['z']
@@ -454,10 +470,10 @@ class model:
                 absorbed = 'absorbed '
             else:
                 absorbed = ''
-            lni = f'{absorbed}{dfdr}{band}irradiance{by}'
+            lni = f'{absorbed}{dfdr}{band}{baseq}{by}'
             # v = self.cnpy_rad_state[k]
             aI_data_vars[k] = (crds_, v, 
-                {**E_units, ln: lni,}
+                {**units, ln: lni,}
                 )
         # print(aI_data_vars)
         
@@ -494,7 +510,8 @@ class model:
                    },
         )
         # TODO: add crt1d version?
-        
+        # TODO: many of these attrs should be data_vars even though 0-D
+
         #> save dataset
         # ofname = '{:s}/{:s}.nc'.format(self.save_dir, self.save_id)
         # dset.to_netcdf(ofname)
@@ -519,22 +536,41 @@ def _plot_canopy(m):
 
     mla = cd['mean_leaf_angle']
 
+
+    if np.allclose(dlai, dlai[0]):
+        plot_dlai = False
+        ncols = 2
+        figsize = (4.2, 3.2)
+    else:
+        plot_dlai = True
+        ncols = 3
+        figsize = (6, 3.2)
+
     figname = f'{m.save_id}_{m.scheme_ID}'
-    fig, [ax1, ax2, ax3] = plt.subplots(1, 3, sharey=True, num=figname)
+    fig, axs = plt.subplots(1, ncols, figsize=figsize,
+        sharey=True, num=figname)
 
     fmt = '.-'
+
+    ax1 = axs[0]
 
     ax1.plot(lai, z, fmt)
     ax1.set_title('cumulative LAI')
     ax1.set_ylabel('height in canopy (m)')
 
-    ax2.plot(dlai, zm, fmt)
-    ax2.set_title('LAI in layer')
+    if plot_dlai:
+        ax2 = axs[1]
+        ax2.plot(dlai, zm, fmt)
+        ax2.set_title('LAI in layer')
+        ax2.ticklabel_format(useOffset=False)
+        ax3 = axs[2]
+    else:
+        ax3 = axs[1]
 
     ax3.plot(dlai/dz, zm, fmt)
     ax3.set_title('LAD')
 
-    for ax in [ax1, ax2, ax3]:
+    for ax in axs:
         ax.grid(True)
 
     fig.tight_layout()
@@ -548,22 +584,25 @@ def _plot_spectral(m):
     return
 
 
-def plot_PAR(dsets=[]):
-    """Plot PAR comparison for set dsets."""
+
+def _plot_band(dsets, bn):
+    """Multi-panel plot of profiles for specified bandname
+    PAR or solar ...
+    """
     if not isinstance(dsets, list):
         print('dsets must be provided as list')
         return
 
     varnames = [\
-        ['aI_PAR', 'I_df_d_PAR', 'I_df_u_PAR'],
-        ['I_dr_PAR']
+        [f'aI_{bn}', f'aI_sl_{bn}', f'aI_sh_{bn}'],
+        [f'I_dr_{bn}', f'I_df_d_{bn}', f'I_df_u_{bn}']
     ]  # rows, cols
 
     nrows = len(varnames)
     ncols = len(varnames[0])
 
     fig, axs = plt.subplots(nrows, ncols, 
-        sharey=True, figsize=(ncols*3, nrows*3))
+        sharey=True, figsize=(ncols*2.4, nrows*3))
 
 
     vns = [vn for row in varnames for vn in row ]
@@ -578,12 +617,62 @@ def plot_PAR(dsets=[]):
     for ax in axs.flat:
         ax.grid(True)
 
+    legfs = 9
     # axs.flat[-1].legend()
     # axs.flat[0].legend()
-    h, l = axs.flat[0].get_legend_handles_labels()
-    fig.legend(handles=h, loc='lower right')
+    
+    h, _ = axs.flat[0].get_legend_handles_labels()
+    # fig.legend(handles=h, loc='right')
+    # fig.legend(handles=h, loc='upper right', bbox_to_anchor=(1.0, 0.))
+    # fig.legend(handles=h, loc='center', bbox_to_anchor=(1.0, 0.9))
+    fig.legend(handles=h, loc='lower left', bbox_to_anchor=(0.1, 0.13), fontsize=legfs)
 
     fig.tight_layout()
+
+
+def plot_PAR(dsets=[]):
+    """Plot PAR comparison for dsets."""
+    _plot_band(dsets, 'PAR')
+
+
+def plot_solar(dsets=[]):
+    _plot_band(dsets, 'solar')
+
+
+# def plot_E_closure_spectra():
+
+
+
+def create_E_closure_table(dsets=[]):
+    """ """
+    IDs = [ds.attrs['scheme_id'] for ds in dsets]
+    columns = ['incoming', 'outgoing (reflected)',
+        'soil absorbed', 'layerwise abs sum', 
+        'in-out-soil', 'canopy abs']
+    df = pd.DataFrame(index=IDs, columns=columns)
+
+    for i, ID in enumerate(IDs):
+        ds = dsets[i]
+        incoming = ds['I_d_solar'][-1].values
+        outgoing = ds['I_df_u_solar'][-1].values
+        transmitted = ds['I_d_solar'][0].values  # direct+diffuse
+        soil_refl = ds['I_df_u_solar'][0].values
+        soil_abs = transmitted - soil_refl
+        layer_abs_sum = ds['aI_solar'].sum().values
+        canopy_abs = ds['I_df_d_solar'][-1].values - outgoing + \
+            ds['I_dr_solar'][-1].values - ds['I_dr_solar'][0].values + \
+            - (ds['I_df_d_solar'][0].values - soil_refl)  # soil abs is down-up diffuse at last layer?
+        df.loc[ID,columns[0]] = incoming
+        df.loc[ID,columns[1]] = outgoing
+        df.loc[ID,columns[2]] = soil_abs
+        df.loc[ID,columns[3]] = layer_abs_sum
+        df.loc[ID,columns[4]] = incoming - outgoing - soil_abs
+        df.loc[ID,columns[5]] = canopy_abs
+
+
+    return df
+
+
 
 
 def run_cases(m0, cases):

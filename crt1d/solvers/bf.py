@@ -75,7 +75,8 @@ def solve_bf(*, psi,
         
         #> attenuation of incoming diffuse
         #  B&F eq. 1
-        I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai)
+        # I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai)
+        I_df = I_df0 * np.exp(-k_d*lai)
         
         #> attenuation of direct beam due to absorption and scattering
         #

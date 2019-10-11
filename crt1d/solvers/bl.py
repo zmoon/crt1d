@@ -63,7 +63,10 @@ def solve_bl(*, psi,
     tau_b = np.exp(-K_b * lai)
 
     #> transmission of hemispherical diffuse to each point in the LAI profile
-    tau_df = tau_df_fn(K_b_fn, lai)
+    # tau_df = tau_df_fn(K_b_fn, lai)
+    tau_df = np.zeros(lai.shape)
+    for i in range(lai.size):
+        tau_df[i] = tau_df_fn(K_b_fn, lai[i])
 
     #> allocate arrays in which to save the solutions for each band
     nbands = I_dr0_all.size
@@ -80,7 +83,7 @@ def solve_bl(*, psi,
     for i in range(nbands):
         
         # calculate top-of-canopy irradiance present in the band
-        I_dr0 = I_dr0_all[i] # W / m^2
+        I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
 
         # relevant properties for the band (using values at waveband LHS)
@@ -113,7 +116,7 @@ def solve_bl(*, psi,
         # save
         I_dr_all[:,i] = I_dr
         I_df_d_all[:,i] = I_df
-        I_df_u_all[:,i] = I_df  # assume u and d equiv for now...
+        I_df_u_all[:,i] = 0 #I_df  # < don't technically have a good expression for upward diffuse currently
         # I_df_u_all[:,i] = 0.5*I_df_dr  # 
         F_all[:,i] = I_dr / mu + 2 * I_df  # actinic flux (upward + downward hemisphere components)
         # ^ upward diffuse (which is not good currently) here doesn't contribute to F
@@ -125,4 +128,3 @@ def solve_bl(*, psi,
         I_df_u = I_df_u_all, 
         F = F_all
         )
-

@@ -2,9 +2,9 @@
 import numpy as np
 
 from . import input_data_dir
-from .leaf_angle_dist import ( G_ellipsoidal_approx, 
+from .leaf_angle import ( G_ellipsoidal_approx, 
     mean_leaf_angle_to_orient, )
-from .leaf_area_alloc import ( distribute_lai_from_cdd, 
+from .leaf_area import ( distribute_lai_from_cdd, 
     distribute_lai_beta )
 # from .utils import ( load_canopy_descrip, load_default_leaf_soil_props, 
 #     load_default_toc_spectra )

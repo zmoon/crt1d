@@ -32,6 +32,8 @@ def tau_df_fn(K_b_fn, lai_val):
     f = lambda psi_: tau_b(psi_, lai_val) * np.sin(psi_) * np.cos(psi_)
     return 2 * si.quad(f, 0, np.pi/2, epsrel=1e-9)[0]
 
+# TODO: vectorize tau_df_fn
+
 
 # TODO: mu version of tau_df and tau_b (or mu/psi choice as input)
 # should also do for G

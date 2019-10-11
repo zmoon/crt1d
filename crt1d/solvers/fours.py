@@ -8,7 +8,7 @@ short_name = '4s'
 long_name = 'four-stream'
 
 def solve_4s(*, psi,
-    I_dr0_all, I_df0_all, wl, dwl,
+    I_dr0_all, I_df0_all, #wl, dwl,
     lai,
     leaf_t, leaf_r, green, soil_r, 
     K_b_fn, G_fn, 
@@ -43,28 +43,6 @@ def solve_4s(*, psi,
 
 
     """
-
-    #
-    #> Get canopy description and radiation parameters that we need
-    #
-    #L = cnpy_descrip['L']  # total LAI
-    # lai = cnpy_descrip['lai']  # (cumulative) LAI profile
-    # #mean_leaf_angle = cnpy_descrip['mean_leaf_angle']  # (deg.)
-    # #orient = cnpy_descrip['orient']
-    # G_fn = cnpy_descrip['G_fn']
-    # green = cnpy_descrip['green']  # canopy green-ness factor
-    # leaf_t = cnpy_descrip['leaf_t']
-    # leaf_r = cnpy_descrip['leaf_r']
-    # soil_r = cnpy_descrip['soil_r']
-
-    # I_dr0_all = cnpy_rad_state['I_dr0_all']
-    # I_df0_all = cnpy_rad_state['I_df0_all']
-    # psi = cnpy_rad_state['psi']
-    # mu = cnpy_rad_state['mu']
-    # K_b = cnpy_rad_state['K_b']
-    # #K_b_fn = cnpy_rad_state['K_b_fn']
-    # wl = cnpy_rad_state['wl']
-    # dwl = cnpy_rad_state['dwl']
 
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
@@ -176,24 +154,22 @@ def solve_4s(*, psi,
 
 
     #> allocate arrays in which to save the solutions for each band
-    # I_dr_all = np.zeros((lai.size, wl.size))
-    # I_df_d_all = np.zeros_like(I_dr_all)
-    # I_df_u_all = np.zeros_like(I_dr_all)
-    # F_all = np.zeros_like(I_dr_all)
-    s = (lai.size, wl.size)  # to make pylint shut up until it supports _like()
+    nbands = I_dr0_all.size
+    nz = lai.size
+    s = (nz, nbands)  # to make pylint shut up until it supports _like()
     I_dr_all   = np.zeros(s)
     I_df_d_all = np.zeros(s)
     I_df_u_all = np.zeros(s)
     F_all      = np.zeros(s)
 
-    for i, band_width in enumerate(dwl):  # run for each band individually
+    for i in range(nbands):  # run for each band individually
 
     #    if i > 20:
     #        break
 
         # calculate top-of-canopy irradiance present in the band
-        I_dr0 = I_dr0_all[i] * band_width  # W / m^2
-        I_df0 = I_df0_all[i] * band_width
+        I_dr0 = I_dr0_all[i]  # W / m^2
+        I_df0 = I_df0_all[i]
 
         # convert to radiance, called "intensity" in the paper (Tian et al. 2007)
         #   ref for the conversion: Madronich 1987
@@ -313,4 +289,10 @@ def solve_4s(*, psi,
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
-    return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    return dict(\
+        I_dr = I_dr_all, 
+        I_df_d = I_df_d_all, 
+        I_df_u = I_df_u_all, 
+        F = F_all
+        )

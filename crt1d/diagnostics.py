@@ -5,19 +5,20 @@ Calculations from the CRT solutions
 import numpy as np
 from .solvers import res_keys_all_schemes
 
-def e_to_photon(E, wl_um):
-    """Energy flux (W/m^2) to photon flux (umol photon / m^2 / s) ?
+def E_to_PFD(E, wl_um):
+    """Energy flux (W/m^2) to photon flux (umol photon / m^2 / s)
     """
-    h = 6.626e-34
-    c = 3.0e8
-    N_A = 6.022e23
+    h = 6.626e-34  # J s
+    c = 3.0e8  # m/s
+    N_A = 6.022e23  # #/mol
 
-    wl = wl_um * 1e-6  # um -> m
+    wl = wl_um[np.newaxis,:] * 1e-6  # um -> m
     
-    e_wl_1 = h*c/wl
-    e_wl_mol = e_wl_1 * N_A
+    e_wl_1 = h*c/wl  # J (per one photon)
+    e_wl_mol = e_wl_1 * N_A  # J/mol
+    e_wl_umol = e_wl_mol * 1e-6  # J/mol -> J/umol
 
-    return e_wl_mol * 1e6  # mol -> umol
+    return E/e_wl_umol  
 
 
 # TODO: maybe want to create and return as xr.Dataset instead
@@ -28,6 +29,9 @@ def calc_leaf_absorption(cd, crs,
     
     for the state (one time/case)
     """
+
+    if band_names_to_calc == 'all':
+        band_names_to_calc = ['PAR', 'solar', 'NIR', 'UV']
 
     lai = cd['lai']
     dlai = cd['dlai']
@@ -45,6 +49,13 @@ def calc_leaf_absorption(cd, crs,
     I_df_d = crs['I_df_d']
     I_df_u = crs['I_df_u']
     I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
+
+    try:
+        wl_l = crs['wl_l']
+        wl_r = crs['wl_r']
+    except KeyError:
+        wl_l = wl  # just use the wavelength we have for defining the bands
+        wl_r = wl
 
     f_sl_interfaces = np.exp(-K_b*lai)  # fraction of sunlit
     f_sl = f_sl_interfaces[:-1] + 0.5*np.diff(f_sl_interfaces)
@@ -78,11 +89,19 @@ def calc_leaf_absorption(cd, crs,
     a_sh = a_df_sh
     assert( np.allclose(a_sl+a_sh, a) )
 
+    #> photon flux density
+    a_pfd = E_to_PFD(a, wl)
+
+
     #> absorbance in specific bands
-    isPAR = (wl >= 0.4) & (wl <= 0.7)
-    isNIR = (wl >= 0.7) & (wl <= 2.5)
-    isUV  = (wl >= 0.01) & (wl <= 0.4)
-    issolar = (wl >= 0.3) & (wl <= 5.0)
+    # isPAR = (wl >= 0.4) & (wl <= 0.7)
+    # isNIR = (wl >= 0.7) & (wl <= 2.5)
+    # isUV  = (wl >= 0.01) & (wl <= 0.4)
+    # issolar = (wl >= 0.3) & (wl <= 5.0)
+    isPAR = (wl_l >= 0.4) & (wl_r <= 0.7)
+    isNIR = (wl_l >= 0.7) & (wl_r <= 2.5)
+    isUV  = (wl_l >= 0.01) & (wl_r <= 0.4)
+    issolar = (wl_l >= 0.3) & (wl_r <= 5.0)
     # also should have the edges somewhere
     # and read from that to make these
     # TODO: strictly should use left and right band definitions to do this,
@@ -122,10 +141,18 @@ def calc_leaf_absorption(cd, crs,
     for i, bn in enumerate(band_names_to_calc):
         isband = bands[bn]
 
-        res_int.update({
-            f'{k}_{bn}': v[:,isband].sum(axis=1)
-                 for k, v in to_int.items()
-        })
+        # res_int.update({
+        #     f'{k}_{bn}': v[:,isband].sum(axis=1),
+        #          for k, v in to_int.items()
+        # })
+
+        for k, v in to_int.items():
+            k_int = f'{k}_{bn}'
+            res_int[k_int] = v[:,isband].sum(axis=1)
+            new_base = k.replace('I', 'PFD')  # don't want to replace NIR though!
+            k_int_pfd = f'{new_base}_{bn}'
+            # print(k, E_to_PFD(v[:,isband], wl[isband]).shape)
+            res_int[k_int_pfd] = E_to_PFD(v[:,isband], wl[isband]).sum(axis=1)
 
 
     # res = {
