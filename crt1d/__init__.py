@@ -7,7 +7,7 @@ import os
 crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))
 input_data_dir = '{:s}/data'.format(crt1d_base_dir)
 
-from .model import model
+from .model import Model
 from .solvers import available_schemes
 from . import _version
 

@@ -2,6 +2,7 @@
 -e ../
 # sphinx
 sphinx
+sphinx-rtd-theme
 nbsphinx
 # to run examples as notebooks
 jupytext

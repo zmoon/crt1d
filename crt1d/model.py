@@ -1,6 +1,6 @@
 """
-
-
+This module contains the model class, which can be used to conveniently solve CRT
+using different solvers.
 """
 
 from __future__ import print_function, division
@@ -56,14 +56,14 @@ from .diagnostics import ( calc_leaf_absorption, )
 
 
 
-class model:
+class Model:
     """A general class for testing 1-D canopy radiative transfer schemes.
 
     Optional keyword arguments are used to create the cnpy_descrip and initial cnpy_rad_state
     dicts that will be passed to the solvers. If not provided, defaults are used. 
 
-    Initialization arguments
-    ------------------------
+    Parameters
+    ----------
     scheme_ID : str
         identifier for the radiation transfer model to use
     psi : float
@@ -89,7 +89,7 @@ class model:
 
     """
 
-    required_input_keys = (\
+    required_input_keys = (
         'lai', 'z',
         'mean_leaf_angle', 
         'green', 
@@ -102,7 +102,10 @@ class model:
         'I_dr0_all', 'I_df0_all',  # spectral (W/m^2/um)
         'wl', 'dwl',  # for the toc spectra
         'psi', 
-        )
+    )
+    """
+    Required inputs
+    """
 
     def __init__(self, scheme_ID='2s', nlayers=60,
                  save_dir= './', save_ID='blah', 
@@ -150,7 +153,7 @@ class model:
 
 
     def assign_scheme(self, scheme_ID, verbose=False):
-        """Using the available_schemes dict, 
+        """Using the :const:`.solvers.available_schemes` dict, 
         assign scheme and necessary scheme attrs
         """
         self._schemes = available_schemes
@@ -185,7 +188,7 @@ class model:
 
         # check for required input all at once variables
         cdcrs = {**cd, **crs}
-        for key in model.required_input_keys:
+        for key in Model.required_input_keys:
             if key not in cdcrs:
                 print(f'required key {key} is not present in the cnpy_* dicts')
 
@@ -644,7 +647,17 @@ def plot_solar(dsets=[]):
 
 
 def create_E_closure_table(dsets=[]):
-    """ """
+    """
+    For `dsets`, assess energy balance closure by comparing
+    computed canopy and soil absorption to incoming minus outgoing
+    radiation at the top of the canopy.
+
+    Parameters
+    ----------
+    dsets : list(xarray.Dataset)
+        computed using :func:`to_xr`
+
+    """
     IDs = [ds.attrs['scheme_id'] for ds in dsets]
     columns = ['incoming', 'outgoing (reflected)',
         'soil absorbed', 'layerwise abs sum', 
