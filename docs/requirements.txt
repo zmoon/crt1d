@@ -1,0 +1,8 @@
+# the package as an editable install
+-e ../
+# sphinx
+sphinx
+nbsphinx
+# to run examples as notebooks
+jupytext
+notebook
