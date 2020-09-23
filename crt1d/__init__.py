@@ -1,25 +1,27 @@
-#!/usr/bin/env python3
-__author__ = "Z Moon"
-__copyright__ = ""
-__version__ = ""
-__license__ = "GPLv3"
-__email__ = "zlm1@psu.edu"
+"""
+1-D canopy radiative transfer
+"""
+import os
+
+# directories TODO: use pathlib
+crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))
+input_data_dir = '{:s}/data'.format(crt1d_base_dir)
+
+from .model import model
+from .solvers import available_schemes
+from . import _version
+
+# set version
+try:
+    __version__ = _version.version
+except PackageNotFoundError:
+    # package is probably not installed
+   pass
 
 #from .spectral_library import get_spectra
 #spectral_lib = get_spectra()
 
-from .solvers import available_schemes
-# print( ))
-
-import os
-crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))
-input_data_dir = '{:s}/data'.format(crt1d_base_dir)
-# print()
-
-from .crt1d import model
-
-# print('test')
-
+# config summary
 sconfig = f"""
 scheme IDs available: {', '.join(available_schemes.keys())}
 crt1d base dir
