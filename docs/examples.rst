@@ -2,6 +2,11 @@ Examples
 ========
 
 
+Tests
+-----
+
+Notebooks that I use to test the code...
+
 .. toctree::
    :maxdepth: 1
    
