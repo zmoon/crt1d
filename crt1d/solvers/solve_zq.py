@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.sparse.linalg import spsolve  # used for Z&Q model only (so far)
 
@@ -27,11 +26,9 @@ def solve_zq(*, psi,
     higher number generally better
 
     """
-
     dlai = np.diff(lai)
     mu = np.cos(psi)
     K_b = K_b_fn(psi)
-
 
     # backward scattering functions
     def r_psi_fn(bl, tl, psi=psi):

@@ -1,6 +1,3 @@
-
-# "fours" because module name can't start with number
-
 import numpy as np
 import scipy.integrate as si
 
@@ -14,19 +11,19 @@ def solve_4s(*, psi,
     K_b_fn, G_fn, 
     mu_s=0.501
     ):
-    """4-stream from Tian et al. (2007) (featuring Dickinson)
+    """4-stream from Tian et al. (2007) (featuring Dickinson).
 
-    all eq./p. references in the code are to Tian et al. 2007 unless otherwise noted
+    All eq./p. references in the code are to Tian et al. 2007 unless otherwise noted.
 
-    note that the authors use I for radiance, and F for irradiance (or actinic flux?)
-    to be consistent with the other model codes I am using
-        I for irradiance
-        R for radiance
-        F for actinic flux
+    Note that the authors use I for radiance, and F for irradiance (or actinic flux?).
+    To be consistent with the other model codes, I am using
 
-    Model parameters
-    ----------------
-    see descriptions in solve_bl
+    * I for irradiance
+    
+    * R for radiance
+
+    * F for actinic flux
+
 
     mu_s: 
         Cosine of the dividing angle theta_s for the two beams: mu_s = cos(theta_s)
@@ -40,7 +37,6 @@ def solve_4s(*, psi,
 
         For 4-stream to provide benefits, the two beams should be diff angles from the vertical.
         (and I'm pretty sure that they are: technically one is zenith angle 0, the other at an angle to the zenith)
-
 
     """
 

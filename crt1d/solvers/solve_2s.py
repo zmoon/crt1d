@@ -1,6 +1,3 @@
-
-# "twos" because module name can't start with number
-
 import numpy as np
 import scipy.integrate as si
 import scipy.optimize as so
@@ -15,26 +12,14 @@ def solve_2s(*, psi,
     K_b_fn, G_fn, 
     mean_leaf_angle, 
     ):
-    """Dickinson-Sellers 2-stream solution
+    """Dickinson-Sellers 2-stream solution,
+    the most common scheme used in regional/climate models.
 
-    Most common scheme used in regional/climate models.
-
-    Following Sellers (1983) and Dickinson (1985)
-        mainly Dickinson -- variable names chosen to match his
-    and including correction in later Dickinson paper.
-    
-    Inputs
-    ------
-    see the descriptions in solve_bl
-
-    G_fn : G_fn(psi)
-        leaf angle dist factor
-        G = K_b * mu 
-    mean_leaf_angle : float
-        mean leaf inclination angle (deg.)
+    Implementation follows Sellers (1983) and Dickinson (1985)
+    (mainly Dickinson -- variable names chosen to match his)
+    and includes the minor correction from the later Dickinson paper.
 
     """
-
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
     theta_bar = np.deg2rad(mean_leaf_angle)  # mean leaf inclination angle; eq. 3
