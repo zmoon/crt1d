@@ -1,8 +1,10 @@
+# fmt: off
 import numpy as np
-from scipy.sparse.linalg import spsolve
 from scipy.sparse import dia_matrix
+from scipy.sparse.linalg import spsolve
 
-from .common import tau_b_fn, tau_df_fn
+from .common import tau_b_fn
+from .common import tau_df_fn
 
 short_name = 'ZQ'
 long_name = 'Zhao & Qualls multi-scattering'
@@ -10,7 +12,7 @@ long_name = 'Zhao & Qualls multi-scattering'
 def solve_zq(*, psi,
     I_dr0_all, I_df0_all, #wl, dwl,
     lai,
-    leaf_t, leaf_r, green, soil_r, 
+    leaf_t, leaf_r, green, soil_r,
     K_b_fn, G_fn,
     ):
     """Zhao & Qualls model (feat. multiple-scattering correction).
@@ -222,9 +224,9 @@ def solve_zq(*, psi,
 
 
     return dict(
-        I_dr = I_dr_all, 
-        I_df_d = I_df_d_all, 
-        I_df_u = I_df_u_all, 
+        I_dr = I_dr_all,
+        I_df_d = I_df_d_all,
+        I_df_u = I_df_u_all,
         F = F_all,
         I_df_d_ss = I_df_d_ss_all,
         I_df_u_ss = I_df_u_ss_all,
