@@ -13,13 +13,9 @@ def solve_zq(*, psi,
     leaf_t, leaf_r, green, soil_r, 
     K_b_fn, G_fn,
     ):
-    """Zhao & Qualls model (feat. multiple-scattering correction)
+    """Zhao & Qualls model (feat. multiple-scattering correction).
 
-    All refs are to Zhao & Qualls (2005) unless otherwise noted
-
-    Parameters
-    ----------
-    see descriptions in solve_bl
+    All refs are to Zhao & Qualls (2005) unless otherwise noted.
 
     Notes
     -----
@@ -225,13 +221,12 @@ def solve_zq(*, psi,
         I_dr_all[:,i] = I_dr0 * np.exp(-K * lai)
 
 
-    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
-    return dict(\
+    return dict(
         I_dr = I_dr_all, 
-        I_df_d = I_df_d_ss_all,#I_df_d_all, 
-        I_df_u = I_df_u_ss_all,#I_df_u_all, 
+        I_df_d = I_df_d_all, 
+        I_df_u = I_df_u_all, 
         F = F_all,
         I_df_d_ss = I_df_d_ss_all,
         I_df_u_ss = I_df_u_ss_all,
         F_ss = F_ss_all
-        )
+    )

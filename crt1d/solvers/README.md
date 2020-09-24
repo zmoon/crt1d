@@ -1,7 +1,7 @@
 
 ## Adding new schemes
 
-Schemes should be added as *modules* with names of the form: `solve_{scheme_id}.py` (`scheme_id` will be extracted from the module name).
+Schemes should be added as *modules* with names of the form: `_solve_{scheme_id}.py` (`scheme_id` will be extracted from the module name).
 
 Schemes should define the following *module-level variables*:
 
@@ -10,7 +10,7 @@ Schemes should define the following *module-level variables*:
 
 :point_up: the names should be unique; 
 
-Scheme *modules* must contain a *function* with the same name as the module that:
+Scheme *modules* must contain a *function* with the same name as the module (but without the underscore) that:
 
 * takes keyword arguments (and only keyword arguments! so that order doesn't matter when passing args in; see which names can be used in the `solvers` module docstring)
 * returns a dict, including, but not limited to, the four required outputs (direct irradiance, downward/upward diffuse irradiance, actinic flux); see `solvers` module docstring for names)

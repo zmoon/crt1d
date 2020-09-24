@@ -33,9 +33,9 @@ import crt1d as crt
 # Run the default case (which is loaded automatically when model object is created).
 
 # %%
-schemes_to_test = ['bl', 'bf', 'gd', '2s', 'zq', '4s']
+# schemes_to_test = ['bl', 'bf', 'gd', '2s', 'zq', '4s']
 #schemes_to_test = ['2s']
-#schemes_to_test = ['bl', '2s', '4s', 'zq']
+schemes_to_test = ['bl', '2s', '4s', 'zq']
 #schemes_to_test = ['bl', '2s', '4s', 'bf']
 #schemes_to_test = ['2s', '4s']
 

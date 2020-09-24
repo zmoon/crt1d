@@ -36,8 +36,9 @@ crt1d.solvers._write_params_docs_snippets()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx_rtd_theme",
     "nbsphinx",
     "sphinxcontrib.bibtex",

@@ -7,6 +7,7 @@ See docs/solvers for descriptions of scheme input/output variables.
 # note: schemes don't require any code from this module to run standalone
 #       some require module common, all need leaf angle (K_b)
 
+# note that __all__ is currently modified below when loading the solvers
 __all__ = ['available_schemes', 'res_keys_all_schemes']
 
 from ..utils import cf_units_to_tex
@@ -125,11 +126,11 @@ def _write_params_docs_snippets():
 def _get_solver_module_names():
     from pathlib import Path
     solvers_dir = Path(__file__).parent
-    return list(p.stem for p in solvers_dir.glob("solve_*.py"))
+    return list(p.stem for p in solvers_dir.glob("_solve_*.py"))
 
 
 def _scheme_id_from_module_name(s):
-    return s[6:]
+    return s[7:]
 
 
 _solver_module_names = _get_solver_module_names()
@@ -184,5 +185,13 @@ def _construct_scheme_dicts():
                 scheme_dict['args'].remove(k)
 
 _construct_scheme_dicts()
+
+# add solver function to solvers module namespace
+for d in available_schemes.values():
+    solver = d["solver"]
+    solver_name = solver.__name__
+    globals().update({solver_name: solver})
+    # also to __all__
+    __all__.append(solver_name)
 
 
