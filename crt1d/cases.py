@@ -118,47 +118,6 @@ def load_default_toc_spectra():
     return wl, dwl, SI_dr0 * dwl, SI_df0 * dwl
 
 
-cnpy_descrip_keys = [
-    "lai",
-    "z",
-    "dlai",
-    "lai_tot",
-    "lai_eff",
-    "mean_leaf_angle",
-    "green",
-    "leaf_t",
-    "leaf_r",
-    "soil_r",
-    "wl_leafsoil",
-    "orient",  # don't really need both this and mla as input
-    "G_fn",
-    "K_b_fn",
-]
-
-cnpy_rad_state_input_keys = [
-    "I_dr0",
-    "I_df0",  # spectral ()
-    "wl",
-    "dwl",  # for the toc spectra
-    "psi",
-    "mu",
-    "K_b",
-]
-
-cnpy_rad_state_keys = cnpy_rad_state_input_keys + [
-    "I_dr",
-    "I_df_d",
-    "I_df_u",
-    "F",  # direct from schemes
-    "a_PAR",
-    "a_solar",
-    "a_UV",
-    "a_spectral",  # calculated (some schemes provide)
-    "a_PAR_sl",
-    "a_PAR_sh",  # ... median wl for energy and photon perspective, photon flux, ...
-]
-
-
 def load_default_case(nlayers):
     """Idealized beta leaf dist,"""
     h_c = 20.0
@@ -215,12 +174,3 @@ def load_Borden95_default_case(nlayers):
     """ """
     cdd_default = load_canopy_descrip(input_data_dir_str + "/" + "default_canopy_descrip.csv")
     lai, z = distribute_lai_from_cdd(cdd_default, nlayers)
-
-
-# if __name__ == '__main__':
-
-#     from .__init__ import input_data_dir_str
-
-#     cd, crs = load_default_case(10)
-#     print(cd)
-#     print(crs)

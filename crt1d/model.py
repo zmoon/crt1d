@@ -2,7 +2,9 @@
 This module contains the model class, which can be used to conveniently solve CRT
 using different solvers.
 """
+# from dataclasses import dataclass
 import warnings
+from collections import namedtuple
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -26,6 +28,48 @@ from .solvers import RET_KEYS_ALL_SCHEMES
 # mi_bc_keys = ['wl', 'dwl', 'I_dr0_all', 'I_df_all']  # top-of-canopy BC / incoming radiation
 # mi_rt_keys = ['leaf_r', 'leaf_t', 'soil_r']  # reflectivity and transmissivity
 # mi_keys = mi_pcd_keys + mi_cd_keys1 + mi_cd_keys2 + mi_bc_keys + mi_rt_keys
+
+
+CANOPY_DESCRIPTION_KEYS = [
+    "lai",
+    "z",
+    "dlai",
+    "lai_tot",
+    "lai_eff",
+    "mean_leaf_angle",
+    "green",
+    "leaf_t",
+    "leaf_r",
+    "soil_r",
+    "wl_leafsoil",
+    "orient",  # don't really need both this and mla as input
+    "G_fn",
+]
+CANOPY_RAD_STATE_INPUT_KEYS = [
+    "I_dr0",
+    "I_df0",  # spectral ()
+    "wl",
+    "dwl",  # for the toc spectra
+    "psi",
+    "mu",
+    "K_b",
+    "K_b_fn",
+]
+CANOPY_RAD_STATE_KEYS = CANOPY_RAD_STATE_INPUT_KEYS + [
+    "I_dr",
+    "I_df_d",
+    "I_df_u",
+    "F",  # direct from schemes
+    "a_PAR",
+    "a_solar",
+    "a_UV",
+    "a_spectral",  # calculated (some schemes provide)
+    "a_PAR_sl",
+    "a_PAR_sh",  # ... median wl for energy and photon perspective, photon flux, ...
+]
+
+
+CanopyDescription = namedtuple("CanopyDescription", " ".join(k for k in CANOPY_DESCRIPTION_KEYS))
 
 
 # class _cnpy_descrip(dict):

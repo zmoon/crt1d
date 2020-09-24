@@ -184,6 +184,7 @@ def _construct_scheme_dicts():
         fullargspec = inspect.getfullargspec(scheme_dict["solver"])
         # scheme_dict['args'] = fullargspec.args
         scheme_dict["args"] = fullargspec.kwonlyargs
+        # TODO: check that these match with expected
         # scheme_dict['args'] = [k for k in fullargspec.kwonlyargs if k not in fullargspec.kwonlydefaults]
         kwd = fullargspec.kwonlydefaults
         if kwd is not None:
