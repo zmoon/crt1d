@@ -17,6 +17,7 @@ dependencies:
   - sphinxcontrib-bibtex
   - myst-parser  # they recommend Conda install over Pip
   - pip:
-    sphinx-rtd-theme
+    - sphinx-rtd-theme
+    - '-e .'
   # dev tools
   - pylint
