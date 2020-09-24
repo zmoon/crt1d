@@ -1,53 +1,11 @@
 """
 These solvers are written as functions that can be called outside the model,
-by supplying the necessary arguments using the cnpy_rad_state and cnpy_descrip 
-dictionary inputs.
+by supplying the necessary keyword arguments.
 
-For now leaving all as looping over all available wavelengths.
-
-
-Required inputs
----------------
-psi : float
-    Solar zenith angle (SZA; radians)
-I_dr0_all, Idf0_all : np array (n_wl) 
-    direct and diffuse irradiances (W/m^2) at top of canopy
-    at all wavelengths
-    not spectral! (which would be W/m^2/um)
-wl, dwl : np array (n_wl)
-    wavelength band centers and bandwidths (m)
-    for the top-of-canopy irradiances and other spectral quantities
-    no longer needed
-lai : np array (n_z)
-    LAI profile
-    lai[0] = total LAI
-    lai[-1] = 0 (canopy-atmos interface layer)
-leaf_t, leaf_r : np array (n_wl)
-    leaf element spectral transmissivity and reflectivity (unitless)
-green : float
-    canopy green-ness factor (0, 1], to weight the leaf_t,_r
-K_b_fn : K_b_fn(psi) 
-    the function to be used to compute K_b
-    (depends on which leaf angle distribution is used
-        so must be passed)
-
-
-G_fn : G_fn(psi)
-    leaf angle dist factor
-    G = K_b * mu 
-mean_leaf_angle : float
-    mean leaf inclination angle (deg.)
-
-
-
-Returns
--------
-I_dr_all, I_df_d_all, I_df_u_all, F_all
-    direct, downward diffuse, upward diffuse, actinic flux 
-    (W/m^2, not W/m^2/m!)
-
-
-"""
+%(params)s
+""" 
+# hack module docstring
+__doc__ %= {"params": "hi there"}
 
 __all__ = ['available_schemes', 'res_keys_all_schemes']
 

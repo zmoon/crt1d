@@ -1,0 +1,133 @@
+# intput/output variable definitions for solvers
+# for docstring hacking
+#
+# variable_name
+#   type   (type info for docs)
+#   desc   (text description for docs)
+#   shape  (optional; tuple, will be added before text description to indicate array shape)
+#   units  (optional; CF-convention format)
+#   param  (optional, default false; whether a model tunable param or a true model input)
+
+aliases:
+  - &shape_z '(n_z)'
+  - &shape_wl '(n_wl)'
+  - &shape_z_wl '(n_z, n_wl)'
+
+
+in:
+  psi:
+    type: float
+    desc: :math:`\psi` is the solar zenith angle (SZA)
+    units: radians
+
+
+  I_dr0_all:
+    type: array_like
+    shape: *shape_wl
+    desc: >
+      Incoming (downwelling) *direct* irradiance(s) at the top of the canopy.
+
+      .. warning:: Not spectral, energy flux density in discrete band.
+
+    units: W m-2
+
+
+  I_df0_all:
+    type: array_like
+    shape: *shape_wl
+    desc: >
+      Incoming (downwelling) *diffuse* irradiance(s) at the top of the canopy.
+
+      .. warning:: Not spectral, energy flux density in discrete band.
+      
+    units: W m-2
+
+
+  # wl:
+  #   type: array_like
+  #   shape: *shape_wl
+
+
+  lai:
+    type: array_like
+    shape: *shape_z
+    desc: >
+      Leaf area index (LAI) profile.
+
+      Bottom to top:
+
+      * ``lai[0]``: total LAI
+
+      * ``lai[-1] = 0`` (canopy-atmos interface)
+
+    units: m2 m-2
+    units_long: (m2 leaf) (m2 ground area)-1
+
+  
+  leaf_t:
+    type: array_like
+    shape: *shape_wl
+    desc: Leaf element transmissivity.
+    units: 1
+
+
+  leaf_r:
+    type: array_like
+    shape: *shape_wl
+    desc: Leaf element reflectivity.
+    units: 1
+
+
+  K_b:
+    type: float
+    desc: :math:`K_b` is the direct beam extinction coefficient.
+    # units: TODO
+
+
+  K_b_fn:
+    type: function
+    desc: >
+      Function used to compute :math:`K_b` from beam angle (:math:`K_b = K_b(\psi)`).
+
+      It depends on the leaf angle distribution (function) used,
+      so it must be passed to the solvers.
+
+
+  G_fn:
+    type: function
+    desc: >
+      Function used to compute :math:`G` from beam angle (:math:`G = G(\psi)`).
+
+      :math:`G = K_b \mu = K_b \cos{\psi}`
+    # units: TODO
+
+  mla:
+    type: float
+    desc: Mean leaf (inclination) angle
+    units: deg
+
+out:
+  I_dr:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Direct irradiance.
+    units: W m-2
+
+  I_df_d:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Downward diffuse irradiance (hemispherical).
+    units: W m-2
+
+  I_df_u:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Upward diffuse irradiance (hemispherical).
+    units: W m-2
+
+  F:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Actinic flux (spherical).
+    units: W m-2
+
