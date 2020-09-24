@@ -2,7 +2,7 @@
 # for docstring hacking
 #
 # variable_name
-#   type   (type info for docs)
+#   type   (type info for docs in the NumPy style)
 #   desc   (text description for docs)
 #   shape  (optional; tuple, will be added before text description to indicate array shape)
 #   units  (optional; CF-convention format)
