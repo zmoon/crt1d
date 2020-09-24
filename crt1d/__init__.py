@@ -1,35 +1,38 @@
 """
 1-D canopy radiative transfer
 """
-import os
+from pathlib import Path as _Path
 
 # directories TODO: use pathlib
-crt1d_base_dir = os.path.dirname(os.path.realpath(__file__))
-input_data_dir = '{:s}/data'.format(crt1d_base_dir)
+BASE_DIR = _Path(__file__).parent
+DATA_BASE_DIR = BASE_DIR / "data"
 
+# include Model in pkg-level namespace
 from .model import Model
-from .solvers import available_schemes
-from . import _version
 
 # set version
+from . import _version
+
 try:
     __version__ = _version.version
 except PackageNotFoundError:
     # package is probably not installed
-   pass
+    pass
 
-#from .spectral_library import get_spectra
-#spectral_lib = get_spectra()
+# from .spectral_library import get_spectra
+# spectral_lib = get_spectra()
 
-# config summary
-sconfig = f"""
-scheme IDs available: {', '.join(available_schemes.keys())}
+
+def print_config():
+    """Print info about the schemes etc."""
+    from .solvers import AVAILABLE_SCHEMES
+
+    # config summary
+    sconfig = f"""
+scheme IDs available: {', '.join(AVAILABLE_SCHEMES.keys())}
 crt1d base dir
-  {crt1d_base_dir}
+    {BASE_DIR.as_posix():s}
 looking for input data for provided cases in
-  {input_data_dir}
-""".strip()
-
-#@property
-def config():
+    {DATA_BASE_DIR.as_posix():s}
+    """.strip()
     print(sconfig)

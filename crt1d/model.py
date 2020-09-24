@@ -2,37 +2,22 @@
 This module contains the model class, which can be used to conveniently solve CRT
 using different solvers.
 """
-
-from __future__ import print_function, division
-from copy import deepcopy
-# import os
-# this_dir = os.path.dirname(os.path.realpath(__file__))
-import sys
 import warnings
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-# import scipy.integrate as si
-#import scipy.io as sio
-#from scipy.interpolate import interp1d
-# import scipy.optimize as so
-# from scipy.sparse.linalg import spsolve  # for Z&Q model
-#from scipy.stats import gamma
 import xarray as xr
 
-from . import input_data_dir
 from .cases import load_default_case
-from .leaf_angle import G_ellipsoidal, G_ellipsoidal_approx
-from .leaf_area import (\
-    distribute_lai_gamma, distribute_lai_beta, distribute_lai_from_cdd )
-from .solvers import ( available_schemes,  # also loaded in __init__.py
-    res_keys_all_schemes )
-from .diagnostics import ( calc_leaf_absorption, )
-# from .utils import load_default_leaf_soil_props, load_default_toc_spectra, load_canopy_descrip
-
-
-
+from .diagnostics import (
+    calc_leaf_absorption,
+)
+from .leaf_angle import G_ellipsoidal
+from .leaf_angle import G_ellipsoidal_approx
+from .solvers import AVAILABLE_SCHEMES
+from .solvers import RET_KEYS_ALL_SCHEMES
 
 
 # mi_pcd_keys = []  # pre canopy description (used to create lai dist)
@@ -41,7 +26,6 @@ from .diagnostics import ( calc_leaf_absorption, )
 # mi_bc_keys = ['wl', 'dwl', 'I_dr0_all', 'I_df_all']  # top-of-canopy BC / incoming radiation
 # mi_rt_keys = ['leaf_r', 'leaf_t', 'soil_r']  # reflectivity and transmissivity
 # mi_keys = mi_pcd_keys + mi_cd_keys1 + mi_cd_keys2 + mi_bc_keys + mi_rt_keys
-
 
 
 # class _cnpy_descrip(dict):
@@ -53,492 +37,410 @@ from .diagnostics import ( calc_leaf_absorption, )
 #     pass
 
 
-
-
-
 class Model:
     """A general class for testing 1-D canopy radiative transfer schemes.
 
     Optional keyword arguments are used to create the cnpy_descrip and initial cnpy_rad_state
-    dicts that will be passed to the solvers. If not provided, defaults are used. 
-
-    Parameters
-    ----------
-    scheme_ID : str
-        identifier for the radiation transfer model to use
-    psi : float
-        solar zenith angle (radians)
-    nlayers : int
-        number of in-canopy layers to use in the solver
-    
-    mi : dict
-        model input dict (canopy description, top-of-canopy BC, leaf and soil scattering props)
-    dts : np.array or list
-        datetimes for each time step
-    nlayers : int
-        number of layers to use in the solver
-    
-    save_dir : str
-        where to save the output nc files
-    save_ID : str
-        basename for the output nc filename
-    save_figs : bool
-    write_output : bool
-    
-
-
+    dicts that will be used to pass info to the solvers. If not provided, defaults are used.
     """
 
+    #
     required_input_keys = (
-        'lai', 'z',
-        'mean_leaf_angle', 
-        'green', 
-        'leaf_t', 
-        'leaf_r',
-        'soil_r',
-        'wl_leafsoil', 
-        'orient',  # don't really need both this and mla as input
-        'G_fn',
-        'I_dr0_all', 'I_df0_all',  # spectral (W/m^2/um)
-        'wl', 'dwl',  # for the toc spectra
-        'psi', 
+        "lai",
+        "z",
+        "mean_leaf_angle",
+        "green",
+        "leaf_t",
+        "leaf_r",
+        "soil_r",
+        "wl_leafsoil",
+        "orient",  # don't really need both this and mla as input
+        "G_fn",
+        "I_dr0_all",
+        "I_df0_all",  # spectral (W/m^2/um)
+        "wl",
+        "dwl",  # for the toc spectra
+        "psi",
     )
     """
     Required inputs
     """
 
-    def __init__(self, scheme_ID='2s', nlayers=60,
-                 save_dir= './', save_ID='blah', 
-                 save_figs=False, write_output=False):
+    _schemes = AVAILABLE_SCHEMES
 
+    def __init__(
+        self,
+        scheme="2s",
+        nlayers=60,
+        # *,
+        # savd_id=None,
+    ):
+        """
+        Create a model instance based on the default setup.
 
-        #> load default case, for given nlayers
-        self.nlayers = nlayers 
-        self.cnpy_descrip_default, self.cnpy_rad_state_default = \
-            load_default_case(nlayers=self.nlayers)
+        Parameters
+        ----------
+        scheme : str
+            Identifier for the desired canopy radiative transfer scheme.
+        psi : float
+            Solar zenith angle (radians).
+        nlayers : int
+            Number of in-canopy layers to use in the solver (interface levels).
+        """
+        # load default case, for given nlayers
+        self.nlayers = nlayers
+        self.cnpy_desc_default, self.crs_default = load_default_case(nlayers=self.nlayers)
+        # initial settings based on default
+        self._cnpy_desc = deepcopy(self.cnpy_desc_default)
+        self._cnpy_rad_state = deepcopy(self.crs_default)
 
-        #> create the dicts from the defaults
-        #  these can be modified by the user
-        self.cnpy_descrip   = deepcopy(self.cnpy_descrip_default)
-        self.cnpy_rad_state = deepcopy(self.cnpy_rad_state_default)
+        # assign scheme
+        self.assign_scheme(scheme)
 
-        self.cd = self.cnpy_descrip
-        self.crs = self.cnpy_rad_state
-        # ^ aliases for easy checking
+        # check inputs
+        self._check_inputs()
 
-        # TODO: store last_state and runcount?
-        self.run_count = 0
+        # run/output variables
+        self._run_count = 0  # TODO: store last_state?
+        self.absorption = None  # initially no absorption data
 
-        #> check
-        self.check_inputs()
+    @property
+    def cd(self):
+        """Canopy description (intended to be read-only; modify using update_p)."""
+        return self._cnpy_desc
 
-        #> assign scheme
-        self.assign_scheme(scheme_ID)
+    @property
+    def crs(self):
+        """Canopy radiative state (intended to be read-only; modify using update_p)."""
+        return self._cnpy_rad_state
 
-        #> allocate arrays for the spectral profile solutions
-        #  all in units W/m^2
-        #  though could also save conversion factor to umol/m^2/s ?
-
-        # self.I_dr = np.zeros((self.nt, self.nlevs, self.nwl))  # < please pylint
-        # self.I_df_d = np.zeros((self.nt, self.nlevs, self.nwl))
-        # self.I_df_u = np.zeros((self.nt, self.nlevs, self.nwl))
-        # self.F = np.zeros((self.nt, self.nlevs, self.nwl))
-
-        #> inputs related to model output
-        self.save_dir = save_dir
-        self.save_id = save_ID
-        self.save_figs = save_figs
-        self.write_output = write_output
-
-
+    def __repr__(self):
+        return f"Model(scheme={self.scheme_ID})"
 
     def assign_scheme(self, scheme_ID, verbose=False):
-        """Using the :const:`.solvers.available_schemes` dict, 
+        """Using the :const:`.solvers.AVAILABLE_SCHEMES` dict,
         assign scheme and necessary scheme attrs
         """
-        self._schemes = available_schemes
+        self._schemes = AVAILABLE_SCHEMES
         # self._scheme_IDs = {d['ID']: d for d in self._schemes}
         self._scheme_IDs = list(self._schemes.keys())
         self.scheme_ID = scheme_ID
         try:
             self.scheme = self._schemes[self.scheme_ID]
-            self.solve = self.scheme['solver']
-            self.solver_args = self.scheme['args']
+            self.solve = self.scheme["solver"]
+            self.solver_args = self.scheme["args"]
             if verbose:
-                print('\n\n')
-                print('='*40)
-                print('scheme:', self.scheme_ID)
-                print('-'*40)
+                print("\n\n")
+                print("=" * 40)
+                print("scheme:", self.scheme_ID)
+                print("-" * 40)
         except KeyError:
-            print('{:s} is not a valid scheme ID!'.format(scheme_ID))
-            print('Defaulting to Dickinson-Sellers two-stream')
-            self.scheme = self._schemes['2s']
+            print(f"{scheme_ID:s} is not a valid scheme ID!")
+            print("Defaulting to Dickinson-Sellers two-stream")
+            self.scheme = self._schemes["2s"]
             # also could self.terminate() or yield error or set flag
 
+    def update_p(self, **kwargs):
+        """
+        Parameters
+        ----------
+        `**kwargs`
+            Used to update the model parameters.
+        """
+        for k, v in kwargs.items():
+            if k not in Model.required_input_keys:
+                warnings.warn(f"{k!r} is not intended as an input and will be ignored")
+                continue
+            # else, it is intended to be an input, so try to use it
+            if k in self.cd:
+                self._cnpy_desc[k] = v
+            if k in self.crs:
+                self._cnpy_rad_state[k] = v
 
-    def check_inputs(self):
+        # update other parameters/validate
+        self._check_inputs()
+
+    def _check_inputs(self):
         """
         Check input LAI profile and compute additional vars from it...,
         Check wls match optical props and toc spectra...
 
         update some class var (e.g. nlayers)
         """
-        crs = self.cnpy_rad_state
-        cd  = self.cnpy_descrip
+        crs = self._cnpy_rad_state
+        cd = self._cnpy_desc
 
         # check for required input all at once variables
         cdcrs = {**cd, **crs}
         for key in Model.required_input_keys:
             if key not in cdcrs:
-                print(f'required key {key} is not present in the cnpy_* dicts')
+                print(f"required key {key} is not present in the cnpy_* dicts")
 
-
-        lai = cd['lai']
-        z   = cd['z']
+        # lai profile
+        lai = cd["lai"]
+        z = cd["z"]
         dz = np.diff(z)
-        zm = z[:-1] + 0.5*dz  # midpts
-        assert( z.size == lai.size )
+        zm = z[:-1] + 0.5 * dz  # midpts
+        assert (
+            z.size == lai.size
+        )  # z values go with lai (the cumulative LAI profile; interface levels)
         self.nlev = lai.size
-        assert( z[-1] > z[0] )  # z increasing
-        assert( lai[0] > lai[-1] ) # LAI decreasing
-        assert( lai[-1] == 0 )
-        cd['lai_tot'] = lai[0]
-        cd['lai_eff'] = lai*cd['clump']
-        cd['dlai'] = lai[:-1] - lai[1:]
-        cd['zm'] = zm  # z for dlai, layer centers
-        cd['dz'] = dz
+        assert z[-1] > z[0]  # z increasing
+        assert lai[0] > lai[-1]  # LAI decreasing
+        assert lai[-1] == 0
+        cd["lai_tot"] = lai[0]
+        cd["lai_eff"] = lai * cd["clump"]
+        dlai = lai[:-1] - lai[1:]
+        assert dlai.sum() == lai[0]
+        cd["dlai"] = dlai
+        cd["dlai_eff"] = dlai * cd["clump"]
+        cd["zm"] = zm  # z for dlai, layer centers
+        cd["dz"] = dz
+        assert dlai.size == zm.size and zm.size == dz.size
 
-        # check mla and orient/x, similar to psi/mu
-
-        psi = crs['psi']  # precendence to psi
+        # solar zenith angle, giving precedence to psi if have both mu and psi already
+        psi = crs["psi"]
         try:
-            mu = crs['mu']
+            mu = crs["mu"]
             if mu != np.cos(psi):
-                print('provided mu not consistent with provided psi')
+                print("provided mu not consistent with provided psi")
         except KeyError:  # no mu
-            crs['mu'] = np.cos(psi)
+            crs["mu"] = np.cos(psi)
+
+        # TODO: check mla and orient/x, similar to psi/mu
 
         # check the two wl sources
-        wl_toc = crs['wl']          # for the toc spectra
-        wl_op  = cd['wl_leafsoil']  # for optical properties
-        if not np.allclose( wl_toc, wl_op ):
+        wl_toc = crs["wl"]  # for the toc spectra
+        wl_op = cd["wl_leafsoil"]  # for optical properties
+        assert wl_toc.size == wl_op.size
+        if not np.allclose(wl_toc, wl_op):
             # print('wl for optical props and toc BC appear to be incompatible')
-            warnings.warn('wl for optical props and toc BC appear to be incompatible')
+            warnings.warn(
+                "wl for optical props and toc BC appear to be incompatible:\n"
+                f"toc - op:\n{wl_toc-wl_op}"
+            )
             # or could convert, but which to choose as base?
-        self.nwl = wl_toc.size
+        self.nwl = wl_toc.size  # precedence to the toc spectra one as definition
 
         # G_fn and K_b_fn ?
         # crs['G_fn'] = cd['G_fn']
-        cd['K_b_fn'] = lambda psi_: cd['G_fn'](psi_)/np.cos(psi_)
-        crs['G']   = cd['G_fn'](psi)
-        crs['K_b'] = cd['K_b_fn'](psi)
+        cd["K_b_fn"] = lambda psi_: cd["G_fn"](psi_) / np.cos(psi_)
+        crs["G"] = cd["G_fn"](psi)
+        crs["K_b"] = cd["K_b_fn"](psi)
         # ^ should clumping index be included somewhere here?
-        
 
-        
-        
-        
-
-
-    # def advance(self):
-    #     """ go to next time step (if necessary) """
-
-
-    def run(self, extra_solver_kwargs={},
-        band_names_to_calc=['PAR', 'solar']):
-        """ 
+    def run(self, **extra_solver_kwargs):
+        """
         TODO: could add verbose option
         """
+        self._run_count += 1
 
-        self.run_count += 1
+        # check wavelengths are compatible etc.
+        # should already have been done at least once by now, but whatever
+        self._check_inputs()
 
-        # check wavelengths are compatbile, etc.
+        # construct dict of kwargs to pass to the solver
+        d = {**self.crs, **self.cd, **extra_solver_kwargs}
+        args = {k: d[k] for k in self.solver_args}
 
-        #> check inputs and fill out (other pre-calculations)
-        self.check_inputs()
-
-        # print('\n')
-        # print('-'*40)
-        # print('now running the model...\n')
-
-        #
-        #> run selected solver for all wavelengths
-        #  since the solvers are for now written to be fully modular,
-        #  the dict must be updated manually  
-        #
-        d = {**self.cnpy_rad_state, **self.cnpy_descrip, **extra_solver_kwargs}
-        args = {k:d[k] for k in self.solver_args}
-
-        # I_dr, I_df_d, I_df_u, F = self.solve(**args)
-
-        # self.cnpy_rad_state.update(dict(\
-        #     I_dr=I_dr, I_df_d=I_df_d, I_df_u=I_df_u, F=F,
-        #     ))
-
+        # run
         sol = self.solve(**args)
 
-        self.cnpy_rad_state.update(sol)
+        # use the dict returned by the solver to update our state
+        self._cnpy_rad_state.update(sol)
+        self.extra_solver_results = {
+            f"{k}_scheme": v for k, v in sol.items() if k not in RET_KEYS_ALL_SCHEMES
+        }
 
-        self.extra_solver_results = {f'{k}_scheme': v for k, v in sol.items() 
-            if k not in res_keys_all_schemes}
+        return self  # for chaining
 
+    def calc_absorption(self, *, bands="all"):
+        """Calculate layerwise absorption variables using routines in module diagnostics."""
+        if self._run_count == 0:
+            raise Exception("Must run the model first.")
 
-        #> calculate absorption
-        # self.cnpy_rad_state.update(\
-        #     calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state)
-        #     )
-        self.absorption = calc_leaf_absorption(self.cnpy_descrip, self.cnpy_rad_state, 
-            # band_names_to_calc=['PAR', 'solar'],
-            # band_names_to_calc=[],
-            # band_names_to_calc='all',
-            band_names_to_calc=band_names_to_calc,
-            )
+        absorption = calc_leaf_absorption(
+            self.cd,
+            self.crs,
+            band_names_to_calc=bands,
+        )
+        # update model attr
+        self.absorption = absorption
 
-
-        # if self.save_figs:  # figs for each time step
-        #     print('making them figs...')
-        #     self.figs_make_save()
-        
-        # #> write combined output file
-        # if self.write_output:
-        #     print('writing output...')
-        #     self.write_output_nc()
-
-        # end iteration through time
-
-
+        return self  # for chaining
 
     # def G_fn(self, psi):
-    #     """ 
-    #     for ellipsoidal leaf dist. could include choice of others... 
+    #     """
+    #     for ellipsoidal leaf dist. could include choice of others...
     #     """
     #     #return G_ellipsoidal(psi, self.orient)
     #     return G_ellipsoidal_approx(psi, self.orient)
-    
-    
+
     # def K_b_fn(self, psi):
     #     """
     #     """
     #     return self.G_fn(psi) / np.cos(psi)
 
-
-
-
-
-    # def figs_make_save(self):
-    #     """ """
-        
-    #     #> grab model class attrs
-    #     ID = self.scheme_ID
-    #     I_dr_all = self.I_dr[self.it,:,:]
-    #     I_df_d_all = self.I_df_d[self.it,:,:]
-    #     I_df_u_all = self.I_df_u[self.it,:,:]
-    #     lai = self.lai
-    #     z = self.z
-
-    #     plt.close('all')
-
-    #     _, [ax1, ax2, ax3] = plt.subplots(1, 3, figsize=(9.5, 6), num='diffuse-vs-direct_{:s}'.format(ID),
-    #         gridspec_kw={'wspace':0.05, 'hspace':0})
-
-    #     ax1.plot(lai, z, '.-', ms=8)
-    #     ax1.set_xlabel(r'cum. LAI (m$^2$ m$^{-2}$)')
-    #     ax1.set_ylabel('h (m)')
-
-    #     ax2.plot(I_dr_all.sum(axis=1), z, '.-', ms=8, label='direct')
-    #     ax2.plot(I_df_u_all.sum(axis=1), z, '.-', ms=8, label='upward diffuse')
-    #     ax2.plot(I_df_d_all.sum(axis=1), z, '.-', ms=8, label='downward diffuse')
-
-    #     ax2.set_xlabel(r'irradiance (W m$^{-2}$)')
-    #     ax2.yaxis.set_major_formatter(plt.NullFormatter())
-    #     ax2.legend()
-
-    #     ax3.plot(I_df_d_all.sum(axis=1) / (I_dr_all.sum(axis=1) + I_df_d_all.sum(axis=1)), z, '.-', ms=8)
-    #     ax3.set_xlabel('diffuse fraction')
-    #     ax3.yaxis.set_major_formatter(plt.NullFormatter())
-
-    #     for ax in [ax1, ax2, ax3]:
-    #         ax.set_xlim(left=0)
-    #         ax.set_ylim(bottom=0)
-    #         ax.grid(True)
-
-    #     ax1.set_title('scheme: {:s}'.format(self.scheme_ID))
-
-    #     ax2.set_xlim(right=1200)
-    #     ax2.set_title(str(pd.Timestamp(self.dts[self.it])))
-
-    #     ax3.set_xlim(right=1.03)
-
-    #     #> save all created figs and close them
-    #     for num in plt.get_fignums():
-    #         fig = plt.figure(num)
-    #         figname = '{:s}_{:s}_it{:d}'.format(fig.canvas.get_window_title(), self.save_id, self.it)
-    #         fig.savefig('{savedir:s}/{figname:s}.pdf'.format(savedir=self.save_dir, figname=figname),
-    #                     transparent=True,
-    #                     bbox_inches='tight', pad_inches=0.05,
-    #                     )
-
-    #         plt.close(fig)
-
-
-    def to_xr(self):
-        """
-        """
-        if self.run_count == 0:
-            print('must run first')
+    def to_xr(self, *, info=""):
+        """Construct an `xarray.Dataset`."""
+        if self._run_count == 0:
+            print("must run first")
             return
-        
-        lai = self.cnpy_descrip['lai']
-        dlai = self.cnpy_descrip['dlai']
-        z = self.cnpy_descrip['z']  # at lai values (layer interfaces)
-        zm = self.cnpy_descrip['zm']
 
-        wl = self.cnpy_rad_state['wl']        
-        dwl = self.cnpy_rad_state['dwl']
+        lai = self.cd["lai"]
+        dlai = self.cd["dlai"]
+        z = self.cd["z"]  # at lai values (layer interfaces)
+        zm = self.cd["zm"]
 
-        psi = self.cnpy_rad_state['psi']
-        mu  = self.cnpy_rad_state['mu']
+        wl = self.crs["wl"]
+        dwl = self.crs["dwl"]
+
+        psi = self.crs["psi"]
+        mu = self.crs["mu"]
         sza = np.rad2deg(psi)
-        G = self.cnpy_rad_state['G']
-        K_b = self.cnpy_rad_state['K_b']
-        
-        info = ''  # info passed in at model init?
-        scheme_lname = self.scheme['long_name']
-        scheme_sname = self.scheme['short_name']
-        scheme_id = self.scheme_ID
-        
-        Idr  = self.cnpy_rad_state['I_dr']
-        Idfd = self.cnpy_rad_state['I_df_d']
-        Idfu = self.cnpy_rad_state['I_df_u']
-        F    = self.cnpy_rad_state['F']
-        crds = ['z', 'wl']
-        crds2 = ['zm', 'wl']
-        
-        #> create dataset
-        ln = 'long_name'
-        z_units = dict(units='m')
-        wl_units = dict(units='um')
-        E_units = dict(units='W m^-2')  # E (energy flux) units
-        SE_units = dict(units='W m^-2 um^-1')  # spectral E units
-        pf_units = dict(units='umol photons m^-2 s^-1')  # photon flux units
-        lai_units = dict(units='m^2 leaf m^-2')
+        G = self.crs["G"]
+        K_b = self.crs["K_b"]
 
-        #> data vars for absorption (many)
-        # aI_suffs = ['', '_sl', '_sh', '_PAR']
-        # aI_lns   = ['absorbed irradiance', 'absorbed irradiance by sunlit leaves',
-        #     'absorbed irradiance by shaded leaves', 
-        #     'absorbed PAR irradiance',
-        #     ]
-        aI_data_vars = {}
-        # for s in aI_suffs:
-        #     k = f'aI{s}'
-        for k, v in self.absorption.items():
-            if 'I' in k:
-                baseq = 'irradiance'
+        scheme_lname = self.scheme["long_name"]
+        scheme_sname = self.scheme["short_name"]
+        scheme_id = self.scheme_ID
+
+        Idr = self.crs["I_dr"]
+        Idfd = self.crs["I_df_d"]
+        Idfu = self.crs["I_df_u"]
+        F = self.crs["F"]
+        crds = ["z", "wl"]
+        crds2 = ["zm", "wl"]
+
+        # > create dataset
+        ln = "long_name"
+        z_units = dict(units="m")
+        wl_units = dict(units="um")
+        E_units = dict(units="W m^-2")  # E (energy flux) units
+        SE_units = dict(units="W m^-2 um^-1")  # spectral E units
+        pf_units = dict(units="umol photons m^-2 s^-1")  # photon flux units
+        lai_units = dict(units="m^2 leaf m^-2")
+
+        # construct data vars for absorption (many)
+        # allow abs not calculated or abs from scheme
+        abs_scheme = {}  # {f"{k}_scheme": v for k, v in self.crs.items() if k[:2] == "aI"}
+        abs_post = self.absorption if self.absorption is not None else {}
+        absorption = {**abs_scheme, **abs_post}  # merge
+        abs_data_vars = {}  # collect data_vars tuples here
+        for k, v in absorption.items():
+            # energy or photon units: irradiance or PFD
+            if "I_" in k or k == "aI":
+                baseq = "irradiance"
                 units = E_units
-            elif 'PFD' in k:
-                baseq = 'PFD'
+            elif "PFD" in k:
+                baseq = "PFD"
                 units = pf_units
             else:
-                baseq = ''
-            if '_sl' in k:
-                by = ' by sunlit leaves'
-            elif '_sh' in k:
-                by = ' by shaded leaves'
+                warnings.warn(f"key {k!r} not identified as either PFD or irradiance")
+                baseq = ""
+            # sunlit, shaded, or both
+            if "_sl" in k:
+                by = " by sunlit leaves"
+            elif "_sh" in k:
+                by = " by shaded leaves"
             else:
-                by = ''
-            if any(w in k for w in ['_PAR', '_solar', '_NIR', '_UV']):  # need to fix
-                bn = k.split('_')[-1]
-                band = f'{bn} '
+                by = ""
+            # specific band or spectral
+            if any(w in k for w in ["_PAR", "_solar", "_NIR", "_UV"]):  # need to fix
+                bn = k.split("_")[-1]
+                band = f"{bn} "
                 # if 'aI' in k:
-                if k[0] == 'a':
-                    crds_ = ['zm']
+                if k[0] == "a":
+                    crds_ = ["zm"]
                 else:
-                    crds_ = ['z']
+                    crds_ = ["z"]
             else:
-                band = ''
-                if k[0] == 'a':
+                band = ""
+                if k[0] == "a":  # absorbed is on mid levels
                     crds_ = crds2
                 else:
-                    crds_ = crds
-            if '_dr' in k:
-                dfdr = 'direct '
-            elif '_df_u' in k:
-                dfdr = 'upward diffuse '
-            elif '_df_d' in k:
-                dfdr = 'downward diffuse '
+                    crds_ = crds  # radiative fluxes are on interface levels
+            # direct or diffuse (up or down)
+            if "_dr" in k:
+                dfdr = "direct "
+            elif "_df_u" in k:
+                dfdr = "upward diffuse "
+            elif "_df_d" in k:
+                dfdr = "downward diffuse "
             else:
-                dfdr = ''
-            if k[0] == 'a':
-                absorbed = 'absorbed '
+                dfdr = ""
+            # absorbed or not
+            if k[0] == "a":
+                absorbed = "absorbed "
             else:
-                absorbed = ''
-            lni = f'{absorbed}{dfdr}{band}{baseq}{by}'
-            # v = self.cnpy_rad_state[k]
-            aI_data_vars[k] = (crds_, v, 
-                {**units, ln: lni,}
-                )
-        # print(aI_data_vars)
-        
-        
+                absorbed = ""
+            # construct long_name
+            lni = f"{absorbed}{dfdr}{band}{baseq}{by}"
+            # construct data_vars tuple
+            abs_data_vars[k] = (
+                crds_,
+                v,
+                {
+                    **units,
+                    ln: lni,
+                },
+            )
 
-        dset = xr.Dataset(\
-            coords={\
-                    'z':  ('z',  z,  {**z_units, ln: 'height above ground'}),
-                    'wl': ('wl', wl, {**wl_units, ln: 'wavelength'}),
-                    'zm': ('zm', zm, {**z_units, ln: 'layer midpoint height'})
-                    },
-            data_vars={\
-                'I_dr':  (crds, Idr,  {**E_units, ln: 'direct beam irradiance (binned)'}),
-                'I_df_d': (crds, Idfd, {**E_units, ln: 'downward diffuse irradiance (binned)'}),
-                'I_df_u': (crds, Idfu, {**E_units, ln: 'upward diffuse irradiance (binned)'}),
-                'F':    (crds, F,    {**E_units, ln: 'actinic flux (binned)'}),
-                'I_d':  (crds, Idr+Idfd,  {**E_units, ln: 'downward irradiance (binned)'}),
-                'dwl':  ('wl', dwl,  {**wl_units, ln: 'wavelength band width'}),
+        # print(abs_data_vars)
+
+        dset = xr.Dataset(
+            coords={
+                "z": ("z", z, {**z_units, ln: "height above ground"}),
+                "wl": ("wl", wl, {**wl_units, ln: "wavelength"}),
+                "zm": ("zm", zm, {**z_units, ln: "layer midpoint height"}),
+            },
+            data_vars={
+                "I_dr": (crds, Idr, {**E_units, ln: "direct beam irradiance (binned)"}),
+                "I_df_d": (crds, Idfd, {**E_units, ln: "downward diffuse irradiance (binned)"}),
+                "I_df_u": (crds, Idfu, {**E_units, ln: "upward diffuse irradiance (binned)"}),
+                "F": (crds, F, {**E_units, ln: "actinic flux (binned)"}),
+                "I_d": (crds, Idr + Idfd, {**E_units, ln: "downward irradiance (binned)"}),
+                "dwl": ("wl", dwl, {**wl_units, ln: "wavelength band width"}),
                 # 'sdt':  ('time', sdt, {'long_name': 'datetime string'}),
                 # 'sza':  ('time', sza, {'units': 'deg.', 'long_name': 'solar zenith angle'}),
-                'lai':  ('z',  lai,  {**lai_units, ln: 'leaf area index (cumulative)'}),
-                'dlai': ('zm', dlai, {**lai_units, ln: 'leaf area index in layer'}),
-                **aI_data_vars
-                },
-            attrs={'save_id': self.save_id, 'info': info, 
-                   'scheme_id': scheme_id, 
-                   'scheme_long_name': scheme_lname, 
-                   'scheme_short_name': scheme_sname,
-                   'sza': sza, 
-                   'psi': psi,
-                   'mu' : mu,
-                   'G' : G,
-                   'K_b' : K_b
-                   },
+                "lai": ("z", lai, {**lai_units, ln: "leaf area index (cumulative)"}),
+                "dlai": ("zm", dlai, {**lai_units, ln: "leaf area index in layer"}),
+                **abs_data_vars,
+            },
+            attrs={
+                "info": info,
+                "scheme_id": scheme_id,
+                "scheme_long_name": scheme_lname,
+                "scheme_short_name": scheme_sname,
+                "sza": sza,
+                "psi": psi,
+                "mu": mu,
+                "G": G,
+                "K_b": K_b,
+            },
         )
         # TODO: add crt1d version?
         # TODO: many of these attrs should be data_vars even though 0-D
 
-        #> save dataset
-        # ofname = '{:s}/{:s}.nc'.format(self.save_dir, self.save_id)
-        # dset.to_netcdf(ofname)
         return dset
 
     def plot_canopy(self):
         _plot_canopy(self)
-        
-        
+
 
 def _plot_canopy(m):
     """Plot LAI and LAD profiles.
-    
+
     m must be model obj
     """
     cd = m.cd
-    lai = cd['lai']
-    z = cd['z']
-    dlai = cd['dlai']
-    zm = cd['zm']
-    dz = cd['dz']
+    lai = cd["lai"]
+    z = cd["z"]
+    dlai = cd["dlai"]
+    zm = cd["zm"]
+    dz = cd["dz"]
 
-    mla = cd['mean_leaf_angle']
-
+    mla = cd["mean_leaf_angle"]
 
     if np.allclose(dlai, dlai[0]):
         plot_dlai = False
@@ -549,43 +451,38 @@ def _plot_canopy(m):
         ncols = 3
         figsize = (6, 3.2)
 
-    figname = f'{m.save_id}_{m.scheme_ID}'
-    fig, axs = plt.subplots(1, ncols, figsize=figsize,
-        sharey=True, num=figname)
+    figname = f"{m.save_id}_{m.scheme_ID}"
+    fig, axs = plt.subplots(1, ncols, figsize=figsize, sharey=True, num=figname)
 
-    fmt = '.-'
+    fmt = ".-"
 
     ax1 = axs[0]
 
     ax1.plot(lai, z, fmt)
-    ax1.set_title('cumulative LAI')
-    ax1.set_ylabel('height in canopy (m)')
+    ax1.set_title("cumulative LAI")
+    ax1.set_ylabel("height in canopy (m)")
 
     if plot_dlai:
         ax2 = axs[1]
         ax2.plot(dlai, zm, fmt)
-        ax2.set_title('LAI in layer')
+        ax2.set_title("LAI in layer")
         ax2.ticklabel_format(useOffset=False)
         ax3 = axs[2]
     else:
         ax3 = axs[1]
 
-    ax3.plot(dlai/dz, zm, fmt)
-    ax3.set_title('LAD')
+    ax3.plot(dlai / dz, zm, fmt)
+    ax3.set_title("LAD")
 
     for ax in axs:
         ax.grid(True)
 
     fig.tight_layout()
-    
 
 
 def _plot_spectral(m):
-    """Plot the spectral leaf and soil properties.
-
-    """
+    """Plot the spectral leaf and soil properties."""
     return
-
 
 
 def _plot_band(dsets, bn):
@@ -593,57 +490,53 @@ def _plot_band(dsets, bn):
     PAR or solar ...
     """
     if not isinstance(dsets, list):
-        print('dsets must be provided as list')
+        print("dsets must be provided as list")
         return
 
-    varnames = [\
-        [f'aI_{bn}', f'aI_sl_{bn}', f'aI_sh_{bn}'],
-        [f'I_dr_{bn}', f'I_df_d_{bn}', f'I_df_u_{bn}']
+    varnames = [
+        [f"aI_{bn}", f"aI_sl_{bn}", f"aI_sh_{bn}"],
+        [f"I_dr_{bn}", f"I_df_d_{bn}", f"I_df_u_{bn}"],
     ]  # rows, cols
 
     nrows = len(varnames)
     ncols = len(varnames[0])
 
-    fig, axs = plt.subplots(nrows, ncols, 
-        sharey=True, figsize=(ncols*2.4, nrows*3))
+    fig, axs = plt.subplots(nrows, ncols, sharey=True, figsize=(ncols * 2.4, nrows * 3))
 
-
-    vns = [vn for row in varnames for vn in row ]
+    vns = [vn for row in varnames for vn in row]
     for i, vn in enumerate(vns):
         ax = axs.flat[i]
         for dset in dsets:
             da = dset[vn]
-            y  = da.dims[0]
-            da.plot(y=y, ax=ax, 
-                label=dset.attrs['scheme_long_name'], marker='.')
-    
+            y = da.dims[0]
+            da.plot(y=y, ax=ax, label=dset.attrs["scheme_long_name"], marker=".")
+
     for ax in axs.flat:
         ax.grid(True)
 
     legfs = 9
     # axs.flat[-1].legend()
     # axs.flat[0].legend()
-    
+
     h, _ = axs.flat[0].get_legend_handles_labels()
     # fig.legend(handles=h, loc='right')
     # fig.legend(handles=h, loc='upper right', bbox_to_anchor=(1.0, 0.))
     # fig.legend(handles=h, loc='center', bbox_to_anchor=(1.0, 0.9))
-    fig.legend(handles=h, loc='lower left', bbox_to_anchor=(0.1, 0.13), fontsize=legfs)
+    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=legfs)
 
     fig.tight_layout()
 
 
 def plot_PAR(dsets=[]):
     """Plot PAR comparison for dsets."""
-    _plot_band(dsets, 'PAR')
+    _plot_band(dsets, "PAR")
 
 
 def plot_solar(dsets=[]):
-    _plot_band(dsets, 'solar')
+    _plot_band(dsets, "solar")
 
 
 # def plot_E_closure_spectra():
-
 
 
 def create_E_closure_table(dsets=[]):
@@ -658,34 +551,40 @@ def create_E_closure_table(dsets=[]):
         computed using :func:`to_xr`
 
     """
-    IDs = [ds.attrs['scheme_id'] for ds in dsets]
-    columns = ['incoming', 'outgoing (reflected)',
-        'soil absorbed', 'layerwise abs sum', 
-        'in-out-soil', 'canopy abs']
+    IDs = [ds.attrs["scheme_id"] for ds in dsets]
+    columns = [
+        "incoming",
+        "outgoing (reflected)",
+        "soil absorbed",
+        "layerwise abs sum",
+        "in-out-soil",
+        "canopy abs",
+    ]
     df = pd.DataFrame(index=IDs, columns=columns)
 
     for i, ID in enumerate(IDs):
         ds = dsets[i]
-        incoming = ds['I_d_solar'][-1].values
-        outgoing = ds['I_df_u_solar'][-1].values
-        transmitted = ds['I_d_solar'][0].values  # direct+diffuse
-        soil_refl = ds['I_df_u_solar'][0].values
+        incoming = ds["I_d_solar"][-1].values
+        outgoing = ds["I_df_u_solar"][-1].values
+        transmitted = ds["I_d_solar"][0].values  # direct+diffuse
+        soil_refl = ds["I_df_u_solar"][0].values
         soil_abs = transmitted - soil_refl
-        layer_abs_sum = ds['aI_solar'].sum().values
-        canopy_abs = ds['I_df_d_solar'][-1].values - outgoing + \
-            ds['I_dr_solar'][-1].values - ds['I_dr_solar'][0].values + \
-            - (ds['I_df_d_solar'][0].values - soil_refl)  # soil abs is down-up diffuse at last layer?
-        df.loc[ID,columns[0]] = incoming
-        df.loc[ID,columns[1]] = outgoing
-        df.loc[ID,columns[2]] = soil_abs
-        df.loc[ID,columns[3]] = layer_abs_sum
-        df.loc[ID,columns[4]] = incoming - outgoing - soil_abs
-        df.loc[ID,columns[5]] = canopy_abs
-
+        layer_abs_sum = ds["aI_solar"].sum().values
+        canopy_abs = (
+            ds["I_df_d_solar"][-1].values
+            - outgoing
+            + ds["I_dr_solar"][-1].values
+            - ds["I_dr_solar"][0].values
+            + -(ds["I_df_d_solar"][0].values - soil_refl)
+        )  # soil abs is down-up diffuse at last layer?
+        df.loc[ID, columns[0]] = incoming
+        df.loc[ID, columns[1]] = outgoing
+        df.loc[ID, columns[2]] = soil_abs
+        df.loc[ID, columns[3]] = layer_abs_sum
+        df.loc[ID, columns[4]] = incoming - outgoing - soil_abs
+        df.loc[ID, columns[5]] = canopy_abs
 
     return df
-
-
 
 
 def run_cases(m0, cases):
@@ -702,32 +601,4 @@ def run_cases(m0, cases):
     case0 = cases[0]
     nparam = len(case0)  # number of things we are varying
 
-
-
-        # #sdt = self.dts #['' for _ in inds]  # temporary..
-        # try:
-        #     sdt = [pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S') for x in self.dts]  # datetime strings from array/list of datetimes
-        #     time = self.dts
-        # except:  # e.g., of dts=[] or not convertable
-        #     sdt = ['' for _ in inds]
-        #     time = inds
-        # if sdt == []:
-        #     sdt = ['' for _ in inds]  # temporary fix since dts=[] not caught
-        #     time = inds
-
-
-# --------------------------------------------------------------------------------------------------
-#
-
-
-
-
-# --------------------------------------------------------------------------------------------------
-
-if __name__ == '__main__':
-
-    plt.close('all')
-
-    # m = model()
-    # m.run()
-
+    raise NotImplementedError
