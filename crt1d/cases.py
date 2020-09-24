@@ -167,7 +167,7 @@ def load_default_case(nlayers):
         psi=psi,
     )
 
-    return cnpy_descrip, cnpy_rad_state
+    return {**cnpy_descrip, **cnpy_rad_state}  # now combined
 
 
 def load_Borden95_default_case(nlayers):

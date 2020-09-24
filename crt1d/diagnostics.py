@@ -23,37 +23,47 @@ def E_to_PFD(E, wl_um):
     return E / e_wl_umol
 
 
+# TODO: band definitions (wl_a, wl_b) as a dict here
+
 # TODO: maybe want to create and return as xr.Dataset instead
 # or like sympl, dict of xr.Dataarrays
-def calc_leaf_absorption(cd, crs, band_names_to_calc=["PAR", "solar"]):
+def calc_leaf_absorption(p, out, *, band_names_to_calc=None):
     """Calculate layerwise leaf absorption from the CRT solver solutions
+
+    Parameters
+    ----------
+    p : dict
+        model parameters
+    out : dict
+        model outputs
 
     for the state (one time/case)
     """
-
-    if band_names_to_calc == "all":
+    if band_names_to_calc is None:
+        band_names_to_calc = ["PAR", "solar"]
+    elif band_names_to_calc == "all":
         band_names_to_calc = ["PAR", "solar", "NIR", "UV"]
 
-    lai = cd["lai"]
-    dlai = cd["dlai"]
-    K_b = crs["K_b"]
-    G = crs["G"]  # fractional leaf area projected in direction psi
-    K_b = crs["K_b"]  # G/cos(psi)
+    lai = p["lai"]
+    dlai = p["dlai"]
+    # K_b = p["K_b"]
+    # G = p["G"]  # fractional leaf area projected in direction psi
+    K_b = p["K_b"]  # G/cos(psi)
 
-    leaf_r = cd["leaf_r"]
-    leaf_t = cd["leaf_t"]
+    leaf_r = p["leaf_r"]
+    leaf_t = p["leaf_t"]
     leaf_a = 1 - (leaf_r + leaf_t)  # leaf element absorption coeff
 
-    wl = crs["wl"]
-    dwl = crs["dwl"]
-    I_dr = crs["I_dr"]
-    I_df_d = crs["I_df_d"]
-    I_df_u = crs["I_df_u"]
+    wl = p["wl"]
+    # dwl = p["dwl"]
+    I_dr = out["I_dr"]
+    I_df_d = out["I_df_d"]
+    I_df_u = out["I_df_u"]
     I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
 
     try:
-        wl_l = crs["wl_l"]
-        wl_r = crs["wl_r"]
+        wl_l = p["wl_l"]
+        wl_r = p["wl_r"]
     except KeyError:
         warnings.warn(
             "Wavelength band left and right bounds should be provided "
@@ -96,7 +106,7 @@ def calc_leaf_absorption(cd, crs, band_names_to_calc=["PAR", "solar"]):
     assert np.allclose(a_sl + a_sh, a)
 
     # compute spectral absorption profile in photon flux density units
-    a_pfd = E_to_PFD(a, wl)
+    # a_pfd = E_to_PFD(a, wl)
 
     # > absorbance in specific bands
     isPAR = (wl_l >= 0.4) & (wl_r <= 0.7)

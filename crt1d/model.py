@@ -22,14 +22,6 @@ from .solvers import AVAILABLE_SCHEMES
 from .solvers import RET_KEYS_ALL_SCHEMES
 
 
-# mi_pcd_keys = []  # pre canopy description (used to create lai dist)
-# mi_cd_keys1 = ['green', 'mean_leaf_angle', 'clump']  # canopy description
-# mi_cd_keys2 = ['lai', 'z']
-# mi_bc_keys = ['wl', 'dwl', 'I_dr0_all', 'I_df_all']  # top-of-canopy BC / incoming radiation
-# mi_rt_keys = ['leaf_r', 'leaf_t', 'soil_r']  # reflectivity and transmissivity
-# mi_keys = mi_pcd_keys + mi_cd_keys1 + mi_cd_keys2 + mi_bc_keys + mi_rt_keys
-
-
 CANOPY_DESCRIPTION_KEYS = [
     "lai",
     "z",
@@ -37,6 +29,7 @@ CANOPY_DESCRIPTION_KEYS = [
     "lai_tot",
     "lai_eff",
     "mean_leaf_angle",
+    "clump",
     "green",
     "leaf_t",
     "leaf_r",
@@ -94,6 +87,7 @@ class Model:
         "z",
         "mean_leaf_angle",
         "green",
+        "clump",
         "leaf_t",
         "leaf_r",
         "soil_r",
@@ -133,13 +127,12 @@ class Model:
         """
         # load default case, for given nlayers
         self.nlayers = nlayers
-        self.cnpy_desc_default, self.crs_default = load_default_case(nlayers=self.nlayers)
+        self.p_default = load_default_case(nlayers=self.nlayers)
         # initial settings based on default
-        self._cnpy_desc = deepcopy(self.cnpy_desc_default)
-        self._cnpy_rad_state = deepcopy(self.crs_default)
+        self._p = deepcopy(self.p_default)
 
         # assign scheme
-        self.assign_scheme(scheme)
+        self.assign_scheme(scheme)  # assigns scheme info dict to self.scheme
 
         # check inputs
         self._check_inputs()
@@ -147,41 +140,43 @@ class Model:
         # run/output variables
         self._run_count = 0  # TODO: store last_state?
         self.absorption = None  # initially no absorption data
+        self.out = {}  # standard scheme outputs
+        self.out_extra = {}  # extra outputs
+
+    @property
+    def p(self):
+        """Model parameters."""
+        print(f"Please update parameters using `.update_p()`!")
 
     @property
     def cd(self):
-        """Canopy description (intended to be read-only; modify using update_p)."""
-        return self._cnpy_desc
-
-    @property
-    def crs(self):
-        """Canopy radiative state (intended to be read-only; modify using update_p)."""
-        return self._cnpy_rad_state
+        """Canopy description."""
+        p = self._p
+        return CanopyDescription(**{k: v for k, v in p.items() if k in CANOPY_DESCRIPTION_KEYS})
 
     def __repr__(self):
-        return f"Model(scheme={self.scheme_ID})"
+        scheme_name = self.scheme["name"]
+        psi = self._p["psi"]
+        return f"Model(scheme={scheme_name}, psi={psi:.4g})"
 
-    def assign_scheme(self, scheme_ID, verbose=False):
+    def assign_scheme(self, scheme_name, *, verbose=False):
         """Using the :const:`.solvers.AVAILABLE_SCHEMES` dict,
         assign scheme and necessary scheme attrs
         """
-        self._schemes = AVAILABLE_SCHEMES
-        # self._scheme_IDs = {d['ID']: d for d in self._schemes}
-        self._scheme_IDs = list(self._schemes.keys())
-        self.scheme_ID = scheme_ID
+        schemes = AVAILABLE_SCHEMES
+        scheme_names = list(schemes.keys())
         try:
-            self.scheme = self._schemes[self.scheme_ID]
-            self.solve = self.scheme["solver"]
-            self.solver_args = self.scheme["args"]
+            self.scheme = schemes[scheme_name]
             if verbose:
                 print("\n\n")
                 print("=" * 40)
-                print("scheme:", self.scheme_ID)
+                print("scheme:", self.scheme["name"])
                 print("-" * 40)
         except KeyError:
-            print(f"{scheme_ID:s} is not a valid scheme ID!")
-            print("Defaulting to Dickinson-Sellers two-stream")
-            self.scheme = self._schemes["2s"]
+            print(f"{scheme_name!r} is not a valid scheme name/ID!")
+            print(f"The valid ones are: {', '.join(scheme_names)}.")
+            print("Defaulting to Dickinson-Sellers two-stream.\n")
+            self.scheme = schemes["2s"]
             # also could self.terminate() or yield error or set flag
 
     def update_p(self, **kwargs):
@@ -191,17 +186,15 @@ class Model:
         `**kwargs`
             Used to update the model parameters.
         """
+        # TODO: store so can undo changes if check doesn't pass
         for k, v in kwargs.items():
             if k not in Model.required_input_keys:
                 warnings.warn(f"{k!r} is not intended as an input and will be ignored")
                 continue
             # else, it is intended to be an input, so try to use it
-            if k in self.cd:
-                self._cnpy_desc[k] = v
-            if k in self.crs:
-                self._cnpy_rad_state[k] = v
+            self._p[k] = v
 
-        # update other parameters/validate
+        # now update other parameters and validate
         self._check_inputs()
 
     def _check_inputs(self):
@@ -211,18 +204,15 @@ class Model:
 
         update some class var (e.g. nlayers)
         """
-        crs = self._cnpy_rad_state
-        cd = self._cnpy_desc
-
+        p = self._p
         # check for required input all at once variables
-        cdcrs = {**cd, **crs}
         for key in Model.required_input_keys:
-            if key not in cdcrs:
-                print(f"required key {key} is not present in the cnpy_* dicts")
+            if key not in p:
+                raise Exception(f"required key {key} is not present. Set it using `update_p`.")
 
         # lai profile
-        lai = cd["lai"]
-        z = cd["z"]
+        lai = p["lai"]
+        z = p["z"]
         dz = np.diff(z)
         zm = z[:-1] + 0.5 * dz  # midpts
         assert (
@@ -232,30 +222,30 @@ class Model:
         assert z[-1] > z[0]  # z increasing
         assert lai[0] > lai[-1]  # LAI decreasing
         assert lai[-1] == 0
-        cd["lai_tot"] = lai[0]
-        cd["lai_eff"] = lai * cd["clump"]
+        p["lai_tot"] = lai[0]
+        p["lai_eff"] = lai * p["clump"]
         dlai = lai[:-1] - lai[1:]
         assert dlai.sum() == lai[0]
-        cd["dlai"] = dlai
-        cd["dlai_eff"] = dlai * cd["clump"]
-        cd["zm"] = zm  # z for dlai, layer centers
-        cd["dz"] = dz
+        p["dlai"] = dlai
+        p["dlai_eff"] = dlai * p["clump"]
+        p["zm"] = zm  # z for dlai, layer centers
+        p["dz"] = dz
         assert dlai.size == zm.size and zm.size == dz.size
 
         # solar zenith angle, giving precedence to psi if have both mu and psi already
-        psi = crs["psi"]
+        psi = p["psi"]
         try:
-            mu = crs["mu"]
+            mu = p["mu"]
             if mu != np.cos(psi):
                 print("provided mu not consistent with provided psi")
         except KeyError:  # no mu
-            crs["mu"] = np.cos(psi)
+            p["mu"] = np.cos(psi)
 
         # TODO: check mla and orient/x, similar to psi/mu
 
         # check the two wl sources
-        wl_toc = crs["wl"]  # for the toc spectra
-        wl_op = cd["wl_leafsoil"]  # for optical properties
+        wl_toc = p["wl"]  # for the toc spectra
+        wl_op = p["wl_leafsoil"]  # for optical properties
         assert wl_toc.size == wl_op.size
         if not np.allclose(wl_toc, wl_op):
             # print('wl for optical props and toc BC appear to be incompatible')
@@ -267,10 +257,10 @@ class Model:
         self.nwl = wl_toc.size  # precedence to the toc spectra one as definition
 
         # G_fn and K_b_fn ?
-        # crs['G_fn'] = cd['G_fn']
-        cd["K_b_fn"] = lambda psi_: cd["G_fn"](psi_) / np.cos(psi_)
-        crs["G"] = cd["G_fn"](psi)
-        crs["K_b"] = cd["K_b_fn"](psi)
+        # p['G_fn'] = p['G_fn']
+        p["K_b_fn"] = lambda psi_: p["G_fn"](psi_) / np.cos(psi_)
+        p["G"] = p["G_fn"](psi)
+        p["K_b"] = p["K_b_fn"](psi)
         # ^ should clumping index be included somewhere here?
 
     def run(self, **extra_solver_kwargs):
@@ -284,19 +274,25 @@ class Model:
         self._check_inputs()
 
         # construct dict of kwargs to pass to the solver
-        d = {**self.crs, **self.cd, **extra_solver_kwargs}
-        args = {k: d[k] for k in self.solver_args}
+        d = {**self._p, **extra_solver_kwargs}
+        scheme = self.scheme
+        args = {k: d[k] for k in scheme["args"]}
 
         # run
-        sol = self.solve(**args)
+        sol = scheme["solver"](**args)
 
         # use the dict returned by the solver to update our state
-        self._cnpy_rad_state.update(sol)
-        self.extra_solver_results = {
-            f"{k}_scheme": v for k, v in sol.items() if k not in RET_KEYS_ALL_SCHEMES
-        }
+        self.out.update({k: v for k, v in sol.items() if k in RET_KEYS_ALL_SCHEMES})
+        self.out_extra.update(
+            {f"{k}_scheme": v for k, v in sol.items() if k not in RET_KEYS_ALL_SCHEMES}
+        )
 
         return self  # for chaining
+
+    @property
+    def out_all(self):
+        """Standard and extra outputs."""
+        return {**self.out, **self.out_extra}
 
     def calc_absorption(self, *, bands="all"):
         """Calculate layerwise absorption variables using routines in module diagnostics."""
@@ -304,8 +300,8 @@ class Model:
             raise Exception("Must run the model first.")
 
         absorption = calc_leaf_absorption(
-            self.cd,
-            self.crs,
+            self._p,
+            self.out,
             band_names_to_calc=bands,
         )
         # update model attr
@@ -313,61 +309,50 @@ class Model:
 
         return self  # for chaining
 
-    # def G_fn(self, psi):
-    #     """
-    #     for ellipsoidal leaf dist. could include choice of others...
-    #     """
-    #     #return G_ellipsoidal(psi, self.orient)
-    #     return G_ellipsoidal_approx(psi, self.orient)
-
-    # def K_b_fn(self, psi):
-    #     """
-    #     """
-    #     return self.G_fn(psi) / np.cos(psi)
-
     def to_xr(self, *, info=""):
         """Construct an `xarray.Dataset`."""
         if self._run_count == 0:
-            print("must run first")
-            return
-
-        lai = self.cd["lai"]
-        dlai = self.cd["dlai"]
-        z = self.cd["z"]  # at lai values (layer interfaces)
-        zm = self.cd["zm"]
-
-        wl = self.crs["wl"]
-        dwl = self.crs["dwl"]
-
-        psi = self.crs["psi"]
-        mu = self.crs["mu"]
+            raise Exception("Must run the model before creating the dataset.")
+        p = self._p
+        out = self.out_all
+        # canopy descrip
+        lai = p["lai"]
+        dlai = p["dlai"]
+        z = p["z"]  # at lai values (layer interfaces)
+        zm = p["zm"]
+        # wavelength grid
+        wl = p["wl"]
+        dwl = p["dwl"]
+        # radiation geometry/setup
+        psi = p["psi"]
+        mu = p["mu"]
         sza = np.rad2deg(psi)
-        G = self.crs["G"]
-        K_b = self.crs["K_b"]
-
+        G = p["G"]
+        K_b = p["K_b"]
+        # scheme info
         scheme_lname = self.scheme["long_name"]
         scheme_sname = self.scheme["short_name"]
-        scheme_id = self.scheme_ID
-
-        Idr = self.crs["I_dr"]
-        Idfd = self.crs["I_df_d"]
-        Idfu = self.crs["I_df_u"]
-        F = self.crs["F"]
+        scheme_name = self.scheme["name"]
+        # canopy RT solution
+        Idr = out["I_dr"]
+        Idfd = out["I_df_d"]
+        Idfu = out["I_df_u"]
+        F = out["F"]
         crds = ["z", "wl"]
         crds2 = ["zm", "wl"]
 
         # > create dataset
         ln = "long_name"
         z_units = dict(units="m")
-        wl_units = dict(units="um")
-        E_units = dict(units="W m^-2")  # E (energy flux) units
-        SE_units = dict(units="W m^-2 um^-1")  # spectral E units
-        pf_units = dict(units="umol photons m^-2 s^-1")  # photon flux units
-        lai_units = dict(units="m^2 leaf m^-2")
+        wl_units = dict(units="μm")
+        E_units = dict(units="W m-2")  # E (energy flux) units
+        # SE_units = dict(units="W m-2 um-1")  # spectral E units
+        pf_units = dict(units="μmol photons m-2 s-1")  # photon flux units
+        lai_units = dict(units="(m2 leaf) m-2")
 
         # construct data vars for absorption (many)
         # allow abs not calculated or abs from scheme
-        abs_scheme = {}  # {f"{k}_scheme": v for k, v in self.crs.items() if k[:2] == "aI"}
+        abs_scheme = {}  # {f"{k}_scheme": v for k, v in self.p.items() if k[:2] == "aI"}
         abs_post = self.absorption if self.absorption is not None else {}
         absorption = {**abs_scheme, **abs_post}  # merge
         abs_data_vars = {}  # collect data_vars tuples here
@@ -445,15 +430,13 @@ class Model:
                 "F": (crds, F, {**E_units, ln: "actinic flux (binned)"}),
                 "I_d": (crds, Idr + Idfd, {**E_units, ln: "downward irradiance (binned)"}),
                 "dwl": ("wl", dwl, {**wl_units, ln: "wavelength band width"}),
-                # 'sdt':  ('time', sdt, {'long_name': 'datetime string'}),
-                # 'sza':  ('time', sza, {'units': 'deg.', 'long_name': 'solar zenith angle'}),
                 "lai": ("z", lai, {**lai_units, ln: "leaf area index (cumulative)"}),
                 "dlai": ("zm", dlai, {**lai_units, ln: "leaf area index in layer"}),
                 **abs_data_vars,
             },
             attrs={
                 "info": info,
-                "scheme_id": scheme_id,
+                "scheme_name": scheme_name,
                 "scheme_long_name": scheme_lname,
                 "scheme_short_name": scheme_sname,
                 "sza": sza,
@@ -469,22 +452,25 @@ class Model:
         return dset
 
     def plot_canopy(self):
+        """Plot LAI and LAD profiles."""
         _plot_canopy(self)
 
 
 def _plot_canopy(m):
     """Plot LAI and LAD profiles.
 
-    m must be model obj
-    """
-    cd = m.cd
-    lai = cd["lai"]
-    z = cd["z"]
-    dlai = cd["dlai"]
-    zm = cd["zm"]
-    dz = cd["dz"]
+    LAI on interface levels, LAD on mid levels.
 
-    mla = cd["mean_leaf_angle"]
+    `m` must be :class:`Model`
+    """
+    p = m._p
+    lai = p["lai"]
+    z = p["z"]
+    dlai = p["dlai"]
+    zm = p["zm"]
+    dz = p["dz"]
+
+    mla = p["mean_leaf_angle"]
 
     if np.allclose(dlai, dlai[0]):
         plot_dlai = False
@@ -495,7 +481,7 @@ def _plot_canopy(m):
         ncols = 3
         figsize = (6, 3.2)
 
-    figname = f"{m.save_id}_{m.scheme_ID}"
+    figname = f"leaf-profiles"
     fig, axs = plt.subplots(1, ncols, figsize=figsize, sharey=True, num=figname)
 
     fmt = ".-"
@@ -530,8 +516,8 @@ def _plot_spectral(m):
 
 
 def _plot_band(dsets, bn):
-    """Multi-panel plot of profiles for specified bandname
-    PAR or solar ...
+    """Multi-panel plot of profiles for specified string bandname `bn`:
+    'PAR', 'solar', etc.
     """
     if not isinstance(dsets, list):
         print("dsets must be provided as list")

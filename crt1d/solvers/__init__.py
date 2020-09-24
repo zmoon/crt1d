@@ -163,7 +163,7 @@ def _construct_scheme_dicts():
     for name, (scheme_ID, scheme_dict) in zip(_solver_module_names, AVAILABLE_SCHEMES.items()):
 
         scheme_dict["module_name"] = name
-        scheme_dict["ID"] = scheme_ID
+        scheme_dict["name"] = scheme_ID  # `name` is the primary identifier
 
         # load module and import things
         module = import_module(f".{name}", package="crt1d.solvers")
