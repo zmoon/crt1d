@@ -16,6 +16,71 @@ EPS = np.finfo(float).eps
 short_name = "ZQ-pA"
 long_name = "Zhao & Qualls multi-scattering pyAPES"
 
+
+def kbeam(ZEN, x=1.0):
+    """
+    COMPUTES BEAM ATTENUATION COEFFICIENT Kb (-) for given solar zenith angle
+    ZEN (rad) and leaf angle distribution x (-)
+    IN:
+        ZEN (rad): solar zenith angle
+        x (-): leaf-angle distr. parameter (optional)
+                x = 1 : spherical leaf-angle distr. (default)
+                x = 0 : vertical leaf-angle distr.
+                x = inf. : horizontal leaf-angle distr
+    OUT:
+        Kb (-): beam attenuation coefficient (array of size(ZEN))
+    SOURCE: Campbell & Norman (1998), Introduction to environmental biophysics
+    """
+
+    ZEN = np.array(ZEN)
+    x = np.array(x)
+
+    XN1 = (np.sqrt(x*x + np.tan(ZEN)**2))
+    XD1 = (x + 1.774*(x + 1.182)**(-0.733))
+    Kb = XN1 / XD1  # direct beam
+
+    Kb = np.minimum(15, Kb)
+    # if Kb<0:
+    #     Kb=15
+
+    return Kb
+
+def kdiffuse(LAI, x=1.0):
+    """
+    COMPUTES DIFFUSE ATTENUATION COEFFICIENT Kd (-) BY INTEGRATING Kd OVER HEMISPHERE
+    IN:
+        LAI - stand leaf (or plant) are index (m2 m-2)
+        x (-): leaf-angle distr. parameter (optional)
+                x = 1 : spherical leaf-angle distr. (default)
+                x = 0 : vertical leaf-angle distr.
+                x = inf. : horizontal leaf-angle distr.
+    OUT:
+        Kd (-): diffuse attenuation coefficient
+    USES:
+        kbeam(ZEN, x) for computing beam attenuation coeff.
+    SOURCE:
+        Campbell & Norman, Introduction to environmental biophysics (1998, eq. 15.5)
+    """
+
+    LAI = float(LAI)
+    x = np.array(x)
+
+    ang = np.linspace(0, np.pi / 2, 90)  # zenith angles at 1deg intervals
+    dang = ang[1]-ang[0]
+
+    # beam attenuation coefficient - call kbeam
+    Kb = kbeam(ang, x)
+    # print(Kb)
+
+    # integrate over hemisphere to get Kd, Campbell & Norman (1998, eq. 15.5)
+    YY = np.exp(-Kb*LAI)*np.sin(ang)*np.cos(ang)
+
+    Taud = 2.0*np.trapz(YY*dang)
+    Kd = -np.log(Taud) / (LAI + EPS)  # extinction coefficient for diffuse radiation
+
+    return Kd
+
+
 def solve_zq_pa(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo):
     """
     Computes incident (Wm-2 ground) SW radiation and absorbed (Wm-2 (leaf) radiation within canopies.
