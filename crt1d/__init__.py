@@ -11,16 +11,13 @@ DATA_BASE_DIR = BASE_DIR / "data"
 from .model import Model
 
 # set version
-from . import _version
-
 try:
-    __version__ = _version.version
-except PackageNotFoundError:
-    # package is probably not installed
-    pass
+    from . import _version
 
-# from .spectral_library import get_spectra
-# spectral_lib = get_spectra()
+    __version__ = _version.version
+except ModuleNotFoundError:
+    # the package is probably not installed
+    pass
 
 
 def print_config():
