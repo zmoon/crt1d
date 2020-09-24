@@ -1,6 +1,7 @@
 """
-This module contains the model class, which can be used to conveniently solve CRT
-using different solvers.
+This module contains the model class, which can be used to conveniently solve CRT problems
+using different solvers with minimal boilerplate code needed.
+(At least that is the goal.)
 """
 # from dataclasses import dataclass
 import warnings
@@ -16,10 +17,8 @@ from .cases import load_default_case
 from .diagnostics import (
     calc_leaf_absorption,
 )
-from .leaf_angle import G_ellipsoidal
-from .leaf_angle import G_ellipsoidal_approx
 from .solvers import AVAILABLE_SCHEMES
-from .solvers import RET_KEYS_ALL_SCHEMES
+from .solvers import RET_KEYS_ALL_SCHEMES  # the ones all schemes must return
 
 
 CANOPY_DESCRIPTION_KEYS = [
@@ -62,16 +61,8 @@ CANOPY_RAD_STATE_KEYS = CANOPY_RAD_STATE_INPUT_KEYS + [
 ]
 
 
+# class for displaying canopy parameters/data (model paramters/inputs, not outputs)
 CanopyDescription = namedtuple("CanopyDescription", " ".join(k for k in CANOPY_DESCRIPTION_KEYS))
-
-
-# class _cnpy_descrip(dict):
-#     """Container for canopy description parameters and data"""
-#     pass
-
-# class _cnpy_rad_state(dict):
-#     """Container for in-canopy radiation parameters and solution at a certain time"""
-#     pass
 
 
 class Model:
@@ -157,7 +148,7 @@ class Model:
     def __repr__(self):
         scheme_name = self.scheme["name"]
         psi = self._p["psi"]
-        return f"Model(scheme={scheme_name}, psi={psi:.4g})"
+        return f"Model(scheme={scheme_name!r}, psi={psi:.4g})"
 
     def assign_scheme(self, scheme_name, *, verbose=False):
         """Using the :const:`.solvers.AVAILABLE_SCHEMES` dict,
@@ -179,6 +170,8 @@ class Model:
             self.scheme = schemes["2s"]
             # also could self.terminate() or yield error or set flag
 
+        return self  # for chaining
+
     def update_p(self, **kwargs):
         """
         Parameters
@@ -196,6 +189,8 @@ class Model:
 
         # now update other parameters and validate
         self._check_inputs()
+
+        return self  # for chaining
 
     def _check_inputs(self):
         """
@@ -512,7 +507,7 @@ def _plot_canopy(m):
 
 def _plot_spectral(m):
     """Plot the spectral leaf and soil properties."""
-    return
+    return NotImplementedError
 
 
 def _plot_band(dsets, bn):
@@ -563,6 +558,7 @@ def plot_PAR(dsets=[]):
 
 
 def plot_solar(dsets=[]):
+    """Plot spectrally integrated solar comparison for dsets."""
     _plot_band(dsets, "solar")
 
 
