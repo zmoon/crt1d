@@ -26,6 +26,9 @@ from pkg_resources import get_distribution
 release = get_distribution("crt1d").version
 version = '.'.join(release.split('.')[:2])
 
+# create some docs info
+import crt1d
+crt1d.solvers._write_params_docs_snippets()
 
 # -- General configuration ---------------------------------------------------
 
@@ -37,6 +40,8 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
     "nbsphinx",
+    "sphinxcontrib.bibtex",
+    "myst_parser",  # automatically used to parse .md files
 ]
 
 # Make nbsphinx detect Jupytext files

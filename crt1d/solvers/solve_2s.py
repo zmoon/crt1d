@@ -15,9 +15,9 @@ def solve_2s(*, psi,
     """Dickinson-Sellers 2-stream solution,
     the most common scheme used in regional/climate models.
 
-    Implementation follows Sellers (1983) and Dickinson (1985)
-    (mainly Dickinson -- variable names chosen to match his)
-    and includes the minor correction from the later Dickinson paper.
+    Implementation follows Dickinson (1983) and Sellers (1985)
+    (mainly Sellers -- variable names chosen to match his)
+    and includes the minor correction from the later Sellers paper (1996).
 
     """
     K_b = K_b_fn(psi)

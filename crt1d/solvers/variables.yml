@@ -3,7 +3,7 @@
 #
 # variable_name
 #   type   (type info for docs in the NumPy style)
-#   desc   (text description for docs)
+#   desc   (text description for docs; MyST format)
 #   shape  (optional; tuple, will be added before text description to indicate array shape)
 #   units  (optional; CF-convention format)
 #   param  (optional, default false; whether a model tunable param or a true model input)
@@ -17,7 +17,7 @@ aliases:
 in:
   psi:
     type: float
-    desc: :math:`\psi` is the solar zenith angle (SZA)
+    desc: $\psi$ is the solar zenith angle (SZA).
     units: radians
 
 
@@ -80,14 +80,14 @@ in:
 
   K_b:
     type: float
-    desc: :math:`K_b` is the direct beam extinction coefficient.
+    desc: $K_b$ is the direct beam extinction coefficient.
     # units: TODO
 
 
   K_b_fn:
     type: function
     desc: >
-      Function used to compute :math:`K_b` from beam angle (:math:`K_b = K_b(\psi)`).
+      Function used to compute $K_b$ from beam angle ($K_b = K_b(\psi)$).
 
       It depends on the leaf angle distribution (function) used,
       so it must be passed to the solvers.
@@ -96,14 +96,14 @@ in:
   G_fn:
     type: function
     desc: >
-      Function used to compute :math:`G` from beam angle (:math:`G = G(\psi)`).
+      Function used to compute $G$ from beam angle ($G = G(\psi)$).
 
-      :math:`G = K_b \mu = K_b \cos{\psi}`
+      $G = K_b \mu = K_b \cos{\psi}$
     # units: TODO
 
   mla:
     type: float
-    desc: Mean leaf (inclination) angle
+    desc: Mean leaf (inclination) angle.
     units: deg
 
 out:

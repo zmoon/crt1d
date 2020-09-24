@@ -51,10 +51,10 @@ crt.solvers
 
 # %%
 import inspect
-inspect.getfullargspec(crt.solvers.bl.solve_bl)
+inspect.getfullargspec(crt.solvers.solve_bl.solve_bl)
 
 # %%
-inspect.getfullargspec(crt.solvers.fours.solve_4s)
+inspect.getfullargspec(crt.solvers.solve_4s.solve_4s)
 
 # %%
 df_schemes = pd.DataFrame(crt.available_schemes).T

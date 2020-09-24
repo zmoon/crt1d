@@ -14,3 +14,23 @@ def add_snippets(func, snippets):
         func.__doc__ %= {key: value.strip() for key, value in snippets.items()}
     return func
 
+
+def cf_units_to_tex(s: str):
+    """Convert CF-style units string to TeX-like.
+    (In order to get exponents in plot labels, etc.)
+    """
+    import re
+
+    if s == "1":  # hack for now to allow CF unitless
+        return s
+
+    def expify(match):
+        m = match.group(0)
+        return f"$^{{{m}}}$"
+
+    # this regex matches integers with optional negative sign (hyphen)
+    # TODO: more careful match only to the right of a base unit (one with no exp)
+    s_new = re.sub(r"-?\d", expify, s)
+
+    return s_new
+

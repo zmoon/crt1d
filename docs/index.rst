@@ -17,12 +17,14 @@ Welcome to crt1d's documentation!
    :maxdepth: 3
    :caption: Reference
 
+   solvers
    api
 
 
-.. Indices and tables
-.. ==================
+Indices and tables
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
+
+.. * :ref:`search`

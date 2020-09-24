@@ -8,6 +8,9 @@
 # version written by setuptools_scm
 crt1d/_version.py
 
+# docs temporary files
+docs/_*snippet.txt
+
 # default .gitignore for Python below
 #------------------------------------------------------------
 

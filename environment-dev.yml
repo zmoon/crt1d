@@ -14,5 +14,9 @@ dependencies:
   - nbsphinx
   - jupytext
   - notebook
+  - sphinxcontrib-bibtex
+  - myst-parser  # they recommend Conda install over Pip
+  - pip:
+    sphinx-rtd-tehme
   # dev tools
   - pylint
