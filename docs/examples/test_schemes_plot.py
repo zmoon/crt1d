@@ -86,7 +86,3 @@ dsets[0]['zm']
 
 # %%
 m.extra_solver_results.keys()
-
-# %%
-
-# %%

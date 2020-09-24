@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.sparse.linalg import spsolve  # used for Z&Q model only (so far)
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import dia_matrix
 
 from .common import tau_b_fn, tau_df_fn
 
@@ -156,7 +157,16 @@ def solve_zq(*, psi,
         # note: could also use a Thomas algorithm solver method (write a fn for it)
         #
 
-        x = spsolve(A, C)
+        # convert A to sparse matrix
+        # A_sparse = dia_matrix((A, (-1, 0, 1)), shape=(3, A.shape[1]))
+        A_sparse = dia_matrix(A)
+        # print(A_sparse.shape)
+        # print(A_sparse)
+        # print(A_sparse.offsets, A_sparse.data.shape)
+        assert tuple(A_sparse.offsets) == (-1, 0, 1)
+        assert A_sparse.data.shape == (3, A.shape[1])
+
+        x = spsolve(A_sparse.tocsr(), C)  # needs CSR or CSC format
         SWu0 = x[::2]  # "original downward and upward hemispherical shortwave radiation flux densities"
         SWd0 = x[1::2] # i.e., before multiple scattering within layers is accounted for
 
