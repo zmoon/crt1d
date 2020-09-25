@@ -177,16 +177,27 @@ class Model:
         `**kwargs`
             Used to update the model parameters.
         """
-        # TODO: store so can undo changes if check doesn't pass
-        for k, v in kwargs.items():
-            if k not in Model.required_input_keys:
-                warnings.warn(f"{k!r} is not intended as an input and will be ignored")
-                continue
-            # else, it is intended to be an input, so try to use it
-            self._p[k] = v
+        import traceback
 
-        # now update other parameters and validate
-        self._check_inputs()
+        p0 = deepcopy(self._p)
+        try:
+            for k, v in kwargs.items():
+                if k not in Model.required_input_keys:
+                    warnings.warn(f"{k!r} is not intended as an input and will be ignored")
+                    continue
+                # else, it is intended to be an input, so try to use it
+                self._p[k] = v
+
+            # now update other parameters and validate
+            self._check_inputs()  # checks self._p
+
+        except Exception:  # AssertionError or other failure in calculating new derived params
+            warnings.warn(
+                f"Updating parameters failed. "
+                f"Full traceback:\n\n{traceback.format_exc()}\n"
+                "Reverting."
+            )
+            self._p = p0  # undo
 
         return self  # for chaining
 
@@ -232,7 +243,7 @@ class Model:
             if mu != np.cos(psi):
                 warnings.warn(
                     "Provided `mu` not consistent with provided `psi`. "
-                    f"`mu` will be updated based on the value of `psi`."
+                    "`mu` will be updated based on the value of `psi`."
                 )
         except KeyError:  # no mu
             p["mu"] = np.cos(psi)
@@ -246,8 +257,9 @@ class Model:
         if not np.allclose(wl_toc, wl_op):
             # print('wl for optical props and toc BC appear to be incompatible')
             warnings.warn(
-                "wl for optical props and toc BC appear to be incompatible:\n"
-                f"toc - op:\n{wl_toc-wl_op}"
+                "Provided wavelengths for optical props (`wl_leafsoil`) and toc BC (`wl`) "
+                "appear to be incompatible:\n"
+                f"`wl - wl_leafsoil`:\n{wl_toc-wl_op}"
             )
             # or could convert, but which to choose as base?
         self.nwl = wl_toc.size  # precedence to the toc spectra one as definition
