@@ -112,7 +112,22 @@ class Model:
     @property
     def p(self):
         """Model parameters."""
-        print(f"Please update parameters using `.update_p()`!")
+        print(
+            "Please update parameters using `.update_p()`! Changes to `.p` will not be stored!\n"
+            "Extract (copy) the parameters using `.copy_p()` or summarize using `.print_p()`."
+        )
+
+    def print_p(self):
+        """Pretty print the parameters."""
+        import pprint
+
+        pp = pprint.PrettyPrinter(indent=1)
+        with np.printoptions(precision=3, threshold=7):
+            pp.pprint(self._p)
+
+    def copy_p(self):
+        """Return a copy of the parameters dict."""
+        return deepcopy(self._p)
 
     @property
     def cd(self):
