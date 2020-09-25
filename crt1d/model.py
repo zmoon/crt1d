@@ -27,7 +27,7 @@ CANOPY_DESCRIPTION_KEYS = [
     "dlai",
     "lai_tot",
     "lai_eff",
-    "mean_leaf_angle",
+    "mla",
     "clump",
     "leaf_t",
     "leaf_r",
@@ -75,7 +75,7 @@ class Model:
     required_input_keys = (
         "lai",
         "z",
-        "mean_leaf_angle",
+        "mla",
         "clump",
         "leaf_t",
         "leaf_r",
@@ -463,7 +463,7 @@ def _plot_canopy(m):
     zm = p["zm"]
     dz = p["dz"]
 
-    mla = p["mean_leaf_angle"]
+    # mla = p["mla"]
 
     if np.allclose(dlai, dlai[0]):
         plot_dlai = False

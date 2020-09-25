@@ -8,11 +8,11 @@ short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
 
 def solve_2s(*, psi,
-    I_dr0_all, I_df0_all, #wl, dwl,
+    I_dr0_all, I_df0_all,
     lai,
     leaf_t, leaf_r, soil_r,
     K_b_fn, G_fn,
-    mean_leaf_angle,
+    mla,
     ):
     """Dickinson-Sellers 2-stream solution,
     the most common scheme used in regional/climate models.
@@ -24,7 +24,7 @@ def solve_2s(*, psi,
     """
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
-    theta_bar = np.deg2rad(mean_leaf_angle)  # mean leaf inclination angle; eq. 3
+    theta_bar = np.deg2rad(mla)  # mean leaf inclination angle, deg->rad; eq. 3
 
     # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
     #   sa: angle of scattered flux

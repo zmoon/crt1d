@@ -2,7 +2,7 @@ import numpy as np
 
 from . import DATA_BASE_DIR
 from .leaf_angle import G_ellipsoidal_approx
-from .leaf_angle import mean_leaf_angle_to_orient
+from .leaf_angle import mla_to_orient
 from .leaf_area import distribute_lai_beta
 from .leaf_area import distribute_lai_from_cdd
 
@@ -136,14 +136,14 @@ def load_default_case(nlayers):
     ) = load_default_leaf_soil_props()
 
     mla = 57  # for spherical? (check)
-    orient = mean_leaf_angle_to_orient(mla)
+    orient = mla_to_orient(mla)
     G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)
 
     cnpy_descrip = dict(
         lai=lai,
         z=z,
         green=1.0,
-        mean_leaf_angle=mla,
+        mla=mla,
         clump=1.0,
         leaf_t=leaf_t_default,
         leaf_r=leaf_r_default,
