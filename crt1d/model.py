@@ -36,29 +36,6 @@ CANOPY_DESCRIPTION_KEYS = [
     "orient",  # don't really need both this and mla as input
     "G_fn",
 ]
-CANOPY_RAD_STATE_INPUT_KEYS = [
-    "I_dr0",
-    "I_df0",  # spectral ()
-    "wl",
-    "dwl",  # for the toc spectra
-    "psi",
-    "mu",
-    "K_b",
-    "K_b_fn",
-]
-CANOPY_RAD_STATE_KEYS = CANOPY_RAD_STATE_INPUT_KEYS + [
-    "I_dr",
-    "I_df_d",
-    "I_df_u",
-    "F",  # direct from schemes
-    "a_PAR",
-    "a_solar",
-    "a_UV",
-    "a_spectral",  # calculated (some schemes provide)
-    "a_PAR_sl",
-    "a_PAR_sh",  # ... median wl for energy and photon perspective, photon flux, ...
-]
-
 
 # class for displaying canopy parameters/data (model paramters/inputs, not outputs)
 CanopyDescription = namedtuple("CanopyDescription", " ".join(k for k in CANOPY_DESCRIPTION_KEYS))

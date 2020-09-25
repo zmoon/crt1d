@@ -33,7 +33,6 @@ def solve_2s(*, psi,
     #assert( mu_bar == mu_bar2 )
     assert( np.isclose(mu_bar, mu_bar2) )
 
-
     L_T = lai[0]  # total LAI
 
     K = K_b  # for black leaves; should grey leaf version, K_b * k_prime, be used ???

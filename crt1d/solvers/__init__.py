@@ -5,7 +5,7 @@ by supplying the necessary keyword arguments.
 See docs/solvers for descriptions of scheme input/output variables.
 """
 # note: schemes don't require any code from this module to run standalone
-#       some require module common, all need leaf angle (K_b)
+#       some require module common, all need K_b, psi, lai, leaf_r, leaf_t
 #
 # note that __all__ is currently modified below when loading the solvers
 __all__ = ["AVAILABLE_SCHEMES", "RET_KEYS_ALL_SCHEMES"]
@@ -139,18 +139,47 @@ def _scheme_id_from_module_name(s):
 
 
 _solver_module_names = _get_solver_module_names()
-_scheme_IDs = [_scheme_id_from_module_name(mn) for mn in _solver_module_names]
+_scheme_names = [_scheme_id_from_module_name(mn) for mn in _solver_module_names]
+
+# TODO: could read these from the variables.yml instead to ensure consistency
+CANOPY_RAD_STATE_INPUT_KEYS = [
+    "I_dr0_all",
+    "I_df0_all",  # spectral ()
+    "wl",
+    "dwl",  # for the toc spectra
+    "psi",
+    "mu",
+    "K_b",
+    "K_b_fn",
+    "G",
+    "G_fn",
+    "clump",
+]
+CANOPY_RAD_STATE_KEYS = CANOPY_RAD_STATE_INPUT_KEYS + [
+    "I_dr",
+    "I_df_d",
+    "I_df_u",
+    "F",  # direct from schemes
+    "a_PAR",
+    "a_solar",
+    "a_UV",
+    "a_spectral",  # calculated (some schemes provide)
+    "a_PAR_sl",
+    "a_PAR_sh",  # ... median wl for energy and photon perspective, photon flux, ...
+]
 
 RET_KEYS_ALL_SCHEMES = ["I_dr", "I_df_d", "I_df_u", "F"]
 """
 The quantities all schemes must return. Some return others as well.
 """
 
-AVAILABLE_SCHEMES = {scheme_ID: {} for scheme_ID in _scheme_IDs}
+AVAILABLE_SCHEMES = {scheme_name: {} for scheme_name in _scheme_names}
 """
 Dictionary of available canopy RT schemes, where keys are the scheme ID,
 and values are ``short_name``, ``long_name``, ``solver`` (the associated solver function).
 """
+
+# TODO: fn to load one scheme at a time, to support user adding their own from outside the package
 
 
 def _construct_scheme_dicts():
@@ -160,19 +189,20 @@ def _construct_scheme_dicts():
     import warnings
 
     # extract info
-    for name, (scheme_ID, scheme_dict) in zip(_solver_module_names, AVAILABLE_SCHEMES.items()):
+    for module_name, (name, scheme_dict) in zip(_solver_module_names, AVAILABLE_SCHEMES.items()):
 
-        scheme_dict["module_name"] = name
-        scheme_dict["name"] = scheme_ID  # `name` is the primary identifier
+        scheme_dict["module_name"] = module_name
+        scheme_dict["name"] = name  # `name` is the primary identifier
 
         # load module and import things
-        module = import_module(f".{name}", package="crt1d.solvers")
-        solve_fun_name = f"solve_{scheme_ID}"  # or could change the fn names to just be 'solve' and import alias here
+        module = import_module(f".{module_name}", package="crt1d.solvers")
+        solve_fun_name = f"solve_{name}"
+        # ^ or could change the fn names to just be 'solve' and import alias here
         solver = getattr(module, solve_fun_name)  # get solver function
-        short_name = getattr(module, "short_name", scheme_ID)
+        short_name = getattr(module, "short_name", name)
         long_name = getattr(module, "long_name", "")
         if not long_name:
-            warnings.warn(f"`long_name` not defined for solver module {name!r}")
+            warnings.warn(f"`long_name` not defined for solver module {module_name!r}")
 
         # set
         scheme_dict["short_name"] = short_name
@@ -180,24 +210,37 @@ def _construct_scheme_dicts():
         scheme_dict["solver"] = solver
 
     # extract signature
+    drop_list = []
     for scheme_dict in AVAILABLE_SCHEMES.values():
         fullargspec = inspect.getfullargspec(scheme_dict["solver"])
         # scheme_dict['args'] = fullargspec.args
         scheme_dict["args"] = fullargspec.kwonlyargs
-        # TODO: check that these match with expected
         # scheme_dict['args'] = [k for k in fullargspec.kwonlyargs if k not in fullargspec.kwonlydefaults]
         kwd = fullargspec.kwonlydefaults
         if kwd is not None:
             for k in kwd:
                 scheme_dict["args"].remove(k)
+                # TODO: do something with these instead of just removing so we have the info
+        # drop scheme and warn if args don't match with expected
+        if any(k not in CANOPY_RAD_STATE_INPUT_KEYS for k in scheme_dict["args"]):
+            warnings.warn(
+                f"Some arguments for scheme {name!r} not compatible with the expected:\n"
+                f"  {', '.join(CANOPY_RAD_STATE_INPUT_KEYS)}\n"
+                f"As a result, {name!r} will not be loaded."
+            )
+            drop_list.append(name)
+    # drop?
+    if drop_list:
+        AVAILABLE_SCHEMES.pop(name)
 
 
 _construct_scheme_dicts()
 
-# add solver function to solvers module namespace
-for d in AVAILABLE_SCHEMES.values():
-    solver = d["solver"]
+# add solver functions to the solvers module namespace
+for _solver_dict in AVAILABLE_SCHEMES.values():  # get this out of module-level scope
+    solver = _solver_dict["solver"]
     solver_name = solver.__name__
     globals().update({solver_name: solver})
     # also to __all__
     __all__.append(solver_name)
+    # ^ static analyzers don't seem to account for this
