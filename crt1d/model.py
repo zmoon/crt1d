@@ -230,7 +230,10 @@ class Model:
         try:
             mu = p["mu"]
             if mu != np.cos(psi):
-                print("provided mu not consistent with provided psi")
+                warnings.warn(
+                    "Provided `mu` not consistent with provided `psi`. "
+                    f"`mu` will be updated based on the value of `psi`."
+                )
         except KeyError:  # no mu
             p["mu"] = np.cos(psi)
 
