@@ -1,6 +1,8 @@
+# fmt: off
 import numpy as np
 import scipy.integrate as si
 import scipy.optimize as so
+
 
 short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
@@ -8,9 +10,9 @@ long_name = 'Dickinson–Sellers two-stream'
 def solve_2s(*, psi,
     I_dr0_all, I_df0_all, #wl, dwl,
     lai,
-    leaf_t, leaf_r, green, soil_r, 
-    K_b_fn, G_fn, 
-    mean_leaf_angle, 
+    leaf_t, leaf_r, soil_r,
+    K_b_fn, G_fn,
+    mean_leaf_angle,
     ):
     """Dickinson-Sellers 2-stream solution,
     the most common scheme used in regional/climate models.
@@ -48,15 +50,15 @@ def solve_2s(*, psi,
     #
     #> run for each band individually
     #
-    for i in range(nbands):  
+    for i in range(nbands):
 
         # calculate top-of-canopy irradiance present in the band
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
 
         # load canopy optical properties
-        alpha = green * leaf_r[i]  # leaf element reflectance
-        tau   = green * leaf_t[i]  # leaf element transmittance
+        alpha = leaf_r[i]  # leaf element reflectance
+        tau   = leaf_t[i]  # leaf element transmittance
         rho_s = soil_r[i]         # soil reflectivity
 
         omega = alpha + tau  # scattering coefficient := omega = alpha + tau
@@ -156,10 +158,10 @@ def solve_2s(*, psi,
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
-    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    # return I_dr_all, I_df_d_all, I_df_u_all, F_all
     return dict(\
-        I_dr = I_dr_all, 
-        I_df_d = I_df_d_all, 
-        I_df_u = I_df_u_all, 
+        I_dr = I_dr_all,
+        I_df_d = I_df_d_all,
+        I_df_u = I_df_u_all,
         F = F_all
         )

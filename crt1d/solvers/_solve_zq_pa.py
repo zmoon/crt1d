@@ -1,7 +1,12 @@
 """
-Modifications wrt. the verion in pyAPES:
+Modifications
+-------------
+(wrt. the verion in pyAPES)
+
 * remove unneeded figure stuff
+
 *
+
 """
 # fmt: off
 import numpy as np

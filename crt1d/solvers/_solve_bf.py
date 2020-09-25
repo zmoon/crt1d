@@ -12,7 +12,6 @@ def solve_bf(
     lai,
     leaf_t,
     leaf_r,
-    green,
     soil_r,
     K_b_fn,
 ):
@@ -67,7 +66,7 @@ def solve_bf(
         r_l = leaf_r[i]
         t_l = leaf_t[i]
         W = soil_r[i]  # ground-sfc albedo, assume equal to soil reflectivity
-        sigma = green * (r_l + t_l)
+        sigma = r_l + t_l
         alpha = 1 - sigma  # absorbed by leaf
         k_prime = np.sqrt(alpha)  # bulk attenuation coeff for a leaf; Moneith & Unsworth eq. 4.16
         # K = K_b * k_prime  # approx extinction coeff for non-black leaves; ref Moneith & Unsworth p. 120
