@@ -582,7 +582,7 @@ def create_E_closure_table(dsets=[]):
         computed using :func:`to_xr`
 
     """
-    IDs = [ds.attrs["scheme_id"] for ds in dsets]
+    IDs = [ds.attrs["scheme_name"] for ds in dsets]
     columns = [
         "incoming",
         "outgoing (reflected)",

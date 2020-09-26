@@ -57,9 +57,9 @@ inspect.getfullargspec(crt.solvers.solve_bl)
 inspect.getfullargspec(crt.solvers.solve_4s)
 
 # %%
-df_schemes = pd.DataFrame(crt.available_schemes).T
+df_schemes = pd.DataFrame(crt.solvers.AVAILABLE_SCHEMES).T
 
-BL_args = set(a for a in df_schemes.loc[df_schemes.ID == "bl"].args[0])
+BL_args = set(a for a in df_schemes.loc[df_schemes.name == "bl"].args[0])
 df_schemes["args_minus_BL"] = df_schemes["args"].apply(
     lambda x: set(x).symmetric_difference(BL_args)
 )
