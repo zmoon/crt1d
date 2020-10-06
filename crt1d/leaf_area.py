@@ -35,6 +35,28 @@ _LeafAreaProfile = namedtuple("LeafAreaProfile", "lai lad z")
 def distribute_lai_beta(h_c, LAI, n, *, h_min=0.5):
     """Create LAI profile using beta distribution for leaf area density.
     This uses a set fractional height of maximum LAD and corresponding beta distribution shape.
+
+    Parameters
+    ----------
+    h_c : float
+        canopy height
+    n : int
+        number of layers (LAI/interface levels)
+    LAI : float
+        total LAI
+    h_min : float
+        height above ground of the canopy bottom
+
+    Returns
+    -------
+    NamedTuple
+        lai : numpy.ndarray
+            cumulative LAI profile; accumulates from top, so decreasing with z
+        lad : numpy.ndarray
+            leaf area density profile
+        z : numpy.ndarray
+            height above ground (increasing)
+
     """
     h_max_lad = 0.7 * h_c  # TODO: make this an input
     d_max_lad = h_c - h_max_lad
@@ -70,7 +92,31 @@ def test_plot_distribute_lai_beta():
 
 
 def distribute_lai_beta_bonan(h_c, LAI, n, *, h_min=0.5, p=3.5, q=2.0):
-    """Beta distribution based on Bonan SP 2.1"""
+    """Beta distribution based on Bonan SP 2.1.
+
+    Parameters
+    ----------
+    h_c : float
+        canopy height
+    n : int
+        number of layers (LAI/interface levels)
+    LAI : float
+        total LAI
+    h_min : float
+        height above ground of the canopy bottom
+    p, q : float
+        beta distribution shape parameters
+
+    Returns
+    -------
+    NamedTuple
+        lai : numpy.ndarray
+            cumulative LAI profile; accumulates from top, so decreasing with z
+        lad : numpy.ndarray
+            leaf area density profile
+        z : numpy.ndarray
+            height above ground (increasing)
+    """
     dist = beta(p, q)
 
     # depth of canopy
@@ -171,19 +217,24 @@ def test_plot_distribute_lai_weibull():
 def distribute_lai_gamma(h_c, LAI, n):
     """Create LAI profile using Gamma distribution for leaf area density.
 
-    Inputs
-    ------
+    Parameters
+    ----------
     h_c : float
         canopy height
     n : int
-        number of layers
+        number of layers (LAI/interface levels)
     LAI : float
         total LAI
 
     Returns
     -------
-    lai, z
-
+    NamedTuple
+        lai : numpy.ndarray
+            cumulative LAI profile; accumulates from top, so decreasing with z
+        lad : numpy.ndarray
+            leaf area density profile
+        z : numpy.ndarray
+            height above ground (increasing)
     """
     h_max_lad = 0.7 * h_c  # TODO: could be a param
     d_max_lad = h_c - h_max_lad  # canopy depth
@@ -460,11 +511,12 @@ class canopy_lai_dist:
 def distribute_lai_from_cdd(cdd, n):
     """Create LAI profile based on input descriptors of the leaf area distribution.
 
-    Inputs
-    ------
-    cdd:  canopy description dict. contains many things. see the default CSV for example
-    n:    number of layers we want
-
+    Parameters
+    ----------
+    cdd : dict
+        canopy description dict. contains many things. see the default CSV for example
+    n : int
+        desired number of levels (LAI/interface levels)
     """
     LAI = cdd["lai_tot"]  # total canopy LAI
     h_bottom = cdd["h_bot"][-1]  # canopy bottom is the bottom of the bottom-most layer
