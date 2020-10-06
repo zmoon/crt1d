@@ -122,7 +122,8 @@ def load_default_case(nlayers):
     """Idealized beta leaf dist,"""
     h_c = 20.0
     LAI = 4.0
-    lai, z = distribute_lai_beta(h_c, LAI, nlayers)
+    res = distribute_lai_beta(h_c, LAI, nlayers)
+    lai, z = res.lai, res.z
 
     # > spectral things
     #  includes: top-of-canopy BC, leaf reflectivity and trans., soil refl,
@@ -174,3 +175,5 @@ def load_Borden95_default_case(nlayers):
     """ """
     cdd_default = load_canopy_descrip(input_data_dir_str + "/" + "default_canopy_descrip.csv")
     lai, z = distribute_lai_from_cdd(cdd_default, nlayers)
+
+    raise NotImplementedError  # TODO: finish this
