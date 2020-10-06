@@ -21,67 +21,22 @@ from scipy.stats import gamma
 # TODO: move to standard scipy imports
 
 __all__ = [
-    "distribute_lai_gamma",
     "distribute_lai_beta",
     "distribute_lai_beta_bonan",
     "distribute_lai_weibull",
+    "distribute_lai_gamma",
     "distribute_lai_from_cdd",
 ]
 
 
 _LeafAreaProfile = namedtuple("LeafAreaProfile", "lai lad z")
 
-# TODO: needs work!
-def distribute_lai_gamma(h_c, LAI, n):
-    """Create LAI profile using Gamma distribution for leaf area density.
-
-    Inputs
-    ------
-    h_c : float
-        canopy height
-    n : int
-        number of layers
-    LAI : float
-        total LAI
-
-    Returns
-    -------
-    lai, z
-
-    """
-    h_max_lad = 0.7 * h_c  # could be a param
-    d_max_lad = h_c - h_max_lad  # canopy depth
-
-    b = 3.5
-    a = d_max_lad / b + 1
-
-    # a = 2.5
-    # b = d_max_lad/(a-1)
-
-    g = gamma(a, b)
-
-    # lad = np.zeros((n, ))
-    lai = np.zeros((n,))
-    z = np.zeros((n,))
-
-    lai_cum_pct = np.linspace(0.99, 0.1, n - 2)
-
-    z[-1] = h_c
-    z[1:-1] = h_c - g.ppf(lai_cum_pct)  # Gamma ppf depends on depth into the canopy
-    z[0] = 0
-
-    lai[-1] = 0
-    lai[1:-1] = lai_cum_pct * LAI
-    lai[0] = LAI
-
-    return _LeafAreaProfile(lai, None, z)
-
 
 def distribute_lai_beta(h_c, LAI, n, *, h_min=0.5):
     """Create LAI profile using beta distribution for leaf area density.
-    This uses a set height of maximum LAD.
+    This uses a set fractional height of maximum LAD and corresponding beta distribution shape.
     """
-    h_max_lad = 0.7 * h_c
+    h_max_lad = 0.7 * h_c  # TODO: make this an input
     d_max_lad = h_c - h_max_lad
 
     # mode is (a-1)/(a+b-2)
@@ -141,43 +96,6 @@ def distribute_lai_beta_bonan(h_c, LAI, n, *, h_min=0.5, p=3.5, q=2.0):
 def test_plot_distribute_lai_beta_bonan():
     res = distribute_lai_beta_bonan(10, 5, 20)
     test_plot_distribute_lai_res(res, title="distribute_lai_beta_bonan")
-
-
-def test_plot_distribute_lai_res(res, *, title=None):
-    """For any LAI profile results, plot the cumulative LAI profile, analytical LAD profile at
-    the LAI (interface) levels if provided, and dlai/dz at layer midpoints.
-    This provides a visual check for consistency between the lai and lad profile formulations.
-    """
-    lai = res.lai
-    dlai = lai[:-1] - lai[1:]
-
-    lad = res.lad
-
-    z = res.z  # increasing
-    dz = np.diff(z)
-    assert np.all(dz > 0)  # assert increasing
-
-    zm = z[:-1] + 0.5 * dz  # midpoints
-
-    assert np.isclose(np.sum(dlai), lai[0])
-
-    fig, [ax1, ax2] = plt.subplots(1, 2, sharey=True)
-
-    ax1.set_title("LAD")
-    if lad is not None:
-        ax1.plot(res.lad, z, ".-", label=f"from dist\ntrapz = {si.trapz(lad, z):.4g}")
-        # note: the trapz converges to true total LAI as n increases (number of layers)
-    ax1.plot(dlai / dz, zm, "s-", mfc="none", label="dlai/dz at midpts")
-    ax1.legend()
-    ax1.set_ylabel("$z$")
-
-    ax2.set_title("LAI")
-    ax2.plot(lai, z, ".-")
-
-    if title is not None:
-        fig.suptitle(title)
-
-    fig.tight_layout()
 
 
 # adapted from: https://github.com/LukeEcomod/pyAPES_skeleton/blob/master/tools/utilities.py
@@ -248,6 +166,95 @@ def test_plot_distribute_lai_weibull():
     for spc in ["birch", "pine", "spruce"]:
         res = distribute_lai_weibull(z, LAI=5, h=10, hb=0.5, species=spc)
         test_plot_distribute_lai_res(res, title=f"distribute_lai_weibul {spc}")
+
+
+def distribute_lai_gamma(h_c, LAI, n):
+    """Create LAI profile using Gamma distribution for leaf area density.
+
+    Inputs
+    ------
+    h_c : float
+        canopy height
+    n : int
+        number of layers
+    LAI : float
+        total LAI
+
+    Returns
+    -------
+    lai, z
+
+    """
+    h_max_lad = 0.7 * h_c  # TODO: could be a param
+    d_max_lad = h_c - h_max_lad  # canopy depth
+
+    b = 3.5
+    a = d_max_lad / b + 1
+
+    # a = 2.5
+    # b = d_max_lad/(a-1)
+
+    g = gamma(a, b)
+
+    # lad = np.zeros((n, ))
+    lai = np.zeros((n,))
+    z = np.zeros((n,))
+
+    lai_cum_pct = np.linspace(0.99, 0.1, n - 2)
+
+    z[-1] = h_c
+    z[1:-1] = h_c - g.ppf(lai_cum_pct)  # Gamma ppf depends on depth into the canopy
+    z[0] = 0
+
+    lai[-1] = 0
+    lai[1:-1] = lai_cum_pct * LAI
+    lai[0] = LAI
+
+    # TODO: derive and output LAD as well
+
+    return _LeafAreaProfile(lai, None, z)
+
+
+def test_plot_distribute_lai_gamma():
+    res = distribute_lai_beta(10, 5, 20)
+    test_plot_distribute_lai_res(res, title="distribute_lai_gamma")
+
+
+def test_plot_distribute_lai_res(res, *, title=None):
+    """For any LAI profile results, plot the cumulative LAI profile, analytical LAD profile at
+    the LAI (interface) levels if provided, and dlai/dz at layer midpoints.
+    This provides a visual check for consistency between the lai and lad profile formulations.
+    """
+    lai = res.lai
+    dlai = lai[:-1] - lai[1:]
+
+    lad = res.lad
+
+    z = res.z  # increasing
+    dz = np.diff(z)
+    assert np.all(dz > 0)  # assert increasing
+
+    zm = z[:-1] + 0.5 * dz  # midpoints
+
+    assert np.isclose(np.sum(dlai), lai[0])
+
+    fig, [ax1, ax2] = plt.subplots(1, 2, sharey=True)
+
+    ax1.set_title("LAD")
+    if lad is not None:
+        ax1.plot(res.lad, z, ".-", label=f"from dist\ntrapz = {si.trapz(lad, z):.4g}")
+        # note: the trapz converges to true total LAI as n increases (number of layers)
+    ax1.plot(dlai / dz, zm, "s-", mfc="none", label="dlai/dz at midpts")
+    ax1.legend()
+    ax1.set_ylabel("$z$")
+
+    ax2.set_title("LAI")
+    ax2.plot(lai, z, ".-")
+
+    if title is not None:
+        fig.suptitle(title)
+
+    fig.tight_layout()
 
 
 # TODO: multi-stories with the above dist fns. could rework the layer machinery below to do this
@@ -574,5 +581,6 @@ if __name__ == "__main__":
     test_plot_distribute_lai_beta()
     test_plot_distribute_lai_beta_bonan()
     test_plot_distribute_lai_weibull()
+    test_plot_distribute_lai_gamma()
     # test_plot_canopy_layer_class()
     # test_plot_canopy_lai_dist()
