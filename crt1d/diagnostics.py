@@ -4,16 +4,16 @@ Calculations from the CRT solutions
 import warnings
 
 import numpy as np
+from scipy.constants import c
+from scipy.constants import h
+from scipy.constants import N_A
 
 from .solvers import RET_KEYS_ALL_SCHEMES
 
 
 def E_to_PFD(E, wl_um):
     """Energy flux (W/m^2) to photon flux (umol photon / m^2 / s)"""
-    h = 6.626e-34  # J s
-    c = 3.0e8  # m/s
-    N_A = 6.022e23  # #/mol
-
+    # convert wavelength to SI units (for compatibility with the constants)
     wl = wl_um[np.newaxis, :] * 1e-6  # um -> m
 
     e_wl_1 = h * c / wl  # J (per one photon)
