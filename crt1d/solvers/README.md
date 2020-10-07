@@ -15,3 +15,5 @@ Scheme *modules* must contain a *function* with the same name as the module (but
 * takes keyword arguments (and only keyword arguments! so that order doesn't matter when passing args in; see which names can be used in the `solvers` module docstring)
 * returns a dict, including, but not limited to, the four required outputs (direct irradiance, downward/upward diffuse irradiance, actinic flux); see `solvers` module docstring for names)
 * has a docstring that includes some info about the scheme, key references, etc. (module docstring not necessary)
+
+Functions used by multiple schemes can be placed in the `common` module, but the goal is to minimize what is put there, and have the individual solver modules be as self-contained as possible. One exception is the functions for *Kb* and *G*, which are passed into the solver functions as input parameters. That is, instead of strictly using the leaf angle distributions specified in the original papers, we allow any to be used.

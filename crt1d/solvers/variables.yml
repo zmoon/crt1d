@@ -1,5 +1,5 @@
 # intput/output variable definitions for solvers
-# for docstring hacking
+# for docs and maybe for docstring hacking
 #
 # variable_name
 #   type   (type info for docs in the NumPy style)
@@ -39,7 +39,7 @@ in:
       Incoming (downwelling) *diffuse* irradiance(s) at the top of the canopy.
 
       .. warning:: Not spectral, energy flux density in discrete band.
-      
+
     units: W m-2
 
 
@@ -63,7 +63,7 @@ in:
     units: m2 m-2
     units_long: (m2 leaf) (m2 ground area)-1
 
-  
+
   leaf_t:
     type: array_like
     shape: *shape_wl
@@ -130,4 +130,3 @@ out:
     shape: *shape_z_wl
     desc: Actinic flux (spherical).
     units: W m-2
-
