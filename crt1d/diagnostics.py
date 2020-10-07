@@ -72,6 +72,8 @@ def calc_leaf_absorption(p, out, *, band_names_to_calc=None):
         wl_l = wl  # just use the wavelength we have for defining the bands
         wl_r = wl
 
+    # TODO: include clump factor in f_sl and absorption calculations
+
     f_sl_interfaces = np.exp(-K_b * lai)  # fraction of sunlit
     f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)
     f_sh = 1 - f_sl
