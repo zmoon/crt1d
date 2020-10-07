@@ -42,33 +42,19 @@ CanopyDescription = namedtuple("CanopyDescription", " ".join(k for k in CANOPY_D
 
 
 class Model:
-    """A general class for testing 1-D canopy radiative transfer schemes.
+    """A general class for testing 1-D canopy radiative transfer schemes."""
 
-    Optional keyword arguments are used to create the cnpy_descrip and initial cnpy_rad_state
-    dicts that will be used to pass info to the solvers. If not provided, defaults are used.
-    """
-
-    #
-    required_input_keys = (
-        "lai",
-        "z",
-        "mla",
-        "clump",
-        "leaf_t",
-        "leaf_r",
-        "soil_r",
-        "wl_leafsoil",
-        "orient",  # don't really need both this and mla as input
-        "G_fn",
-        "I_dr0_all",
-        "I_df0_all",  # spectral (W/m^2/um)
-        "wl",
-        "dwl",  # for the toc spectra
-        "psi",
+    required_input_keys = tuple(
+        [k for k in CANOPY_DESCRIPTION_KEYS if k not in ("dlai", "lai_tot", "lai_eff")]
+        + [
+            "I_dr0_all",
+            "I_df0_all",  # spectral (W/m^2/um)
+            "wl",
+            "dwl",  # for the toc spectra
+            "psi",
+        ]
     )
-    """
-    Required inputs
-    """
+    """Required inputs"""
 
     _schemes = AVAILABLE_SCHEMES
 
@@ -76,8 +62,7 @@ class Model:
         self,
         scheme="2s",
         nlayers=60,
-        # *,
-        # savd_id=None,
+        **p_kwargs,
     ):
         """
         Create a model instance based on the default setup.
@@ -90,6 +75,8 @@ class Model:
             Solar zenith angle (radians).
         nlayers : int
             Number of in-canopy layers to use in the solver (interface levels).
+        **p_kwargs
+            Model parameter keyword arguments passed on to `.update_p()`.
         """
         # load default case, for given nlayers
         self.nlayers = nlayers
@@ -100,8 +87,12 @@ class Model:
         # assign scheme
         self.assign_scheme(scheme)  # assigns scheme info dict to self.scheme
 
-        # check inputs
-        self._check_inputs()
+        # add parameters in?
+        if p_kwargs:
+            self.update_p(**p_kwargs)
+        else:
+            # check inputs (included in update_p)
+            self._check_inputs()
 
         # run/output variables
         self._run_count = 0  # TODO: store last_state?
