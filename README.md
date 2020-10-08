@@ -6,6 +6,8 @@ Testbed for 1-D canopy radiative transfer schemes.
 
 ### Current list
 
+So far, shortwave canopy radiative transfer only.
+
 Scheme Name | Scheme ID in code | Reference(s)
 --- | :---: | ---
 Beer&ndash;Lambert | bl | [Cambell & Norman (1998)](https://www.springer.com/us/book/9780387949376), ...
