@@ -1,6 +1,0 @@
-[submodule "submodules/radtran"]
-	path = crt1d/external_solvers/radtran
-	url = https://github.com/zmoon92/radtran
-[submodule "submodules/prosail"]
-	path = crt1d/external_solvers/prosail
-	url = git@github.com:zmoon92/prosail.git

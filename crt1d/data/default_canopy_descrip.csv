@@ -7,7 +7,7 @@ h_max_lad,15.4; 6.16,m,heights of maximum leaf area density for each story
 h_bot,12.1; 1.375,m,heights of story bottoms
 h_top,22.0; 12.0,m,heights of story tops (first one should be same as canopy height)
 lad_h_top,0; 0.065,m^2 m^-2 m^-1,LAD value at story tops (should be 0 for uppermost story)
-mean_leaf_angle,57.4,deg.,mean leaf inclination angle
+mla,57.4,deg.,mean leaf inclination angle
 lat,44.31666,,
 lon,80.93333,,
 green,1.0,,leaf green-ness factor

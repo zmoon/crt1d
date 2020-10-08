@@ -1,8 +1,10 @@
-
+# fmt: off
 import numpy as np
-from scipy.sparse.linalg import spsolve  # used for Z&Q model only (so far)
+from scipy.sparse import dia_matrix
+from scipy.sparse.linalg import spsolve
 
-from .common import tau_b_fn, tau_df_fn
+from .common import tau_b_fn
+from .common import tau_df_fn
 
 short_name = 'ZQ'
 long_name = 'Zhao & Qualls multi-scattering'
@@ -10,16 +12,12 @@ long_name = 'Zhao & Qualls multi-scattering'
 def solve_zq(*, psi,
     I_dr0_all, I_df0_all, #wl, dwl,
     lai,
-    leaf_t, leaf_r, green, soil_r, 
+    leaf_t, leaf_r, soil_r,
     K_b_fn, G_fn,
     ):
-    """Zhao & Qualls model (feat. multiple-scattering correction)
+    """Zhao & Qualls model (feat. multiple-scattering correction).
 
-    All refs are to Zhao & Qualls (2005) unless otherwise noted
-
-    Parameters
-    ----------
-    see descriptions in solve_bl
+    All refs are to Zhao & Qualls (2005) unless otherwise noted.
 
     Notes
     -----
@@ -27,11 +25,9 @@ def solve_zq(*, psi,
     higher number generally better
 
     """
-
     dlai = np.diff(lai)
     mu = np.cos(psi)
     K_b = K_b_fn(psi)
-
 
     # backward scattering functions
     def r_psi_fn(bl, tl, psi=psi):
@@ -91,8 +87,8 @@ def solve_zq(*, psi,
         alpha0 = 1 - rho
 
         # leaf optical props; ref. p. 6, eq. 22
-        beta_L  = green * leaf_r[i]  # leaf element reflectance
-        tau_L   = green * leaf_t[i]  # leaf element transmittance
+        beta_L  = leaf_r[i]  # leaf element reflectance
+        tau_L   = leaf_t[i]  # leaf element transmittance
         alpha_L = 1 - (beta_L + tau_L)  # leaf element absorbance
 
 
@@ -159,7 +155,16 @@ def solve_zq(*, psi,
         # note: could also use a Thomas algorithm solver method (write a fn for it)
         #
 
-        x = spsolve(A, C)
+        # convert A to sparse matrix
+        # A_sparse = dia_matrix((A, (-1, 0, 1)), shape=(3, A.shape[1]))
+        A_sparse = dia_matrix(A)
+        # print(A_sparse.shape)
+        # print(A_sparse)
+        # print(A_sparse.offsets, A_sparse.data.shape)
+        assert tuple(A_sparse.offsets) == (-1, 0, 1)
+        assert A_sparse.data.shape == (3, A.shape[1])
+
+        x = spsolve(A_sparse.tocsr(), C)  # needs CSR or CSC format
         SWu0 = x[::2]  # "original downward and upward hemispherical shortwave radiation flux densities"
         SWd0 = x[1::2] # i.e., before multiple scattering within layers is accounted for
 
@@ -218,13 +223,12 @@ def solve_zq(*, psi,
         I_dr_all[:,i] = I_dr0 * np.exp(-K * lai)
 
 
-    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
-    return dict(\
-        I_dr = I_dr_all, 
-        I_df_d = I_df_d_ss_all,#I_df_d_all, 
-        I_df_u = I_df_u_ss_all,#I_df_u_all, 
+    return dict(
+        I_dr = I_dr_all,
+        I_df_d = I_df_d_all,
+        I_df_u = I_df_u_all,
         F = F_all,
         I_df_d_ss = I_df_d_ss_all,
         I_df_u_ss = I_df_u_ss_all,
         F_ss = F_ss_all
-        )
+    )

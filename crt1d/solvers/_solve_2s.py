@@ -1,43 +1,30 @@
-
-# "twos" because module name can't start with number
-
+# fmt: off
 import numpy as np
 import scipy.integrate as si
 import scipy.optimize as so
+
 
 short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
 
 def solve_2s(*, psi,
-    I_dr0_all, I_df0_all, #wl, dwl,
+    I_dr0_all, I_df0_all,
     lai,
-    leaf_t, leaf_r, green, soil_r, 
-    K_b_fn, G_fn, 
-    mean_leaf_angle, 
+    leaf_t, leaf_r, soil_r,
+    K_b_fn, G_fn,
+    mla,
     ):
-    """Dickinson-Sellers 2-stream solution
+    """Dickinson-Sellers 2-stream solution,
+    the most common scheme used in regional/climate models.
 
-    Most common scheme used in regional/climate models.
-
-    Following Sellers (1983) and Dickinson (1985)
-        mainly Dickinson -- variable names chosen to match his
-    and including correction in later Dickinson paper.
-    
-    Inputs
-    ------
-    see the descriptions in solve_bl
-
-    G_fn : G_fn(psi)
-        leaf angle dist factor
-        G = K_b * mu 
-    mean_leaf_angle : float
-        mean leaf inclination angle (deg.)
+    Implementation follows Dickinson (1983) and Sellers (1985)
+    (mainly Sellers -- variable names chosen to match his)
+    and includes the minor correction from the later Sellers paper (1996).
 
     """
-
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
-    theta_bar = np.deg2rad(mean_leaf_angle)  # mean leaf inclination angle; eq. 3
+    theta_bar = np.deg2rad(mla)  # mean leaf inclination angle, deg->rad; eq. 3
 
     # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
     #   sa: angle of scattered flux
@@ -45,7 +32,6 @@ def solve_2s(*, psi,
     mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
     #assert( mu_bar == mu_bar2 )
     assert( np.isclose(mu_bar, mu_bar2) )
-
 
     L_T = lai[0]  # total LAI
 
@@ -63,15 +49,15 @@ def solve_2s(*, psi,
     #
     #> run for each band individually
     #
-    for i in range(nbands):  
+    for i in range(nbands):
 
         # calculate top-of-canopy irradiance present in the band
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
 
         # load canopy optical properties
-        alpha = green * leaf_r[i]  # leaf element reflectance
-        tau   = green * leaf_t[i]  # leaf element transmittance
+        alpha = leaf_r[i]  # leaf element reflectance
+        tau   = leaf_t[i]  # leaf element transmittance
         rho_s = soil_r[i]         # soil reflectivity
 
         omega = alpha + tau  # scattering coefficient := omega = alpha + tau
@@ -171,10 +157,10 @@ def solve_2s(*, psi,
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
-    # return I_dr_all, I_df_d_all, I_df_u_all, F_all 
+    # return I_dr_all, I_df_d_all, I_df_u_all, F_all
     return dict(\
-        I_dr = I_dr_all, 
-        I_df_d = I_df_d_all, 
-        I_df_u = I_df_u_all, 
+        I_dr = I_dr_all,
+        I_df_d = I_df_d_all,
+        I_df_u = I_df_u_all,
         F = F_all
         )

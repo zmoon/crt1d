@@ -1,0 +1,11 @@
+# the package as an editable install
+-e ../
+# sphinx extensions
+sphinx
+sphinx-rtd-theme
+nbsphinx
+sphinxcontrib-bibtex
+myst-parser
+# to run examples as notebooks
+jupytext
+notebook

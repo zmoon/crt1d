@@ -1,4 +1,6 @@
-
+"""
+Common functions used by canopy RT solvers.
+"""
 import numpy as np
 import scipy.integrate as si
 
@@ -9,11 +11,13 @@ def tau_b_fn(K_b_fn, psi, lai_val):
     We need to be able to integrate over different zenith angles (to calulate tau_df), 
     so we supply K_b_fn instead of K_b
 
-    K_b_fn 
+    Parameters
+    ----------
+    K_b_fn : function 
         := G_fn(psi)/cos(psi) where G_fn is "big G" for the chosen leaf angle distribution function.
-    psi:
+    psi : float or array_like
         Solar zenith angle (radians)
-    lai_val: 
+    lai_val : float
         a value of LAI from the cumulative LAI profile (~ an extinction optical thickness/depth)
     """
     return np.exp(-K_b_fn(psi) * lai_val)

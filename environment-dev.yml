@@ -1,0 +1,25 @@
+name: crt1d-dev
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  # used by crt1d
+  - numpy
+  - scipy
+  - matplotlib
+  - xarray
+  - pandas
+  # for docs
+  - sphinx
+  - nbsphinx
+  - jupytext
+  - notebook
+  - sphinxcontrib-bibtex
+  - myst-parser  # they recommend Conda install over Pip
+  - pip  # otherwise conda nags
+  - pip:
+    - sphinx-rtd-theme
+    - '-e .'
+  # dev tools
+  - pylint
+  - rope
