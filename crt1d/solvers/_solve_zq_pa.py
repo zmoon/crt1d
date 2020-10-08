@@ -195,8 +195,10 @@ def solve_zq_pa(*, psi,
         IdSky = I_df0_all[ib]
 
         # --- check inputs and create local variables
-        IbSky = max(IbSky, 0.0001)
-        IdSky = max(IdSky, 0.0001)
+        # // IbSky = max(IbSky, 0.0001)
+        # // IdSky = max(IdSky, 0.0001)
+        # ^ this can skew results (irradiance in a band often less than 0.0001)
+        #   instead we check inputs before passing in here
 
         # get optical param values in the band
         beta_L = leaf_r[ib]
@@ -344,14 +346,16 @@ def solve_zq_pa(*, psi,
         aDiro = aLo*Kb*IbSky
 
         # stand albedo
-        alb = SWuo[-1] / (IbSky + IdSky + EPS)
+        # // alb = SWuo[-1] / (IbSky + IdSky + EPS)
+        alb = SWuo[-1] / (IbSky + IdSky)
         # print alb
         # soil absorption (Wm-2 (ground))
         q_soil = (1 - SoilAlbedo)*(SWdo[0] + SWbo[0])
 
         # correction to match absorption-based and flux-based albedo, relative error <3% may occur
         # in daytime conditions, at nighttime relative error can be larger but fluxes are near zero
-        aa = (sum(aDiffo*Lo + aDiro*f_slo*Lo) + q_soil) / (IbSky + IdSky + EPS)
+        # // aa = (sum(aDiffo*Lo + aDiro*f_slo*Lo) + q_soil) / (IbSky + IdSky + EPS)
+        aa = (sum(aDiffo*Lo + aDiro*f_slo*Lo) + q_soil) / (IbSky + IdSky)
         F = (1. - alb) / aa
         # print('F', F)
         if F <= 0 or np.isfinite(F) is False:
