@@ -174,7 +174,7 @@ def solve_zq(*, psi,
         # SWu = np.zeros_like(SWd)
         SWu = np.zeros((m+1, ))  # < please pylint
 
-        # note that li = 1:m
+        # note that li = 1:m (including m)
 
         # eq. 24; i+1 -> li, i -> li - 1
         SWd[li] = SWd0[li] / (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li])) + \

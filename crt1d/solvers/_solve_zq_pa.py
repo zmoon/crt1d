@@ -15,79 +15,11 @@ from .common import K_df_fn
 from .common import tau_b_fn
 from .common import tau_df_fn
 
-# TODO: define kbeam and kdiffuse using the existing machinery
-# TODO: redefine input names
-# TODO: redefine outputs as dict
-
 #: machine epsilon
 EPS = np.finfo(float).eps
 
 short_name = "ZQ-pA"
 long_name = "Zhao & Qualls multi-scattering pyAPES"
-
-
-# def kbeam(ZEN, x=1.0):
-#     """
-#     COMPUTES BEAM ATTENUATION COEFFICIENT Kb (-) for given solar zenith angle
-#     ZEN (rad) and leaf angle distribution x (-)
-#     IN:
-#         ZEN (rad): solar zenith angle
-#         x (-): leaf-angle distr. parameter (optional)
-#                 x = 1 : spherical leaf-angle distr. (default)
-#                 x = 0 : vertical leaf-angle distr.
-#                 x = inf. : horizontal leaf-angle distr
-#     OUT:
-#         Kb (-): beam attenuation coefficient (array of size(ZEN))
-#     SOURCE: Campbell & Norman (1998), Introduction to environmental biophysics
-#     """
-
-#     ZEN = np.array(ZEN)
-#     x = np.array(x)
-
-#     XN1 = (np.sqrt(x*x + np.tan(ZEN)**2))
-#     XD1 = (x + 1.774*(x + 1.182)**(-0.733))
-#     Kb = XN1 / XD1  # direct beam
-
-#     Kb = np.minimum(15, Kb)
-#     # if Kb<0:
-#     #     Kb=15
-
-#     return Kb
-
-# def kdiffuse(LAI, x=1.0):
-#     """
-#     COMPUTES DIFFUSE ATTENUATION COEFFICIENT Kd (-) BY INTEGRATING Kd OVER HEMISPHERE
-#     IN:
-#         LAI - stand leaf (or plant) are index (m2 m-2)
-#         x (-): leaf-angle distr. parameter (optional)
-#                 x = 1 : spherical leaf-angle distr. (default)
-#                 x = 0 : vertical leaf-angle distr.
-#                 x = inf. : horizontal leaf-angle distr.
-#     OUT:
-#         Kd (-): diffuse attenuation coefficient
-#     USES:
-#         kbeam(ZEN, x) for computing beam attenuation coeff.
-#     SOURCE:
-#         Campbell & Norman, Introduction to environmental biophysics (1998, eq. 15.5)
-#     """
-
-#     LAI = float(LAI)
-#     x = np.array(x)
-
-#     ang = np.linspace(0, np.pi / 2, 90)  # zenith angles at 1deg intervals
-#     dang = ang[1]-ang[0]
-
-#     # beam attenuation coefficient - call kbeam
-#     Kb = kbeam(ang, x)
-#     # print(Kb)
-
-#     # integrate over hemisphere to get Kd, Campbell & Norman (1998, eq. 15.5)
-#     YY = np.exp(-Kb*LAI)*np.sin(ang)*np.cos(ang)
-
-#     Taud = 2.0*np.trapz(YY*dang)
-#     Kd = -np.log(Taud) / (LAI + EPS)  # extinction coefficient for diffuse radiation
-
-#     return Kd
 
 
 def solve_zq_pa(*, psi,
@@ -98,19 +30,7 @@ def solve_zq_pa(*, psi,
     K_b_fn,
 ):
     """
-    Computes incident (Wm-2 ground) SW radiation and absorbed (Wm-2 (leaf) radiation within canopies.
-    INPUT:
-        LAIz: layewise one-sided leaf-area index (m2m-2)
-        Clump: element clumping index (0...1)
-        x: param. of leaf angle distribution
-            (1=spherical, 0=vertical, inf.=horizontal) (-)
-        ZEN: solar zenith angle (rad),scalar
-        IbSky: incident beam radiation above canopy (Wm-2),scalar
-        IdSky: downwelling diffuse radiation above canopy (Wm-2),scalar
-        LAI: leaf (or plant-area) index, 1-sided (m2m-2),scalar
-        LeafAlbedo: leaf albedo of desired waveband (-)
-        SoilAlbedo: soil albedo of desired waveband (-)
-        PlotFigs="True" plots figures.
+
     OUTPUT:
         SWbo: direct SW at z (Wm-2(ground))
         SWdo: downwelling diffuse at z (Wm-2(ground))
@@ -303,7 +223,7 @@ def solve_zq_pa(*, psi,
         # ---- Compute multiple scattering, Zhao & Qualls, 2005. eq. 24 & 25.
         # downwelling diffuse after multiple scattering, eq. 24
         SWd = np.zeros([M+1])
-        for k in range(M-1, -1, -1):  # downwards from layer k+1 to layer k
+        for k in range(M-1, -1, -1):  # downwards from layer k+1 to layer k: M-1..0
             X = SWd0[k+1] / (1 - rd[k]*rd[k+1]*(1-aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
             Y = SWu0[k]*rd[k+1]*(1 - aL[k+1])*(1 - taud[k+1]) / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
             SWd[k+1] = X + Y
@@ -312,7 +232,7 @@ def solve_zq_pa(*, psi,
 
         # upwelling diffuse after multiple scattering, eq. 25
         SWu = np.zeros([M+1])
-        for k in range(0, M, 1):  # upwards from layer k to layer k+1
+        for k in range(0, M, 1):  # upwards from layer k to layer k+1: 0..M-1
             X = SWu0[k] / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
             Y = SWd0[k+1]*rd[k]*(1 - aL[k])*(1 - taud[k]) / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
             SWu[k] = X + Y
