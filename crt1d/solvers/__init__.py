@@ -143,19 +143,7 @@ _scheme_names = [_scheme_id_from_module_name(mn) for mn in _solver_module_names]
 _solver_modules = dict(zip(_scheme_names, _solver_module_names))
 
 # TODO: could read these from the variables.yml instead to ensure consistency
-CANOPY_RAD_STATE_INPUT_KEYS = [
-    "I_dr0_all",
-    "I_df0_all",  # spectral ()
-    "wl",
-    "dwl",  # for the toc spectra
-    "psi",
-    "mu",
-    "K_b",
-    "K_b_fn",
-    "G",
-    "G_fn",
-    "clump",
-]
+CANOPY_RAD_STATE_INPUT_KEYS = [d["name"] for d in _vmd["in"]]
 CANOPY_RAD_STATE_KEYS = CANOPY_RAD_STATE_INPUT_KEYS + [
     "I_dr",
     "I_df_d",
@@ -214,7 +202,7 @@ def _construct_scheme_dicts():
 
     # extract signature
     drop_list = []
-    for scheme_dict in AVAILABLE_SCHEMES.values():
+    for name, scheme_dict in AVAILABLE_SCHEMES.items():
         fullargspec = inspect.getfullargspec(scheme_dict["solver"])
         # scheme_dict['args'] = fullargspec.args
         scheme_dict["args"] = fullargspec.kwonlyargs
@@ -226,10 +214,15 @@ def _construct_scheme_dicts():
                 # TODO: do something with these instead of just removing so we have the info
         # drop scheme and warn if args don't match with expected
         if any(k not in CANOPY_RAD_STATE_INPUT_KEYS for k in scheme_dict["args"]):
+            invalid_kwargs = [
+                k for k in scheme_dict["args"] if k not in CANOPY_RAD_STATE_INPUT_KEYS
+            ]
             warnings.warn(
                 f"Some arguments for scheme {name!r} not compatible with the expected:\n"
                 f"  {', '.join(CANOPY_RAD_STATE_INPUT_KEYS)}\n"
-                f"As a result, {name!r} will not be loaded."
+                f"As a result, {name!r} will not be loaded.\n"
+                "Invalid keys:\n"
+                f"  {', '.join(invalid_kwargs)}"
             )
             drop_list.append(name)
     # drop?
