@@ -131,7 +131,7 @@ def _get_solver_module_names():
     from pathlib import Path
 
     solvers_dir = Path(__file__).parent
-    return list(p.stem for p in solvers_dir.glob("_solve_*.py"))
+    return sorted(p.stem for p in solvers_dir.glob("_solve_*.py"))
 
 
 def _scheme_id_from_module_name(s):
@@ -140,6 +140,7 @@ def _scheme_id_from_module_name(s):
 
 _solver_module_names = _get_solver_module_names()
 _scheme_names = [_scheme_id_from_module_name(mn) for mn in _solver_module_names]
+_solver_modules = dict(zip(_scheme_names, _solver_module_names))
 
 # TODO: could read these from the variables.yml instead to ensure consistency
 CANOPY_RAD_STATE_INPUT_KEYS = [
@@ -189,7 +190,9 @@ def _construct_scheme_dicts():
     import warnings
 
     # extract info
-    for module_name, (name, scheme_dict) in zip(_solver_module_names, AVAILABLE_SCHEMES.items()):
+    for name, scheme_dict in AVAILABLE_SCHEMES.items():
+
+        module_name = _solver_modules[name]
 
         scheme_dict["module_name"] = module_name
         scheme_dict["name"] = name  # `name` is the primary identifier
