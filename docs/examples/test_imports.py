@@ -51,7 +51,7 @@ crt.solvers
 # %%
 import inspect
 
-inspect.getfullargspec(crt.solvers.solve_bl)
+inspect.getfullargspec(crt.solvers.solve_2s)
 
 # %%
 inspect.getfullargspec(crt.solvers.solve_4s)
