@@ -88,6 +88,7 @@ def solve_zq_pa(*, psi,
     L[0] = 0.
     L[M + 1] = 0.
     Lcum = np.cumsum(np.flipud(L), 0)  # cumulative plant area from top
+    # ^ 0, ..., LAI, LAI
 
     # black leaf extinction coefficients for direct beam and diffuse radiation
     # Kb = kbeam(ZEN, x)
@@ -154,7 +155,8 @@ def solve_zq_pa(*, psi,
         taud = np.zeros([M+2])
         taub[0:M+2] = np.exp(-Kb*L)
         taud[0:M+2] = np.exp(-Kd*L)
-        # TODO: check whether this Kd method is consistent with my tau_df method...
+        # taud[0:M+2] = tau_df_fn(K_b_fn, LAI/M)  # there is LAI/M in each layer
+        # ^ not equivalent but doesn't change results much wrt. original
 
         # soil surface is non-transparent
         taub[0] = 0.
