@@ -86,7 +86,16 @@ def kdiffuse(LAI, x=1.0):
     return Kd
 
 
-def solve_zq_pa(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo):
+def solve_zq_pa(
+    lai,
+    Clump,
+    x,
+    ZEN,
+    IbSky,
+    IdSky,
+    LeafAlbedo,
+    SoilAlbedo,
+):
     """
     Computes incident (Wm-2 ground) SW radiation and absorbed (Wm-2 (leaf) radiation within canopies.
     INPUT:
@@ -134,15 +143,20 @@ def solve_zq_pa(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo):
     IdSky = max(IdSky, 0.0001)
 
     # original and computational grid
-    LAI = Clump*sum(LAIz)  # effective LAI, corrected for clumping (m2 m-2)
+    # // LAI = Clump*sum(LAIz)  # effective LAI, corrected for clumping (m2 m-2)
+    # // Lo = Clump*LAIz  # effective layerwise LAI (or PAI) in original grid
 
-    Lo = Clump*LAIz  # effective layerwise LAI (or PAI) in original grid
+    # instead, assume that effective *cumulative* LAI has been passed in;
+    # use Clump only for the absorption stuff
+    LAI = lai[0]  # effective LAI, corrected for clumping (m2 m-2)
+    # `lai` input
 
-    Lcumo = np.cumsum(np.flipud(Lo), 0)  # cumulative plant area index from canopy top
-    Lcumo = np.flipud(Lcumo)  # node 0 is canopy bottom, N is top
+    # cumulative plant area index: node 0 is canopy bottom, N is top
+    # this is the same as the `lai` input
+    Lcumo = lai
 
     # --- create computation grid
-    N = np.size(Lo)  # nr of original layers
+    N = np.size(lai)  # nr of original layers
     M = np.minimum(100, N)  # nr of comp. layers
     L = np.ones([M+2])*LAI / M  # effective leaf-area density (m2m-3)
     L[0] = 0.
