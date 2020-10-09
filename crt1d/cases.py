@@ -51,10 +51,8 @@ def load_default_leaf_soil_props():
     # ----------------------------------------------------------------------------------------------
     # green leaf properties (alread at SPCTRAL2 wavelengths)
 
-    leaf_data_file = (
-        "{data:s}/ideal-green-leaf/leaf-idealized-rad_SPCTRAL2_wavelengths_extended.csv".format(
-            data=input_data_dir_str
-        )
+    leaf_data_file = "{data:s}/ideal-green-leaf_SPCTRAL2-wavelengths.csv".format(
+        data=input_data_dir_str
     )
     leaf_data = np.loadtxt(leaf_data_file, delimiter=",", skiprows=1)
     wl = leaf_data[
@@ -98,12 +96,15 @@ def load_default_leaf_soil_props():
 def load_default_toc_spectra():
     """Load sample top-of-canopy spectra (direct and diffuse).
 
-    The irradiances are in spectral form: W m^-2 um^-1
+    The SPCTRAL2 irradiances are in spectral form: W m^-2 um^-1
     """
+    fp = "{data:s}/SPCTRAL2_xls_default-spectrum.csv".format(data=input_data_dir_str)
 
-    fp = "{data:s}/sample_pyspctral2.csv".format(data=input_data_dir_str)
+    wl, I_dr0, I_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
 
-    wl, dwl, I_dr0, I_df0 = np.loadtxt(fp, delimiter=",", unpack=True)
+    # TODO: update dwl
+    dwl0 = np.diff(wl)
+    dwl = np.r_[dwl0, dwl0[0]]
 
     wl_a = 0.30  # lower limit of leaf data, extended; um
     wl_b = 2.6  # upper limit of leaf data; um
