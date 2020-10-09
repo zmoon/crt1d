@@ -64,6 +64,17 @@ in:
     units_long: (m2 leaf) (m2 ground area)-1
 
 
+  clump:
+    type: float
+    desc: >
+      Clump factor $\Omega$. In (0, 1], this parameter represents the impact of leaf
+      clumping in space on canopy light transmission and leaf absorption. It can vary
+      with height in real canopies (like some of the other parameters here),
+      but this is currently not supported.
+
+    units: 1
+
+
   leaf_t:
     type: array_like
     shape: *shape_wl
@@ -75,6 +86,13 @@ in:
     type: array_like
     shape: *shape_wl
     desc: Leaf element reflectivity.
+    units: 1
+
+
+  soil_r:
+    type: array_like
+    shape: *shape_wl
+    desc: Soil (ground surface) reflectivity.
     units: 1
 
 

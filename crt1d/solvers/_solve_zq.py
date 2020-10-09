@@ -74,9 +74,6 @@ def solve_zq(*, psi,
 
     for i in range(nbands):  # run for each band individually
 
-    #    if i > 20:
-    #        break
-
         # calculate top-of-canopy irradiance present in the band
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
@@ -155,6 +152,10 @@ def solve_zq(*, psi,
         # note: could also use a Thomas algorithm solver method (write a fn for it)
         #
 
+        # ---- standard solve
+        # x = np.linalg.solve(A, C)
+
+        # ---- solve using sparse matrix machinery
         # convert A to sparse matrix
         # A_sparse = dia_matrix((A, (-1, 0, 1)), shape=(3, A.shape[1]))
         A_sparse = dia_matrix(A)
@@ -163,8 +164,8 @@ def solve_zq(*, psi,
         # print(A_sparse.offsets, A_sparse.data.shape)
         assert tuple(A_sparse.offsets) == (-1, 0, 1)
         assert A_sparse.data.shape == (3, A.shape[1])
-
         x = spsolve(A_sparse.tocsr(), C)  # needs CSR or CSC format
+
         SWu0 = x[::2]  # "original downward and upward hemispherical shortwave radiation flux densities"
         SWd0 = x[1::2] # i.e., before multiple scattering within layers is accounted for
 
@@ -177,7 +178,7 @@ def solve_zq(*, psi,
         # SWu = np.zeros_like(SWd)
         SWu = np.zeros((m+1, ))  # < please pylint
 
-        # note that li = 1:m
+        # note that li = 1:m (including m)
 
         # eq. 24; i+1 -> li, i -> li - 1
         SWd[li] = SWd0[li] / (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li])) + \
