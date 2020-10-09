@@ -87,8 +87,6 @@ def solve_zq_pa(*, psi,
     L = np.ones([M+2])*LAI / M  # effective leaf-area density, divided equally amongst layers (m2m-3)
     L[0] = 0.
     L[M + 1] = 0.
-    Lcum = np.cumsum(np.flipud(L), 0)  # cumulative plant area from top
-    # ^ 0, ..., LAI, LAI
 
     # black leaf extinction coefficients for direct beam and diffuse radiation
     # Kb = kbeam(ZEN, x)
@@ -143,9 +141,15 @@ def solve_zq_pa(*, psi,
         tL[M+1] = 1.
         rL[M+1] = 0.
 
+        # cumulative plant area from top
+        # even though doesn't change with wavelength, need to define here since it is modified later
+        Lcum = np.cumsum(np.flipud(L), 0)
+        # ^ 0, ..., LAI, LAI
+
         # fraction of sunlit & shad ground area in a layer (-)
         # even though doesn't change with wavelength, need to define here since it is modified later
         f_sl = np.flipud(np.exp(-Kb*(Lcum)))
+        # defined this way, f_sl[0] == 1
 
         # beam radiation at each layer
         Ib = f_sl*IbSky
@@ -154,9 +158,9 @@ def solve_zq_pa(*, psi,
         taub = np.zeros([M+2])
         taud = np.zeros([M+2])
         taub[0:M+2] = np.exp(-Kb*L)
-        taud[0:M+2] = np.exp(-Kd*L)
-        # taud[0:M+2] = tau_df_fn(K_b_fn, LAI/M)  # there is LAI/M in each layer
-        # ^ not equivalent but doesn't change results much wrt. original
+        # taud[0:M+2] = np.exp(-Kd*L)  # < original expression
+        taud[0:M+2] = tau_df_fn(K_b_fn, LAI/M)  # there is LAI/M in each layer
+        # ^ not equivalent to original expression!
 
         # soil surface is non-transparent
         taub[0] = 0.
@@ -204,6 +208,7 @@ def solve_zq_pa(*, psi,
 
         # lowermost row
         C[0] = SoilAlbedo*Ib[0]
+        # C[0] = SoilAlbedo*Ib[-1]
         n = 1  # dummy
         for k in range(1, M+1):  # k=2:M-1,
             C[n] = (1 - rd[k-1]*rd[k]*(1 - aL[k-1])*(1 - taud[k-1])*(1 - aL[k])*(1 - taud[k]) )*rb[k]*(1 - taub[k])*(1 - aL[k])*Ib[k]
