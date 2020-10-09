@@ -41,13 +41,7 @@ def load_canopy_descrip(fname):
 
 
 def load_default_leaf_soil_props():
-    """
-    Returns
-    -------
-
-
-    """
-
+    """Load arrays for the ideal green leaf and simplified (two-value) soil reflectivity."""
     # ----------------------------------------------------------------------------------------------
     # green leaf properties (alread at SPCTRAL2 wavelengths)
 
@@ -55,12 +49,10 @@ def load_default_leaf_soil_props():
         data=input_data_dir_str
     )
     leaf_data = np.loadtxt(leaf_data_file, delimiter=",", skiprows=1)
-    wl = leaf_data[
-        :, 0
-    ]  # all SPCTRAL2 wavelengths (to 4 um); assume band center (though may be left...)
-    dwl = np.append(
-        np.diff(wl), np.nan
-    )  # um; UV region more important so add nan to end instead of beginning, though doesn't really matter since outside leaf data bounds
+    wl = leaf_data[:, 0]
+    # ^ all SPCTRAL2 wavelengths (to 4 um); assume band center (though may be left/edge...)
+    dwl = np.append(np.diff(wl), np.nan)
+    # ^ um; UV region more important so add nan to end instead of beginning, though doesn't really matter since outside leaf data bounds
 
     #    wl_a = 0.35  # lower limit of leaf data; um
     wl_a = 0.30  # lower limit of leaf data, extended; um
@@ -77,8 +69,7 @@ def load_default_leaf_soil_props():
 
     leaf_t[leaf_t == 0] = 1e-10
     leaf_r[leaf_r == 0] = 1e-10
-
-    # also eliminate < 0 values ??
+    # TODO: ^ also eliminate < 0 values ??
     #   this was added to the leaf optical props generation
     #   but still having problem with some values == 0
 

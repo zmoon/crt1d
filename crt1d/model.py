@@ -446,6 +446,14 @@ class Model:
         """Plot LAI and LAD profiles."""
         _plot_canopy(self)
 
+    def plot_toc_spectra(self):
+        """Plot the toc (top-of-canopy) irradiance spectra used for the upper boundary condition."""
+        _plot_toc_spectra(self)
+
+    def plot_leafsoil_spectra(self):
+        """Plot the leaf and soil optical properties spectra used by the model."""
+        _plot_leafsoil_spectra(self)
+
 
 def _plot_canopy(m):
     """Plot LAI and LAD profiles.
@@ -460,8 +468,6 @@ def _plot_canopy(m):
     dlai = p["dlai"]
     zm = p["zm"]
     dz = p["dz"]
-
-    # mla = p["mla"]
 
     if np.allclose(dlai, dlai[0]):
         plot_dlai = False
@@ -480,8 +486,8 @@ def _plot_canopy(m):
     ax1 = axs[0]
 
     ax1.plot(lai, z, fmt)
-    ax1.set_title("cumulative LAI")
-    ax1.set_ylabel("height in canopy (m)")
+    ax1.set_title("Cumulative LAI")
+    ax1.set_ylabel("Height in canopy (m)")
 
     if plot_dlai:
         ax2 = axs[1]
@@ -501,9 +507,63 @@ def _plot_canopy(m):
     fig.tight_layout()
 
 
-def _plot_spectral(m):
+def _plot_toc_spectra(m):
+    """Plot the toc irradiance spectra."""
+    p = m._p
+    dwl = p["dwl"]
+    wl = p["wl"]
+    Idr = p["I_dr0_all"]
+    Idf = p["I_df0_all"]
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+
+    ax.plot(wl, Idr / dwl, label="direct")
+    ax.plot(wl, Idf / dwl, label="diffuse")
+    ax.plot(wl, (Idr + Idf) / dwl, label="total")
+
+    ax.set(xlabel="Wavelength (μm)", ylabel="Spectral irradiance (W m$^{-2}$ μm$^{-1}$)")
+
+    ax.autoscale(enable=True, axis="x", tight=True)
+    ax.set_ylim(ymin=0)
+
+    ax.legend()
+    fig.tight_layout()
+
+
+def _plot_leafsoil_spectra(m):
     """Plot the spectral leaf and soil properties."""
-    return NotImplementedError
+    p = m._p
+    wl = p["wl_leafsoil"]
+    rl = p["leaf_r"]
+    tl = p["leaf_t"]
+    rs = p["soil_r"]
+
+    fig, [ax1, ax2] = plt.subplots(2, 1, figsize=(6, 5), sharex=True, sharey=True)
+
+    # leaf
+    l1 = rl
+    l2 = 1 - tl
+    ax1.plot(wl, l1, label="Reflectance", lw=2.0)
+    ax1.plot(wl, l2, label="Transmittance\n(from top x-axis)", lw=2.0)
+    ax1.fill_between(wl, l1, l2, color="0.70", alpha=0.5)
+    ax1.legend()
+    ax1.set_ylim((0, 1))
+    ax1.set_title("Grey = Absorbance", loc="left", color="0.4", fontsize=9)
+    # ^ indicate what the grey means
+    ax1.text(0.01, 0.97, "Leaf", ha="left", va="top", transform=ax1.transAxes)
+
+    # soil
+    l1 = rs
+    l2 = np.ones_like(l1)
+    ax2.plot(wl, rs, label="Reflectance (soil albedo)")
+    ax2.fill_between(wl, l1, l2, color="0.70", alpha=0.5)
+    ax2.text(0.01, 0.97, "Soil", ha="left", va="top", transform=ax2.transAxes)
+
+    ax2.set(xlabel="Wavelength (μm)", ylabel="")
+    ax2.autoscale(enable=True, axis="x", tight=True)
+    ax2.set_ylim(ymin=0)
+
+    fig.tight_layout()
 
 
 def _plot_band(dsets, bn):
