@@ -61,6 +61,7 @@ def calc_leaf_absorption(p, out, *, band_names_to_calc=None):
     I_df_u = out["I_df_u"]
     I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
 
+    # get band wavelength bounds, in order to assess contributions to the integrals
     try:
         wl_l = p["wl_l"]
         wl_r = p["wl_r"]
@@ -115,6 +116,8 @@ def calc_leaf_absorption(p, out, *, band_names_to_calc=None):
     isNIR = (wl_l >= 0.7) & (wl_r <= 2.5)
     isUV = (wl_l >= 0.01) & (wl_r <= 0.4)
     issolar = (wl_l >= 0.3) & (wl_r <= 5.0)
+
+    # TODO: fractional weights for bands that are only partially in the desired range
 
     # integrate spectral profiles over different bands (currently hardcoded)
     #
