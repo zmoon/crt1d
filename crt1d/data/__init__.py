@@ -1,77 +1,164 @@
 """
 Data provided with crt1d: default/sample spectra,
 as well as functions that use external (not-required) libraries to compute more spectra.
+
+Data are loaded as `xarray.Dataset`s for easy inspection.
 """
 import numpy as np
+import xarray as xr
 
 from .. import DATA_BASE_DIR
+from ..spectra import edges_from_centers
 
 DATA_DIR_STR = DATA_BASE_DIR.as_posix()
 
 
-def load_default_leaf_soil_props():
-    """Load arrays for the ideal green leaf and simplified (two-value) soil reflectivity."""
-    # ----------------------------------------------------------------------------------------------
-    # green leaf properties (alread at SPCTRAL2 wavelengths)
-
-    leaf_data_file = "{data:s}/ideal-green-leaf_SPCTRAL2-wavelengths.csv".format(data=DATA_DIR_STR)
-    leaf_data = np.loadtxt(leaf_data_file, delimiter=",", skiprows=1)
-    wl = leaf_data[:, 0]
-    # ^ all SPCTRAL2 wavelengths (to 4 um); assume band center (though may be left/edge...)
-    dwl = np.append(np.diff(wl), np.nan)
-    # ^ um; UV region more important so add nan to end instead of beginning, though doesn't really matter since outside leaf data bounds
-
-    #    wl_a = 0.35  # lower limit of leaf data; um
-    wl_a = 0.30  # lower limit of leaf data, extended; um
-    wl_b = 2.6  # upper limit of leaf data; um
-    leaf_data_wls = (wl >= wl_a) & (wl <= wl_b)
-
-    # use only the region where we have leaf data
-    #  initially, everything should be at the SPCTRAL2 wls
-    wl = wl[leaf_data_wls]
-    dwl = dwl[leaf_data_wls]
-
-    leaf_t = leaf_data[:, 1][leaf_data_wls]
-    leaf_r = leaf_data[:, 2][leaf_data_wls]
-
-    leaf_t[leaf_t == 0] = 1e-10
-    leaf_r[leaf_r == 0] = 1e-10
-    # TODO: ^ also eliminate < 0 values ??
-    #   this was added to the leaf optical props generation
-    #   but still having problem with some values == 0 in certain schemes
-
-    # ----------------------------------------------------------------------------------------------
-    # soil reflectivity (assume these for now (used in Fuentes 2007)
-
-    # soil_r = np.ones_like(wl)
-    soil_r = np.ones(wl.shape)  # < please pylint
-    soil_r[wl <= 0.7] = 0.1100  # this is the PAR value
-    soil_r[wl > 0.7] = 0.2250  # near-IR value
-
-    return wl, dwl, leaf_r, leaf_t, soil_r
+def _wl_coord_dict(wl, *, units="μm"):
+    return {"wl": (("wl"), wl, {"long_name": "Wavelength", "units": units})}
 
 
-def load_default_toc_spectra():
-    """Load sample top-of-canopy spectra (direct and diffuse).
+def load_soil_fuentes2007(wl_um):
+    """PAR and NIR values, applied to the wavelengths in `wl_um`."""
+    wl_um = np.asarray(wl_um)
+    r_soil = np.ones_like(wl_um)
+    r_soil[wl_um <= 0.7] = 0.1100  # this is the PAR value
+    r_soil[wl_um > 0.7] = 0.2250  # near-IR value
 
-    The SPCTRAL2 irradiances are in spectral form: W m^-2 um^-1
+    attrs = {}
+    return xr.Dataset(
+        coords=_wl_coord_dict(wl_um),
+        data_vars={"rs": ("wl", r_soil, {"long_name": "Soil reflectance", "units": ""})},
+        attrs=attrs,
+    )
+
+
+def load_default_ps5():
+    """Load the provided default PROSPECT5 leaf element reflectance/transmittance."""
+    wl_nm, r, t = np.loadtxt(DATA_BASE_DIR / "PROSPECT_sample.txt", unpack=True)
+    wl = wl_nm / 1000.0  # nm->um
+
+    attrs = {}
+    dims = "wl"
+    ds = xr.Dataset(
+        coords=_wl_coord_dict(wl),
+        data_vars={
+            "rl": (dims, r, {"units": "", "long_name": "Leaf reflectance"}),
+            "tl": (dims, t, {"units": "", "long_name": "Leaf transmittance"}),
+        },
+        attrs=attrs,
+    )
+    return ds
+
+
+def load_ideal_leaf(*, midpt=False):
+    """Load the ideal green leaf properties (at SPCTRAL2 wavelengths)."""
+    fpath = DATA_BASE_DIR / "ideal-green-leaf_SPCTRAL2-wavelengths.csv"
+    wl, t, r = np.loadtxt(fpath, delimiter=",", skiprows=1, unpack=True)
+
+    # adjust <= 0 values (on the right edge where r=t=0)
+    t[t == 0] = 1e-10
+    r[r == 0] = 1e-10
+
+    if midpt:
+        wl = (wl[:-1] + wl[1:]) / 2
+        t = (t[:-1] + t[1:]) / 2
+        r = (r[:-1] + r[1:]) / 2
+
+    attrs = {}
+    dims = "wl"
+    ds = xr.Dataset(
+        coords=_wl_coord_dict(wl),
+        data_vars={
+            "rl": (dims, r, {"units": "", "long_name": "Leaf reflectance"}),
+            "tl": (dims, t, {"units": "", "long_name": "Leaf transmittance"}),
+        },
+        attrs=attrs,
+    )
+    return ds
+
+
+def load_default_sp2(*, midpt=True):
+    """Load sample SPCTRAL2 top-of-canopy spectra (direct and diffuse).
+
+    The SPCTRAL2 irradiances are in spectral form: W m-2 μm-1,
+    but we need in-band irradiance for the solvers, since some compute W/m2 absorption.
+
+    Parameters
+    ----------
+    midpt : bool, optional
+        true (default): irradiance calculated at midpts of the original grid
+
+        false: irradiance calculated by estimating the edges of the original grid
+            and treating the original grid as centers
     """
-    fp = "{data:s}/SPCTRAL2_xls_default-spectrum.csv".format(data=DATA_DIR_STR)
+    # load original spectra
+    fp = DATA_BASE_DIR / "SPCTRAL2_xls_default-spectrum.csv"
+    wl0, SI_dr0, SI_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
 
-    wl, I_dr0, I_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
+    if midpt:
+        dwl = np.diff(wl0)
+        wl = wl0[:-1] + 0.5 * dwl  # for in-band irradiance
 
-    # TODO: update dwl
-    dwl0 = np.diff(wl)
-    dwl = np.r_[dwl0, dwl0[0]]
+        # spectral irradiance for bin center as average of edge values
+        # integration: spectral irradiance -> bin-level irradiance
+        I_dr = (SI_dr0[:-1] + SI_dr0[1:]) / 2 * dwl
+        I_df = (SI_df0[:-1] + SI_df0[1:]) / 2 * dwl
 
-    wl_a = 0.30  # lower limit of leaf data, extended; um
-    wl_b = 2.6  # upper limit of leaf data; um
-    leaf_data_wls = (wl >= wl_a) & (wl <= wl_b)
+    else:  # edges-from-centers method
+        wle = edges_from_centers(wl0)
+        dwl = np.diff(wle)
+        wl = wl0  # for in-band irradiance (and original spectral irradiance)
 
-    # use only the region where we have leaf data
-    wl = wl[leaf_data_wls]
-    dwl = dwl[leaf_data_wls]
-    SI_dr0 = I_dr0[leaf_data_wls]  # [np.newaxis,:]  # expects multiple cases
-    SI_df0 = I_df0[leaf_data_wls]  # [np.newaxis,:]
+        I_dr = SI_dr0 * dwl
+        I_df = SI_df0 * dwl
 
-    return wl, dwl, SI_dr0 * dwl, SI_df0 * dwl
+    dimsx = "wl"  # band edges / actual spectrum tracing
+    dims0 = "wl0"  # band centers
+    Sunits = "W m-2 μm-1"  # spectral units
+    units = "W m-2"  # non-spectral
+
+    attrs = {}
+    coords = {
+        "wl": (dimsx, wl, {"units": "μm", "long_name": "Wavelength"}),
+        "wl0": (dims0, wl0, {"units": "μm", "long_name": "Wavelength of original spectra"}),
+    }
+    dset = xr.Dataset(
+        coords=coords,
+        data_vars={
+            "SI_dr0": (dims0, SI_dr0, {"units": Sunits, "long_name": "Spectral direct irradiance"}),
+            "SI_df0": (
+                dims0,
+                SI_df0,
+                {"units": Sunits, "long_name": "Spectral diffuse irradiance"},
+            ),
+            "I_dr": (dimsx, I_dr, {"units": units, "long_name": "Direct irradiance"}),
+            "I_df": (dimsx, I_df, {"units": units, "long_name": "Diffuse irradiance"}),
+            "dwl": (dimsx, dwl, {"units": "μm", "long_name": "Wavelength band width"}),
+        },
+        attrs=attrs,
+    )
+    return dset
+
+
+def load_default(*, midpt=True):
+    """Load default toc irradiance spectra, and leaf & soil optical props,
+    used in :func:`~..cases.load_default_case`.
+    """
+    # load individual datasets
+    ds_l = load_ideal_leaf(midpt=midpt)
+    ds_r = load_default_sp2(midpt=midpt)  # toc irradiance
+    ds_s = load_soil_fuentes2007(wl_um=ds_l.wl)  # soil, using the leaf wavelengths
+
+    # make sure the grids are the same
+    assert np.allclose(ds_l.wl, ds_s.wl)
+    assert np.allclose(ds_l.wl, ds_r.wl)
+
+    if not midpt:
+        assert np.allclose(
+            ds_l.wl, ds_r.wl0
+        ), "In the non-midpt case, we use the original SPCTRAL2 wavelengths."
+
+    # concat and reconcile
+    ds = xr.merge([ds_l, ds_r, ds_s])
+
+    return ds

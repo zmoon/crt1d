@@ -3,9 +3,8 @@
 """
 import numpy as np
 
+from . import data
 from . import DATA_BASE_DIR
-from .data import load_default_leaf_soil_props
-from .data import load_default_toc_spectra
 from .leaf_angle import G_ellipsoidal_approx
 from .leaf_angle import mla_to_x_approx as mla_to_orient
 from .leaf_area import distribute_lai_beta
@@ -22,51 +21,40 @@ def load_default_case(nlayers):
     res = distribute_lai_beta(h_c, LAI, nlayers)
     lai, z = res.lai, res.z
 
-    # spectral things
-    # includes:
-    # - top-of-canopy BC, leaf reflectivity and trans., soil refl,
-    #   for now, assume wavelengths from the BC apply to leaf as well
-    (
-        wl_default,
-        dwl_default,
-        leaf_r_default,
-        leaf_t_default,
-        soil_r_default,
-    ) = load_default_leaf_soil_props()
+    # default spectral things,
+    # dropping wavelengths where something is NaN (missing / not defined)
+    ds = data.load_default(midpt=True).dropna(dim="wl")
 
     mla = 57  # for spherical? (check)
     orient = mla_to_orient(mla)
     G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)
 
-    cnpy_descrip = dict(
+    sza = 20  # deg.
+    psi = np.deg2rad(sza)
+    # mu = np.cos(psi)
+
+    p = dict(
         lai=lai,
         z=z,
         green=1.0,
         mla=mla,
         clump=1.0,
-        leaf_t=leaf_t_default,
-        leaf_r=leaf_r_default,
-        soil_r=soil_r_default,
-        wl_leafsoil=wl_default,
         orient=orient,
         G_fn=G_fn,
-    )
-
-    wl, dwl, I_dr0, I_df0 = load_default_toc_spectra()
-
-    sza = 20  # deg.
-    psi = np.deg2rad(sza)
-    # mu = np.cos(psi)
-
-    cnpy_rad_state = dict(
-        I_dr0_all=I_dr0,
-        I_df0_all=I_df0,
-        wl=wl,
-        dwl=dwl,
         psi=psi,
+        #
+        leaf_t=ds.tl.values,
+        leaf_r=ds.rl.values,
+        soil_r=ds.rs.values,
+        wl_leafsoil=ds.wl.values,
+        #
+        I_dr0_all=ds.I_dr.values,
+        I_df0_all=ds.I_df.values,
+        wl=ds.wl.values,
+        dwl=ds.dwl.values,
     )
 
-    return {**cnpy_descrip, **cnpy_rad_state}  # now combined
+    return p
 
 
 def load_canopy_descrip(fpath):
@@ -96,7 +84,7 @@ def load_canopy_descrip(fpath):
 
 def load_Borden95_default_case(nlayers):
     """ """
-    cdd_default = load_canopy_descrip(input_data_dir_str + "/" + "default_canopy_descrip.csv")
+    cdd_default = load_canopy_descrip(DATA_BASE_DIR / "default_canopy_descrip.csv")
     lai, z = distribute_lai_from_cdd(cdd_default, nlayers)
 
     raise NotImplementedError  # TODO: finish this

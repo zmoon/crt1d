@@ -53,5 +53,28 @@ def smear_tuv(x, y, bins):
     return ynew  # valid for band, not at left edge
 
 
+def smear_trapz_interp():
+    raise NotImplementedError
+
+
+def smear_ds(ds, *, method="tuv"):
+    """"""
+    raise NotImplementedError
+
+
+def edges_from_centers(x):
+    """Estimate locations of the bin edges by extrapolating the grid spacing on the edges.
+    Note that the true bin edges could be different--this is just a guess!
+
+    From specutils:
+    https://github.com/astropy/specutils/blob/9ce88d6be700a06e888d9d0cdd04c0afc2ae85f8/specutils/spectra/spectral_axis.py#L46-L55
+    """
+    extend_left = np.r_[2 * x[0] - x[1], x]
+    extend_right = np.r_[x, 2 * x[-1] - x[-2]]
+    edges = (extend_left + extend_right) / 2
+
+    return edges
+
+
 if __name__ == "__main__":
     pass
