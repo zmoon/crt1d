@@ -2,6 +2,7 @@
 Spectral manipulations.
 """
 import numpy as np
+import xarray as xr
 
 
 def smear_tuv_1(x, y, xgl, xgu):
@@ -57,9 +58,47 @@ def smear_trapz_interp():
     raise NotImplementedError
 
 
-def smear_ds(ds, *, method="tuv"):
-    """"""
-    raise NotImplementedError
+def _smear_da(da, bins, *, xname, method):
+    """Returns an `xr.Dataset` ``data_vars`` tuple."""
+    x = da[xname].values
+    y = da.values
+
+    if method == "tuv":
+        ynew = smear_tuv(x, y, bins)
+
+    else:
+        raise ValueError(f"invalid `method` {method!r}")
+
+    return ("wl", ynew, da.attrs)
+
+
+def smear_ds(ds, bins, *, xname="wl", method="tuv"):
+    """
+    Smear spectra (with coordinate variable `xname`) to new `bins`.
+    """
+    da_x = ds[xname]
+    dx = np.diff(bins)
+    xnewc = bins[:-1] + 0.5 * dx
+
+    new_data_vars = {
+        vn: _smear_da(ds[vn], bins, xname=xname, method=method)
+        for vn in ds.variables
+        if vn not in ds.coords
+    }
+
+    xe_name = f"{da_x.name}e"
+    xe_dims = [f"{d}e" for d in da_x.dims]
+    xe_attrs = {
+        "long_name": f"{da_x.attrs['long_name']} band edges",
+        "units": da_x.attrs["units"],
+    }
+    return xr.Dataset(
+        coords={
+            da_x.name: (da_x.dims, xnewc, da_x.attrs),
+            xe_name: (xe_dims, bins, xe_attrs),
+        },
+        data_vars=new_data_vars,
+    )
 
 
 def edges_from_centers(x):
