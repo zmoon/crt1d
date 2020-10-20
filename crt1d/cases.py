@@ -16,6 +16,7 @@ input_data_dir_str = DATA_BASE_DIR.as_posix()  # string
 
 def load_default_case(nlayers):
     """Idealized beta leaf dist, default spectra."""
+    # leaf area distribution
     h_c = 20.0
     LAI = 4.0
     res = distribute_lai_beta(h_c, LAI, nlayers)
@@ -25,10 +26,12 @@ def load_default_case(nlayers):
     # dropping wavelengths where something is NaN (missing / not defined)
     ds = data.load_default(midpt=True).dropna(dim="wl")
 
+    # leaf angle
     mla = 57  # for spherical? (check)
     orient = mla_to_orient(mla)
     G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)
 
+    # Solar zenith angle
     sza = 20  # deg.
     psi = np.deg2rad(sza)
     # mu = np.cos(psi)
