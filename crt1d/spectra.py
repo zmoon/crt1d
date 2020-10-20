@@ -3,6 +3,8 @@ Spectral manipulations.
 """
 import numpy as np
 import xarray as xr
+from scipy.integrate import cumtrapz
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 
 def smear_tuv_1(x, y, xgl, xgu):
@@ -54,11 +56,36 @@ def smear_tuv(x, y, bins):
     return ynew  # valid for band, not at left edge
 
 
-def smear_trapz_interp():
-    raise NotImplementedError
+def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
+    """Interpolate y(x) to bin values, then apply trapezoidal integration.
+
+    Parameters
+    ----------
+    k : int
+        Degree of the spline used (1--5). The spline passes through all data points.
+    interp : str
+        'F' to interpolate the cumulative trapz integral, or 'f' to interpolate the `y` data.
+    """
+    if interp == "f":
+        spl = InterpolatedUnivariateSpline(x, y, k=k)
+        y_bins = spl(bins)
+        Ynew = cumtrapz(y_bins, x=bins, initial=0)
+        dYnew = np.diff(Ynew)
+
+    elif interp == "F":
+        Y0 = cumtrapz(y, x, initial=0)
+        spl = InterpolatedUnivariateSpline(x, Y0, k=k)
+        dYnew = spl(bins[1:]) - spl(bins[:-1])
+
+    else:
+        raise ValueError(f"invalid `interp` {interp!r}")
+
+    dxnew = np.diff(bins)
+
+    return dYnew / dxnew
 
 
-def _smear_da(da, bins, *, xname, method):
+def _smear_da(da, bins, *, xname, method, **method_kwargs):
     """Returns an `xr.Dataset` ``data_vars`` tuple."""
     x = da[xname].values
     y = da.values
@@ -66,13 +93,16 @@ def _smear_da(da, bins, *, xname, method):
     if method == "tuv":
         ynew = smear_tuv(x, y, bins)
 
+    elif method == "trapz_interp":
+        ynew = smear_trapz_interp(x, y, bins, **method_kwargs)
+
     else:
         raise ValueError(f"invalid `method` {method!r}")
 
     return ("wl", ynew, da.attrs)
 
 
-def smear_ds(ds, bins, *, xname="wl", method="tuv"):
+def smear_ds(ds, bins, *, xname="wl", method="tuv", **method_kwargs):
     """
     Smear spectra (with coordinate variable `xname`) to new `bins`.
     """
@@ -81,7 +111,7 @@ def smear_ds(ds, bins, *, xname="wl", method="tuv"):
     xnewc = bins[:-1] + 0.5 * dx
 
     new_data_vars = {
-        vn: _smear_da(ds[vn], bins, xname=xname, method=method)
+        vn: _smear_da(ds[vn], bins, xname=xname, method=method, **method_kwargs)
         for vn in ds.variables
         if vn not in ds.coords
     }
