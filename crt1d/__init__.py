@@ -3,7 +3,7 @@
 """
 from pathlib import Path as _Path
 
-# directories TODO: use pathlib
+# directories
 BASE_DIR = _Path(__file__).parent
 DATA_BASE_DIR = BASE_DIR / "data"
 

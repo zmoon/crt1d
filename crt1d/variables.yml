@@ -1,0 +1,348 @@
+# Variable metadata
+
+aliases:
+  - &shape_z '(n_z)'
+  - &shape_zm '(n_z-1)'
+  - &shape_wl '(n_wl)'
+  - &shape_z_wl '(n_z, n_wl)'
+  - &shape_zm_wl '(n_z-1, n_wl)'
+  - &units_E 'W m-2'
+  - &units_long_El 'W (m2 leaf)-1'
+  - &units_SE "W m-2 \u03bcm"
+  - &units_wl "\u03bcm"  # micron
+
+
+# all possible params for the variables
+variable_params:
+  - type    # type info for docs in the NumPy style
+  - desc    # text description for docs; MyST format, should be sentences
+  - shape   # optional; tuple, will be added before text description to indicate array shape
+  - units   # (optional; CF-convention format
+  - ln      # CF long name; required for variables included in the output dataset
+  - param   # optional, default false; whether a model tunable param or a true model input
+  - intent  # optional, default None; `in` for scheme inputs, `out` for scheme standard outputs
+  - units_long  # longer form of units, e.g., with more details than just the SI
+
+defaults:
+  type: array_like
+  units: ''
+  ln: null  # no long_name
+  param: false
+  intent: 'none'  # intent neither in nor out
+  units_long: null
+
+variables:
+  psi:
+    type: float
+    desc: $\psi$ is the solar zenith angle (SZA).
+    units: radians
+    intent: in
+
+
+  I_dr0_all:
+    type: array_like
+    shape: *shape_wl
+    desc: >
+      Incoming (downwelling) *direct* irradiance(s) at the top of the canopy.
+
+      .. warning:: Not spectral, energy flux density in discrete band.
+
+    units: W m-2
+    intent: in
+
+
+  I_df0_all:
+    type: array_like
+    shape: *shape_wl
+    desc: >
+      Incoming (downwelling) *diffuse* irradiance(s) at the top of the canopy.
+
+      .. warning:: Not spectral, energy flux density in discrete band.
+
+    units: W m-2
+    intent: in
+
+
+  lai:
+    type: array_like
+    shape: *shape_z
+    desc: >
+      Leaf area index (LAI) profile.
+
+      Bottom to top:
+
+      * ``lai[0]``: total LAI
+
+      * ``lai[-1] = 0`` (canopy-atmos interface)
+
+    units: m2 m-2
+    units_long: (m2 leaf) (m2 ground area)-1
+    ln: Leaf area index (cumulative)
+    intent: in
+
+
+  clump:
+    type: float
+    desc: >
+      Clump factor $\Omega$. In (0, 1], this parameter represents the impact of leaf
+      clumping in space on canopy light transmission and leaf absorption. It can vary
+      with height in real canopies (like some of the other parameters here),
+      but this is currently not supported.
+
+    units: 1
+    intent: in
+
+
+
+  leaf_t:
+    type: array_like
+    shape: *shape_wl
+    desc: Leaf element transmissivity.
+    units: 1
+    intent: in
+
+
+  leaf_r:
+    type: array_like
+    shape: *shape_wl
+    desc: Leaf element reflectivity.
+    units: 1
+    intent: in
+
+
+  soil_r:
+    type: array_like
+    shape: *shape_wl
+    desc: Soil (ground surface) reflectivity.
+    units: 1
+    intent: in
+
+
+  K_b:
+    type: float
+    desc: $K_b$ is the direct beam extinction coefficient.
+    # units: TODO
+    intent: in
+
+
+  K_b_fn:
+    type: function
+    desc: >
+      Function used to compute $K_b$ from beam angle ($K_b = K_b(\psi)$).
+
+      It depends on the leaf angle distribution (function) used,
+      so it must be passed to the solvers.
+    intent: in
+
+
+  G_fn:
+    type: function
+    desc: >
+      Function used to compute $G$ from beam angle ($G = G(\psi)$).
+
+      $G = K_b \mu = K_b \cos{\psi}$
+    # units: TODO
+    intent: in
+
+
+  mla:
+    type: float
+    desc: Mean leaf (inclination) angle.
+    units: deg
+    intent: in
+
+
+  # -- Output irradiances `*I*` are W/m2 in-bin values
+
+  I_dr:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Direct irradiance in wavebands.
+    units: *units_E
+    ln: Direct beam irradiance (binned)
+    intent: out
+
+
+  I_df_d:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Downward diffuse irradiance (hemispherical) in wavebands.
+    units: *units_E
+    ln: Downward diffuse irradiance (binned)
+    intent: out
+
+
+  I_df_u:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Upward diffuse irradiance (hemispherical) in wavebands.
+    units: *units_E
+    ln: Upward diffuse irradiance (binned)
+    intent: out
+
+
+  F:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Actinic flux (spherical) in wavebands.
+    units: *units_E
+    ln: Actinic flux (binned)
+    intent: out
+
+
+  # -- variables not required as scheme inputs but relevant
+  #    coordinate variables, derived params, etc.
+  #    intent for schemes is neither `in` nor `out`
+
+  I_d:
+    type: array_like
+    shape: *shape_z_wl
+    desc: Downward irradiance (diffuse+direct) in wavebands.
+    units: *units_E
+    ln: Downward irradiance
+
+
+  aI:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed irradiance.
+    units: *units_E
+    ln: Absorbed irradiance
+
+
+  aI_dr:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed direct irradiance.
+    units: *units_E
+    ln: Absorbed direct irradiance
+
+
+  aI_df:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed diffuse irradiance.
+    units: *units_E
+    ln: Absorbed diffuse irradiance
+
+
+  aI_sl:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed irradiance by sunlit leaves. Not per unit leaf area.
+      Sunlit leaves absorb both direct and diffuse light.
+    units: *units_E
+    ln: Absorbed irradiance by sunlit leaves
+
+  aI_lsl:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed irradiance by sunlit leaves per unit leaf area.
+    units: *units_E
+    units_long: *units_long_El
+    ln: Absorbed irradiance by sunlit leaves
+
+
+  aI_sh:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed irradiance by shaded leaves. Not per unit leaf area.
+      Shaded leaves absorb only diffuse light.
+    units: *units_E
+    ln: Absorbed irradiance by shaded leaves
+
+  aI_lsh:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed irradiance by shaded leaves per unit leaf area.
+    units: *units_E
+    units_long: *units_long_El
+    ln: Absorbed irradiance by shaded leaves
+
+
+  aI_df_sl:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed diffuse irradiance by sunlit leaves. Not per unit leaf area.
+    units: *units_E
+    ln: Absorbed diffuse irradiance by sunlit leaves
+
+  aI_df_lsl:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed diffuse irradiance by sunlit leaves per unit leaf area.
+    units: *units_E
+    units_long: *units_long_El
+    ln: Absorbed irradiance by sunlit leaves
+
+
+  aI_df_sh:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed diffuse irradiance by shaded leaves. Not per unit leaf area.
+    units: *units_E
+    ln: Absorbed diffuse irradiance by shaded leaves
+
+  aI_df_lsh:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: >
+      Layerwise absorbed diffuse irradiance by shaded leaves per unit leaf area.
+    units: *units_E
+    units_long: *units_long_El
+    ln: Absorbed irradiance by shaded leaves
+
+
+  dlai:
+    type: array_like
+    shape: *shape_zm
+    desc: LAI increment within layer (at midpoint levels).
+    units: m2 m-2
+    units_long: (m2 leaf) (m2 ground area)-1
+    ln: "Leaf area index in layer"
+
+
+  lad:
+    type: array_like
+    shape: *shape_zm
+    desc: Leaf area density $dlai/dz$.
+    units: m2 m-3
+    units_long: (m2 leaf) (m2 ground area)-1 m-1
+    ln: Leaf area density
+
+
+  wl:
+    type: array_like
+    shape: *shape_wl
+    desc: Wavelength (centers of the irradiance bins).
+    units: *units_wl
+    ln: Wavelength
+
+
+  dwl:
+    type: array_like
+    shape: *shape_wl
+    desc: Wavelength band width.
+    units: *units_wl
+    ln: Wavelength band width
+
+
+  z:
+    type: array_like
+    shape: *shape_z
+    desc: Height above ground for the interface levels (light fluxes).
+    units: m
+    ln: Height above ground
+
+
+  zm:
+    type: array_like
+    shape: *shape_zm
+    desc: Height above ground for the layer midpoints (mass levels).
+    units: m
+    ln: Height above ground

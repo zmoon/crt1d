@@ -20,6 +20,7 @@ import xarray as xr
 from .cases import load_default_case
 from .solvers import AVAILABLE_SCHEMES
 from .solvers import RET_KEYS_ALL_SCHEMES  # the ones all schemes must return
+from .variables import VMD
 
 
 CANOPY_DESCRIPTION_KEYS = [
@@ -58,6 +59,8 @@ class Model:
     """Required inputs"""
 
     _schemes = AVAILABLE_SCHEMES
+
+    vmd = VMD
 
     def __init__(
         self,
@@ -327,6 +330,7 @@ class Model:
             raise Exception("Must run the model before creating the dataset.")
         p = self._p
         out = self.out_all
+        out_extra = self.out_extra  # non-standard outputs, such as absorption
         # -- canopy descrip
         lai = p["lai"]
         dlai = p["dlai"]
@@ -364,7 +368,8 @@ class Model:
 
         # -- construct data vars for absorption (many)
         # allow abs not calculated or abs from scheme
-        abs_scheme = {}  # {f"{k}_scheme": v for k, v in self.p.items() if k[:2] == "aI"}
+        abs_scheme = {f"{k}": v for k, v in out_extra.items() if k[:2] == "aI"}
+        # ^ keys already have `_scheme` appended
         abs_post = self.absorption if self.absorption is not None else {}
         absorption = {**abs_scheme, **abs_post}  # merge
         abs_data_vars = {}  # collect data_vars tuples here
@@ -402,8 +407,15 @@ class Model:
             else:
                 absorbed = ""
                 crds_ = crds
+            # -- from scheme or not
+            if k[-7:] == "_scheme":
+                scheme = " in scheme"
+                if v.shape[0] == z.size:  # some schemes have absorption on interface levels
+                    crds_ = crds
+            else:
+                scheme = ""
             # -- construct long_name
-            lni = f"{absorbed}{dfdr}{baseq}{by}"
+            lni = f"{absorbed}{dfdr}{baseq}{by}{scheme}"
             # -- construct data_vars tuple
             abs_data_vars[k] = (
                 crds_,
@@ -414,21 +426,24 @@ class Model:
                 },
             )
 
+        def tup(name, data):
+            return self.vmd[name].dv_tuple(data)
+
         dset = xr.Dataset(
             coords={
-                "z": ("z", z, {**z_units, ln: "height above ground"}),
-                "wl": ("wl", wl, {**wl_units, ln: "wavelength"}),
-                "zm": ("zm", zm, {**z_units, ln: "layer midpoint height"}),
+                "z": tup("z", z),
+                "wl": tup("wl", wl),
+                "zm": tup("zm", zm),
             },
             data_vars={
-                "I_dr": (crds, Idr, {**E_units, ln: "direct beam irradiance (binned)"}),
-                "I_df_d": (crds, Idfd, {**E_units, ln: "downward diffuse irradiance (binned)"}),
-                "I_df_u": (crds, Idfu, {**E_units, ln: "upward diffuse irradiance (binned)"}),
-                "F": (crds, F, {**E_units, ln: "actinic flux (binned)"}),
-                "I_d": (crds, Idr + Idfd, {**E_units, ln: "downward irradiance (binned)"}),
-                "dwl": ("wl", dwl, {**wl_units, ln: "wavelength band width"}),
-                "lai": ("z", lai, {**lai_units, ln: "leaf area index (cumulative)"}),
-                "dlai": ("zm", dlai, {**lai_units, ln: "leaf area index in layer"}),
+                "I_dr": tup("I_dr", Idr),
+                "I_df_d": tup("I_df_d", Idfd),
+                "I_df_u": tup("I_df_u", Idfu),
+                "F": tup("F", F),
+                "I_d": tup("I_d", Idr + Idfd),
+                "dwl": tup("dwl", dwl),
+                "lai": tup("lai", lai),
+                "dlai": tup("dlai", dlai),
                 **abs_data_vars,
             },
             attrs={
