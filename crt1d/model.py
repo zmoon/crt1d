@@ -313,38 +313,47 @@ class Model:
         return self  # for chaining
 
     def to_xr(self, *, info=""):
-        """Construct an `xarray.Dataset`."""
+        """Construct an `xarray.Dataset`.
+
+        Parameters
+        ----------
+        info : str
+            Extra information about the run/model to be stored in the dataset.
+        """
+        # import datetime
+        import crt1d
+
         if self._run_count == 0:
             raise Exception("Must run the model before creating the dataset.")
         p = self._p
         out = self.out_all
-        # canopy descrip
+        # -- canopy descrip
         lai = p["lai"]
         dlai = p["dlai"]
         z = p["z"]  # at lai values (layer interfaces)
         zm = p["zm"]
-        # wavelength grid
+        # -- wavelength grid
         wl = p["wl"]
         dwl = p["dwl"]
-        # radiation geometry/setup
+        # -- radiation geometry/setup
         psi = p["psi"]
         mu = p["mu"]
         sza = np.rad2deg(psi)
         G = p["G"]
         K_b = p["K_b"]
-        # scheme info
+        # -- scheme info
         scheme_lname = self.scheme["long_name"]
         scheme_sname = self.scheme["short_name"]
         scheme_name = self.scheme["name"]
-        # canopy RT solution
+        # -- canopy RT solution
         Idr = out["I_dr"]
         Idfd = out["I_df_d"]
         Idfu = out["I_df_u"]
         F = out["F"]
-        crds = ["z", "wl"]
-        crds2 = ["zm", "wl"]
+        crds = ["z", "wl"]  # radiative fluxes are on interface levels
+        crds_m = ["zm", "wl"]  # absorbed is on mid-levels
 
-        # > create dataset
+        # -- unit strings
         ln = "long_name"
         z_units = dict(units="m")
         wl_units = dict(units="μm")
@@ -353,14 +362,14 @@ class Model:
         pf_units = dict(units="μmol photons m-2 s-1")  # photon flux units
         lai_units = dict(units="(m2 leaf) m-2")
 
-        # construct data vars for absorption (many)
+        # -- construct data vars for absorption (many)
         # allow abs not calculated or abs from scheme
         abs_scheme = {}  # {f"{k}_scheme": v for k, v in self.p.items() if k[:2] == "aI"}
         abs_post = self.absorption if self.absorption is not None else {}
         absorption = {**abs_scheme, **abs_post}  # merge
         abs_data_vars = {}  # collect data_vars tuples here
         for k, v in absorption.items():
-            # energy or photon units: irradiance or PFD
+            # -- energy or photon units: irradiance or PFD
             if "I_" in k or k == "aI":
                 baseq = "irradiance"
                 units = E_units
@@ -370,29 +379,14 @@ class Model:
             else:
                 warnings.warn(f"key {k!r} not identified as either PFD or irradiance")
                 baseq = ""
-            # sunlit, shaded, or both
+            # -- sunlit, shaded, or both
             if "_sl" in k:
                 by = " by sunlit leaves"
             elif "_sh" in k:
                 by = " by shaded leaves"
             else:
                 by = ""
-            # specific band or spectral
-            if any(w in k for w in ["_PAR", "_solar", "_NIR", "_UV"]):  # need to fix
-                bn = k.split("_")[-1]
-                band = f"{bn} "
-                # if 'aI' in k:
-                if k[0] == "a":
-                    crds_ = ["zm"]
-                else:
-                    crds_ = ["z"]
-            else:
-                band = ""
-                if k[0] == "a":  # absorbed is on mid levels
-                    crds_ = crds2
-                else:
-                    crds_ = crds  # radiative fluxes are on interface levels
-            # direct or diffuse (up or down)
+            # -- direct or diffuse (up or down)
             if "_dr" in k:
                 dfdr = "direct "
             elif "_df_u" in k:
@@ -401,14 +395,16 @@ class Model:
                 dfdr = "downward diffuse "
             else:
                 dfdr = ""
-            # absorbed or not
+            # -- absorbed or not
             if k[0] == "a":
                 absorbed = "absorbed "
+                crds_ = crds_m
             else:
                 absorbed = ""
-            # construct long_name
-            lni = f"{absorbed}{dfdr}{band}{baseq}{by}"
-            # construct data_vars tuple
+                crds_ = crds
+            # -- construct long_name
+            lni = f"{absorbed}{dfdr}{baseq}{by}"
+            # -- construct data_vars tuple
             abs_data_vars[k] = (
                 crds_,
                 v,
@@ -417,8 +413,6 @@ class Model:
                     ln: lni,
                 },
             )
-
-        # print(abs_data_vars)
 
         dset = xr.Dataset(
             coords={
@@ -447,6 +441,8 @@ class Model:
                 "mu": mu,
                 "G": G,
                 "K_b": K_b,
+                "crt1d_version": crt1d.__version__,
+                # "run_date": datetime.datetime.now(),
             },
         )
         # TODO: add crt1d version?
