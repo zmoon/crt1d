@@ -12,16 +12,33 @@ from scipy.constants import N_A
 from .solvers import RET_KEYS_ALL_SCHEMES
 
 
-def E_to_PFD(E, wl_um):
-    """Energy flux (W/m^2) to photon flux (umol photon / m^2 / s)"""
+def e_wl_umol(wl_um):
+    """J/(umol photons) at wavelength `wl_um`."""
     # convert wavelength to SI units (for compatibility with the constants)
-    wl = wl_um[np.newaxis, :] * 1e-6  # um -> m
+    wl = wl_um * 1e-6  # um -> m
 
     e_wl_1 = h * c / wl  # J (per one photon)
     e_wl_mol = e_wl_1 * N_A  # J/mol
     e_wl_umol = e_wl_mol * 1e-6  # J/mol -> J/umol
 
-    return E / e_wl_umol
+    return e_wl_umol
+
+
+def E_to_PFD_da(da):
+    """Assuming wl in microns, convert W/m2 -> (umol photons)/m2/s."""
+    wl_um = da.wl
+    f = 1 / e_wl_umol(wl_um)  # J/umol -> umol/J
+    ln = da.attrs["long_name"].replace("irradiance", "PFD")
+    units = "μmol photons m-2 s-1"
+    da_new = da * f  # umol/J * W/m2 -> umol/m2/s
+    da_new.attrs.update(
+        {
+            "long_name": ln,
+            "units": units,
+        }
+    )
+
+    return da_new
 
 
 def band_sum_weights(xe, bounds):
@@ -76,7 +93,7 @@ BAND_DEFNS_UM = {
 }
 
 
-def ds_band_sum(ds, *, band_name="PAR", bounds=None):
+def ds_band_sum(ds, *, band_name="PAR", bounds=None, calc_PFD=False):
     """Reduce spectral variables in `ds` by summing in-band irradiances.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
     """
@@ -97,20 +114,37 @@ def ds_band_sum(ds, *, band_name="PAR", bounds=None):
     vns = [vn for vn in ds.variables if vn not in ds.coords and "wl" in ds[vn].coords]
     for vn in vns:
         da = ds[vn]
-        # vn_new = f"{vn}_{band_name}"
         ln_new = f"{da.attrs['long_name']} - {band_name}"
+        units = da.attrs["units"]
         ds[vn] = (da * w).sum(dim="wl")
         ds[vn].attrs.update(
             {
                 "long_name": ln_new,
-                "units": da.attrs["units"],
+                "units": units,
             }
         )
+        if calc_PFD:
+            da_pfd = E_to_PFD_da(da)
+            ln_new = f"{da_pfd.attrs['long_name']} - {band_name}"
+            units = da_pfd.attrs["units"]
+            vn_pfd = vn.replace("I", "PFD")
+            ds[vn_pfd] = (da_pfd * w).sum(dim="wl")
+            ds[vn_pfd].attrs.update(
+                {
+                    "long_name": ln_new,
+                    "units": units,
+                }
+            )
+
+    ds.attrs.update(
+        {
+            "band_name": band_name,
+            "band_bounds": bounds,
+        }
+    )
 
     return ds.drop("wl")
 
-
-# TODO: band definitions (wl_a, wl_b) as a dict here
 
 # TODO: maybe want to create and return as xr.Dataset instead
 # or like sympl, dict of xr.Dataarrays
