@@ -1,7 +1,11 @@
 """
-This module contains the model class, which can be used to conveniently solve CRT problems
-using different solvers with minimal boilerplate code needed.
+This module contains the model class :class:`Model`, which can be used to
+conveniently solve CRT problems using different solvers with minimal boilerplate code needed.
 (At least that is the goal.)
+
+This module also contains functions that operate on the model state,
+most of which are also attached as class methods.
+Functions that operate on the model output `xr.Dataset` are in :mod:`.diagnostics`.
 """
 # from dataclasses import dataclass
 import warnings
@@ -14,9 +18,6 @@ import pandas as pd
 import xarray as xr
 
 from .cases import load_default_case
-from .diagnostics import (
-    calc_leaf_absorption,
-)
 from .solvers import AVAILABLE_SCHEMES
 from .solvers import RET_KEYS_ALL_SCHEMES  # the ones all schemes must return
 
@@ -300,16 +301,12 @@ class Model:
         """Standard and extra outputs."""
         return {**self.out, **self.out_extra}
 
-    def calc_absorption(self, *, bands="all"):
-        """Calculate layerwise absorption variables using routines in module diagnostics."""
+    def calc_absorption(self):
+        """Calculate layerwise absorption variables."""
         if self._run_count == 0:
             raise Exception("Must run the model first.")
 
-        absorption = calc_leaf_absorption(
-            self._p,
-            self.out,
-            band_names_to_calc=bands,
-        )
+        absorption = _calc_absorption(self)
         # update model attr
         self.absorption = absorption
 
@@ -581,121 +578,91 @@ def _plot_leafsoil_spectra(m):
     fig.tight_layout()
 
 
-def _plot_band(dsets, bn):
-    """Multi-panel plot of profiles for specified string bandname `bn`:
-    'PAR', 'solar', etc.
-    """
-    if not isinstance(dsets, list):
-        print("dsets must be provided as list")
-        return
+def _calc_absorption(m):
+    """Calculate layerwise absorption using the light profiles etc."""
+    p = m._p
+    out = m.out
 
-    varnames = [
-        [f"aI_{bn}", f"aI_sl_{bn}", f"aI_sh_{bn}"],
-        [f"I_dr_{bn}", f"I_df_d_{bn}", f"I_df_u_{bn}"],
-    ]  # rows, cols
+    lai = p["lai"]
+    dlai = p["dlai"]
+    # G = p["G"]  # fractional leaf area projected in direction psi
+    K_b = p["K_b"]  # G/cos(psi)
 
-    nrows = len(varnames)
-    ncols = len(varnames[0])
+    leaf_r = p["leaf_r"]
+    leaf_t = p["leaf_t"]
+    leaf_a = 1 - (leaf_r + leaf_t)  # leaf element absorption coeff
 
-    fig, axs = plt.subplots(nrows, ncols, sharey=True, figsize=(ncols * 2.4, nrows * 3))
+    # wl = p["wl"]
+    I_dr = out["I_dr"]
+    I_df_d = out["I_df_d"]
+    I_df_u = out["I_df_u"]
+    # I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
 
-    vns = [vn for row in varnames for vn in row]
-    for i, vn in enumerate(vns):
-        ax = axs.flat[i]
-        for dset in dsets:
-            da = dset[vn]
-            y = da.dims[0]
-            da.plot(y=y, ax=ax, label=dset.attrs["scheme_long_name"], marker=".")
+    # TODO: include clump factor in f_sl and absorption calculations
 
-    for ax in axs.flat:
-        ax.grid(True)
+    # Sunlit leaf fraction
+    f_sl_interfaces = np.exp(-K_b * lai)  # at interface levels
+    f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)  # at mid levels (abs.)
+    f_sh = 1 - f_sl
 
-    legfs = 9
-    # axs.flat[-1].legend()
-    # axs.flat[0].legend()
+    # Compute total layerwise absorbed (by plant, but not per unit LAI)
+    nlev = lai.size
+    i = np.arange(nlev - 1)
+    ip1 = i + 1
+    a = I_dr[ip1] - I_dr[i] + I_df_d[ip1] - I_df_d[i] + I_df_u[i] - I_df_u[ip1]
+    # ^ a: layerwise irradiance absorption in all bands
+    #      as inputs - outputs
+    #      actual W/m2 absorption, not per unit LAI
 
-    h, _ = axs.flat[0].get_legend_handles_labels()
-    # fig.legend(handles=h, loc='right')
-    # fig.legend(handles=h, loc='upper right', bbox_to_anchor=(1.0, 0.))
-    # fig.legend(handles=h, loc='center', bbox_to_anchor=(1.0, 0.9))
-    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=legfs)
+    # Absorbed direct depends on the sunlit leaf fraction
+    I_dr0 = I_dr[-1, :][np.newaxis, :]
+    # a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
+    a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
+    # ^ direct beam absorption (sunlit leaves only by definition)
+    #
+    # **technically should be computed with exp**
+    #   1 - exp(-K_b*L)
+    # K_b*L is an approximation for small L
+    # e.g.,
+    #   K=1, L=0.01, 1-exp(-K*L)=0.00995
 
-    fig.tight_layout()
+    # Absorbed diffuse is the remaining fraction of absorbed radiation
+    a_df = a - a_dr
 
+    # Sunlit (sl) and shaded (sh) leaves
+    a_df_sl = a_df * f_sl[:, np.newaxis]
+    a_df_sh = a_df * f_sh[:, np.newaxis]
+    a_sl = a_df_sl + a_dr
+    a_sh = a_df_sh
+    assert np.allclose(a_sl + a_sh, a)
 
-def plot_PAR(dsets=[]):
-    """Plot PAR comparison for dsets."""
-    _plot_band(dsets, "PAR")
-
-
-def plot_solar(dsets=[]):
-    """Plot spectrally integrated solar comparison for dsets."""
-    _plot_band(dsets, "solar")
-
-
-# def plot_E_closure_spectra():
-
-
-def create_E_closure_table(dsets=[]):
-    """
-    For `dsets`, assess energy balance closure by comparing
-    computed canopy and soil absorption to incoming minus outgoing
-    radiation at the top of the canopy.
-
-    Parameters
-    ----------
-    dsets : list(xarray.Dataset)
-        computed using :func:`to_xr`
-
-    """
-    IDs = [ds.attrs["scheme_name"] for ds in dsets]
-    columns = [
-        "incoming",
-        "outgoing (reflected)",
-        "soil absorbed",
-        "layerwise abs sum",
-        "in-out-soil",
-        "canopy abs",
-    ]
-    df = pd.DataFrame(index=IDs, columns=columns)
-
-    for i, ID in enumerate(IDs):
-        ds = dsets[i]
-        incoming = ds["I_d_solar"][-1].values
-        outgoing = ds["I_df_u_solar"][-1].values
-        transmitted = ds["I_d_solar"][0].values  # direct+diffuse
-        soil_refl = ds["I_df_u_solar"][0].values
-        soil_abs = transmitted - soil_refl
-        layer_abs_sum = ds["aI_solar"].sum().values
-        canopy_abs = (
-            ds["I_df_d_solar"][-1].values
-            - outgoing
-            + ds["I_dr_solar"][-1].values
-            - ds["I_dr_solar"][0].values
-            + -(ds["I_df_d_solar"][0].values - soil_refl)
-        )  # soil abs is down-up diffuse at last layer?
-        df.loc[ID, columns[0]] = incoming
-        df.loc[ID, columns[1]] = outgoing
-        df.loc[ID, columns[2]] = soil_abs
-        df.loc[ID, columns[3]] = layer_abs_sum
-        df.loc[ID, columns[4]] = incoming - outgoing - soil_abs
-        df.loc[ID, columns[5]] = canopy_abs
-
-    return df
+    return {
+        "aI": a,
+        "aI_df": a_df,
+        "aI_dr": a_dr,
+        "aI_sh": a_sh,
+        "aI_sl": a_sl,
+        "aI_df_sl": a_df_sl,
+        "aI_df_sh": a_df_sh,
+        # "I_d": I_d,
+        # "I_dr": I_dr,
+        # "I_df_d": I_df_d,
+        # "I_df_u": I_df_u,
+    }
 
 
-def run_cases(m0, cases):
+def run_sensitivity(m0, p_sets):
     """For model m, run multiple cases.
     Vary one or more attributes and create combined dataset.
 
     m0 : model object
         base case to branch off of
+    p_sets : dict
+        keys: param to change; values: list of values for the param
 
-    cases : list of dicts ?
-        one dict for each case
-        keys to change and values to change them to
+    Returns
+    -------
+    xr.Dataset
+        With a new dimension for each key in `p_sets`
     """
-    case0 = cases[0]
-    nparam = len(case0)  # number of things we are varying
-
     raise NotImplementedError
