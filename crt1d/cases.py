@@ -4,14 +4,10 @@
 import numpy as np
 
 from . import data
-from . import DATA_BASE_DIR
 from .leaf_angle import G_ellipsoidal_approx
 from .leaf_angle import mla_to_x_approx as mla_to_orient
 from .leaf_area import distribute_lai_beta
 from .leaf_area import distribute_lai_from_cdd
-
-
-input_data_dir_str = DATA_BASE_DIR.as_posix()  # string
 
 
 def load_default_case(nlayers):
@@ -27,7 +23,7 @@ def load_default_case(nlayers):
     ds = data.load_default(midpt=True).dropna(dim="wl")
 
     # leaf angle
-    mla = 57  # for spherical? (check)
+    mla = 57  # approximately the value for spherical leaf angle dist
     orient = mla_to_orient(mla)
     G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)
 
@@ -55,6 +51,7 @@ def load_default_case(nlayers):
         I_df0_all=ds.I_df.values,
         wl=ds.wl.values,
         dwl=ds.dwl.values,
+        wle=ds.wle.values,
     )
 
     return p
