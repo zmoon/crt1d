@@ -9,6 +9,7 @@ import xarray as xr
 
 from .. import DATA_BASE_DIR
 from ..spectra import edges_from_centers
+from ..variables import _tup
 
 DATA_DIR_STR = DATA_BASE_DIR.as_posix()
 
@@ -27,7 +28,7 @@ def load_soil_fuentes2007(wl_um):
     attrs = {}
     return xr.Dataset(
         coords=_wl_coord_dict(wl_um),
-        data_vars={"rs": ("wl", r_soil, {"long_name": "Soil reflectance", "units": ""})},
+        data_vars={"rs": _tup("soil_r", r_soil)},
         attrs=attrs,
     )
 
@@ -49,14 +50,12 @@ def load_prosail_sample_soil(*, f_wet=0):
     rho_soil = f_wet * rho_soil_wet + (1 - f_wet) * rho_soil_dry
 
     attrs = {}
-    dims = "wl"
-    coords = {
-        "wl": wl_ps5,
-    }
     dset = xr.Dataset(
-        coords=coords,
+        coords={
+            "wl": wl_ps5,
+        },
         data_vars={
-            "rs": (dims, rho_soil, {"units": "", "long_name": f"Soil reflectance"}),
+            "rs": _tup("soil_r", rho_soil),
         },
         attrs=attrs,
     )
@@ -72,12 +71,11 @@ def load_default_ps5():
     wl = wl_nm / 1000.0  # nm->um
 
     attrs = {}
-    dims = "wl"
     ds = xr.Dataset(
         coords=_wl_coord_dict(wl),
         data_vars={
-            "rl": (dims, r, {"units": "", "long_name": "Leaf reflectance"}),
-            "tl": (dims, t, {"units": "", "long_name": "Leaf transmittance"}),
+            "rl": _tup("leaf_r", r),
+            "tl": _tup("leaf_t", t),
         },
         attrs=attrs,
     )
@@ -99,12 +97,11 @@ def load_ideal_leaf(*, midpt=False):
         r = (r[:-1] + r[1:]) / 2
 
     attrs = {}
-    dims = "wl"
     ds = xr.Dataset(
         coords=_wl_coord_dict(wl),
         data_vars={
-            "rl": (dims, r, {"units": "", "long_name": "Leaf reflectance"}),
-            "tl": (dims, t, {"units": "", "long_name": "Leaf transmittance"}),
+            "rl": _tup("leaf_r", r),
+            "tl": _tup("leaf_t", t),
         },
         attrs=attrs,
     )
@@ -155,6 +152,7 @@ def load_default_sp2(*, midpt=True):
     units = "W m-2"  # non-spectral
 
     attrs = {}
+    # TODO: use `_tup`
     coords = {
         "wl": (dimsx, wl, {"units": "μm", "long_name": "Wavelength"}),
         "wl0": (dims0, wl0, {"units": "μm", "long_name": "Wavelength in original spectra"}),

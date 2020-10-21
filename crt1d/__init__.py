@@ -10,6 +10,9 @@ DATA_BASE_DIR = BASE_DIR / "data"
 # include Model in pkg-level namespace
 from .model import Model
 
+# include diagnostics module (not used by any of the others)
+from . import diagnostics
+
 # set version
 try:
     from . import _version

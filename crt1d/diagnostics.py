@@ -12,8 +12,6 @@ from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import N_A
 
-from .solvers import RET_KEYS_ALL_SCHEMES
-
 
 def e_wl_umol(wl_um):
     """J/(umol photons) at wavelength `wl_um`."""
@@ -97,9 +95,11 @@ BAND_DEFNS_UM = {
 }
 
 
-def ds_band_sum(ds, *, band_name="PAR", bounds=None, calc_PFD=False):
-    """Reduce spectral variables in `ds` by summing in-band irradiances.
+def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
+    """Reduce spectral variables in `ds` by summing in-band irradiances
+    to give the integrated irradiance in that spectral region.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
+    If `variables` is None, will attempt to guess.
     """
     ds = ds.copy()
     if bounds is None:
@@ -115,7 +115,10 @@ def ds_band_sum(ds, *, band_name="PAR", bounds=None, calc_PFD=False):
     # weights as a function of wavelength
     w = xr.DataArray(dims="wl", data=band_sum_weights(wle, bounds))
 
-    vns = [vn for vn in ds.variables if vn not in ds.coords and "wl" in ds[vn].coords]
+    # default to searching for irradiance variables and actinic flux
+    if variables is None:
+        vns = [vn for vn in ds.variables if vn == "F" or "I" in vn]
+
     for vn in vns:
         da = ds[vn]
         ln_new = f"{da.attrs['long_name']} - {band_name}"

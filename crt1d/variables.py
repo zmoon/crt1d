@@ -18,7 +18,7 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
         self.long_name = params.get("ln", param_defaults["ln"])
         self.intent = params.get("intent", param_defaults["intent"])
         self.is_param = params.get("param", param_defaults["param"])
-        self.s_units = params.get("units", param_defaults["units"])
+        self.s_units = str(params.get("units", param_defaults["units"]))
         self.s_units_long = params.get("units_long", param_defaults["units_long"])
 
         # shape and dims only apply to array_like type
@@ -148,9 +148,11 @@ def _dims_from_s_shape(s_shape):
         shape_part = shape_part_raw.strip()
         assert shape_part[:2] == "n_"
 
-        # special treatment for layer midpt levels
+        # special treatment for things off the main grid
         if shape_part[2:] == "z-1":
-            dims.append("zm")
+            dims.append("zm")  # layer midpts
+        elif shape_part[2:] == "wl+1":
+            dims.append("wle")  # wavelength band edges
         else:
             dims.append(shape_part[2:])
 
@@ -198,6 +200,14 @@ def _vmd_from_yaml():
 
 # Create the Vmd instance
 VMD = _vmd_from_yaml()
+
+
+def _tup(name, data):
+    """Shortcut function for creating an `xr.Dataset` ``data_vars`` tuple
+    for variable `name` using the values of `data`
+    and the standard variable metadata `VMD`.
+    """
+    return VMD[name].dv_tuple(data)
 
 
 def params_list_table(vmdes=None):
