@@ -236,13 +236,13 @@ def params_list_table(vmdes=None):
 """
 
 
-# python -c 'import crt1d; crt1d.solvers._write_params_docs_snippets()'
-# def _write_params_docs_snippets():
-#     from pathlib import Path
+# python -c 'import crt1d; crt1d.variables._write_params_docs_snippets()'
+def _write_params_docs_snippets():
+    from pathlib import Path
 
-#     p = Path(__file__).parent / "../../docs" / "_solvers_summary_table_snippet.txt"
-#     with open(p, "w") as f:
-#         f.write(_all_params_list_table(_vmd["in"] + _vmd["out"]))
+    p = Path(__file__).parent / "../docs" / "_solvers_summary_table_snippet.txt"
+    with open(p, "wb") as f:
+        f.write(params_list_table().encode("utf-8"))
 
 
 # hack module docstring

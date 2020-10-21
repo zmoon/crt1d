@@ -344,7 +344,6 @@ class Model:
         #
         # -- radiation geometry/setup
         psi = p["psi"]
-        mu = p["mu"]
         sza = np.rad2deg(psi)
         G = p["G"]
         K_b = p["K_b"]

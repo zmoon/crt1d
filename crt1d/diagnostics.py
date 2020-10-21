@@ -153,17 +153,20 @@ def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=Fa
     return ds.drop("wl")
 
 
-def _plot_band(dsets, bn):
+def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
     """Multi-panel plot of profiles for specified string bandname `bn`:
-    'PAR', 'solar', etc.
+    `bounds` does not have to be provided if `band_name` is one of the known bands.
     """
     if not isinstance(dsets, list):
-        print("dsets must be provided as list")
-        return
+        raise Exception("A list of dsets must be provided")
 
+    # integrate over the band
+    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+
+    # variables to show in each panel
     varnames = [
-        [f"aI_{bn}", f"aI_sl_{bn}", f"aI_sh_{bn}"],
-        [f"I_dr_{bn}", f"I_df_d_{bn}", f"I_df_u_{bn}"],
+        [f"aI", f"aI_sl", f"aI_sh"],
+        [f"I_dr", f"I_df_d", f"I_df_u"],
     ]  # rows, cols
 
     nrows = len(varnames)
@@ -182,33 +185,17 @@ def _plot_band(dsets, bn):
     for ax in axs.flat:
         ax.grid(True)
 
-    legfs = 9
-    # axs.flat[-1].legend()
-    # axs.flat[0].legend()
-
+    # legend in lower left
     h, _ = axs.flat[0].get_legend_handles_labels()
-    # fig.legend(handles=h, loc='right')
-    # fig.legend(handles=h, loc='upper right', bbox_to_anchor=(1.0, 0.))
-    # fig.legend(handles=h, loc='center', bbox_to_anchor=(1.0, 0.9))
-    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=legfs)
+    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=9)
 
     fig.tight_layout()
 
 
-def plot_PAR(dsets=[]):
-    """Plot PAR comparison for dsets."""
-    _plot_band(dsets, "PAR")
+# TODO: def plot_E_closure_spectra():
 
 
-def plot_solar(dsets=[]):
-    """Plot spectrally integrated solar comparison for dsets."""
-    _plot_band(dsets, "solar")
-
-
-# def plot_E_closure_spectra():
-
-
-def create_E_closure_table(dsets=[]):
+def df_E_balance(dsets, *, band_name="solar", bounds=None):
     """
     For `dsets`, assess energy balance closure by comparing
     computed canopy and soil absorption to incoming minus outgoing
@@ -220,6 +207,12 @@ def create_E_closure_table(dsets=[]):
         Created using :func:`to_xr`
 
     """
+    if not isinstance(dsets, list):
+        raise Exception("A list of dsets must be provided")
+
+    # integrate over the band
+    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+
     IDs = [ds.attrs["scheme_name"] for ds in dsets]
     columns = [
         "incoming",
@@ -233,18 +226,18 @@ def create_E_closure_table(dsets=[]):
 
     for i, ID in enumerate(IDs):
         ds = dsets[i]
-        incoming = ds["I_d_solar"][-1].values
-        outgoing = ds["I_df_u_solar"][-1].values
-        transmitted = ds["I_d_solar"][0].values  # direct+diffuse
-        soil_refl = ds["I_df_u_solar"][0].values
+        incoming = ds["I_d"][-1].values
+        outgoing = ds["I_df_u"][-1].values
+        transmitted = ds["I_d"][0].values  # direct+diffuse transmitted all the way through canopy
+        soil_refl = ds["I_df_u"][0].values
         soil_abs = transmitted - soil_refl
-        layer_abs_sum = ds["aI_solar"].sum().values
+        layer_abs_sum = ds["aI"].sum().values
         canopy_abs = (
-            ds["I_df_d_solar"][-1].values
+            ds["I_df_d"][-1].values
             - outgoing
-            + ds["I_dr_solar"][-1].values
-            - ds["I_dr_solar"][0].values
-            + -(ds["I_df_d_solar"][0].values - soil_refl)
+            + ds["I_dr"][-1].values
+            - ds["I_dr"][0].values
+            + -(ds["I_df_d"][0].values - soil_refl)
         )  # soil abs is down-up diffuse at last layer?
         df.loc[ID, columns[0]] = incoming
         df.loc[ID, columns[1]] = outgoing
