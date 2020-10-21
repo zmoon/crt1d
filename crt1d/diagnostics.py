@@ -4,6 +4,7 @@ Calculations from the CRT solutions
 import warnings
 
 import numpy as np
+import xarray as xr
 from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import N_A
@@ -23,18 +24,20 @@ def E_to_PFD(E, wl_um):
     return E / e_wl_umol
 
 
-def calc_band_sum(y, xe, bounds):
-    """Calculate the sum of `y` values in `bounds`, including fractional edge contributions.
+def band_sum_weights(xe, bounds):
+    """Including fractional edge contributions.
 
     Parameters
     ----------
-    y, xe : array
-    bounds : 2-tuple
+    xe : array
+    bounds : 2-tuple(float)
     """
-    assert y.size + 1 == xe.size, "Edges must have one more value than `y`."
     x1, x2 = xe[:-1], xe[1:]  # left and right
 
     b1, b2 = bounds[0], bounds[1]
+
+    if b1 < x1[0] or b2 > x2[-1]:
+        warnings.warn("`bounds` extend outside the data range")
 
     in_bounds = (x2 >= b1) & (x1 <= b2)
     x1in, x2in = x1[in_bounds], x2[in_bounds]
@@ -52,9 +55,59 @@ def calc_band_sum(y, xe, bounds):
         else:  # completely within the bounds
             w[i] = 1
 
-    # print(w)
+    w_all = np.zeros(xe.size - 1)
+    w_all[in_bounds] = w
 
-    return np.sum(y[in_bounds] * w)
+    return w_all
+
+
+def calc_band_sum(y, xe, bounds):
+    assert y.size + 1 == xe.size, "Edges must have one more value than `y`."
+    w = band_sum_weights(xe, bounds)
+
+    return np.sum(y * w)
+
+
+BAND_DEFNS_UM = {
+    "PAR": (0.4, 0.7),
+    "NIR": (0.7, 2.5),
+    "UV": (0.01, 0.4),
+    "solar": (0.3, 5.0),
+}
+
+
+def ds_band_sum(ds, *, band_name="PAR", bounds=None):
+    """Reduce spectral variables in `ds` by summing in-band irradiances.
+    `bounds` does not have to be provided if `band_name` is one of the known bands.
+    """
+    ds = ds.copy()
+    if bounds is None:
+        bounds = BAND_DEFNS_UM[band_name]
+
+    wl = ds.wl.values
+    dwl = ds.dwl.values
+    try:
+        wle = ds.wle.values
+    except AttributeError:
+        wle = np.r_[wl - 0.5 * dwl, wl[-1] + 0.5 * dwl[-1]]
+
+    # weights as a function of wavelength
+    w = xr.DataArray(dims="wl", data=band_sum_weights(wle, bounds))
+
+    vns = [vn for vn in ds.variables if vn not in ds.coords and "wl" in ds[vn].coords]
+    for vn in vns:
+        da = ds[vn]
+        # vn_new = f"{vn}_{band_name}"
+        ln_new = f"{da.attrs['long_name']} - {band_name}"
+        ds[vn] = (da * w).sum(dim="wl")
+        ds[vn].attrs.update(
+            {
+                "long_name": ln_new,
+                "units": da.attrs["units"],
+            }
+        )
+
+    return ds.drop("wl")
 
 
 # TODO: band definitions (wl_a, wl_b) as a dict here
