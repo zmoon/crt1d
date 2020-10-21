@@ -185,5 +185,70 @@ def edges_from_centers(x):
     return edges
 
 
+def plot_binned(x, y, xc, yc, dx):
+    """Compare an original spectrum to binned one.
+
+    If `x` and `y` are `xr.DataArray`s, their attrs will be used to label the plot.
+
+    Parameters
+    ----------
+    x, y :
+        original/actual values at wavelengths (original spectra)
+    xc, yc :
+        values at wave band centers
+    dx :
+        wave band widths
+    """
+    import matplotlib.pyplot as plt
+    from .utils import cf_units_to_tex
+
+    spectrum_ls = "r-" if x.size > 150 else "r.-"
+    xbounds = (x[0], x[-1])
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    ax.bar(xc, yc, width=dx, label="binned", align="center", alpha=0.7, edgecolor="blue")
+
+    ax.plot(x, y, spectrum_ls, lw=1.5, label="spectrum")
+
+    if isinstance(x, xr.DataArray) and isinstance(y, xr.DataArray):
+        unx = cf_units_to_tex(x.attrs["units"])
+        lnx = x.attrs["long_name"]
+        xlabel = f"{lnx} ({unx})"
+        uny = cf_units_to_tex(y.attrs["units"])
+        lny = y.attrs["long_name"]
+        ylabel = f"{lny} ({uny})"
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+    ax.set_xlim(xbounds)
+
+    ax.legend()
+
+    fig.tight_layout()
+
+
+def plot_binned_ds(ds0, ds, *, yname=None):
+    """Compare an original spectrum in `ds0` to binned one in `ds`.
+    Uses :func:`plot_binned` with auto-detection of ``x``, ``dx``, and ``xc``.
+    """
+    y = ds0[yname]
+    xname = list(y.coords)[0]
+    x = ds0[xname]
+
+    yc = ds[yname]
+    xcname = list(yc.coords)[0]
+    xc = ds[xcname]
+
+    # get dx, either from stored variable or by comnputing from edges
+    try:
+        dx = ds[f"d{xcname}"]
+    except KeyError:
+        xe = ds[f"{xcname}e"]
+        dx = np.diff(xe)
+
+    plot_binned(x, y, xc, yc, dx)
+
+
 if __name__ == "__main__":
     pass
