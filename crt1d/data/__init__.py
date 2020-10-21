@@ -96,7 +96,8 @@ def load_default_sp2(*, midpt=True):
     wl0, SI_dr0, SI_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
 
     if midpt:
-        dwl = np.diff(wl0)
+        wle = wl0
+        dwl = np.diff(wle)
         wl = wl0[:-1] + 0.5 * dwl  # for in-band irradiance
 
         # spectral irradiance for bin center as average of edge values
@@ -120,13 +121,14 @@ def load_default_sp2(*, midpt=True):
     attrs = {}
     coords = {
         "wl": (dimsx, wl, {"units": "μm", "long_name": "Wavelength"}),
-        "wl0": (dims0, wl0, {"units": "μm", "long_name": "Wavelength of original spectra"}),
+        "wl0": (dims0, wl0, {"units": "μm", "long_name": "Wavelength in original spectra"}),
+        "wle": ("wle", wle, {"units": "μm", "long_name": "Irradiance band edge wavelength"}),
     }
     dset = xr.Dataset(
         coords=coords,
         data_vars={
-            "SI_dr0": (dims0, SI_dr0, {"units": Sunits, "long_name": "Spectral direct irradiance"}),
-            "SI_df0": (
+            "SI_dr": (dims0, SI_dr0, {"units": Sunits, "long_name": "Spectral direct irradiance"}),
+            "SI_df": (
                 dims0,
                 SI_df0,
                 {"units": Sunits, "long_name": "Spectral diffuse irradiance"},
@@ -158,7 +160,7 @@ def load_default(*, midpt=True):
             ds_l.wl, ds_r.wl0
         ), "In the non-midpt case, we use the original SPCTRAL2 wavelengths."
 
-    # concat and reconcile
+    # join into one dataset
     ds = xr.merge([ds_l, ds_r, ds_s])
 
     return ds

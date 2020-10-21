@@ -85,7 +85,7 @@ def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
     return dYnew / dxnew
 
 
-def _smear_da(da, bins, *, xname, method, **method_kwargs):
+def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
     """Returns an `xr.Dataset` ``data_vars`` tuple."""
     x = da[xname].values
     y = da.values
@@ -99,36 +99,76 @@ def _smear_da(da, bins, *, xname, method, **method_kwargs):
     else:
         raise ValueError(f"invalid `method` {method!r}")
 
-    return ("wl", ynew, da.attrs)
+    return (xname_out, ynew, da.attrs)
 
 
-def smear_ds(ds, bins, *, xname="wl", method="tuv", **method_kwargs):
+def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
     """
     Smear spectra (with coordinate variable `xname`) to new `bins`.
+    The returned `xr.Dataset` consists of the data variables who have the coordinate
+    variable with name `xname`.
     """
     da_x = ds[xname]
     dx = np.diff(bins)
     xnewc = bins[:-1] + 0.5 * dx
 
+    if xname_out is None:
+        xname_out = xname
+
     new_data_vars = {
-        vn: _smear_da(ds[vn], bins, xname=xname, method=method, **method_kwargs)
+        vn: _smear_da(
+            ds[vn], bins, xname=xname, xname_out=xname_out, method=method, **method_kwargs
+        )
         for vn in ds.variables
-        if vn not in ds.coords
+        if xname in ds[vn].coords and vn not in ds.coords
     }
 
-    xe_name = f"{da_x.name}e"
-    xe_dims = [f"{d}e" for d in da_x.dims]
+    da_xo = ds[xname_out]
+    xe_name = f"{da_xo.name}e"
+    xe_dims = [f"{d}e" for d in da_xo.dims]
     xe_attrs = {
         "long_name": f"{da_x.attrs['long_name']} band edges",
-        "units": da_x.attrs["units"],
+        "units": da_xo.attrs["units"],
     }
     return xr.Dataset(
         coords={
-            da_x.name: (da_x.dims, xnewc, da_x.attrs),
+            da_xo.name: (da_xo.dims, xnewc, da_xo.attrs),
             xe_name: (xe_dims, bins, xe_attrs),
         },
         data_vars=new_data_vars,
     )
+
+
+def smear_si(ds, bins, *, xname_out="wl", **kwargs):
+    """Smear spectral irradiance, computing in-bin irradiance in the new bins.
+    `**kwargs` are passed to :func:`smear_ds`.
+    `ds` must have 'SI_dr', 'SI_df'
+    """
+    # coordinate variable for the spectral irradiances
+    xname = list(ds["SI_dr"].coords)[0]
+
+    # smear the spectral irradiances
+    ds_new = smear_ds(
+        ds[["SI_dr", "SI_df", xname_out]], bins=bins, xname=xname, xname_out=xname_out, **kwargs
+    )
+
+    # compute irradiances
+    dwl = np.diff(ds_new.wle)
+    units = "W m-2"
+    ds_new["I_dr"] = (
+        xname_out,
+        ds_new.SI_dr * dwl,
+        {"units": units, "long_name": "Direct irradiance"},
+    )
+    ds_new["I_df"] = (
+        xname_out,
+        ds_new.SI_df * dwl,
+        {"units": units, "long_name": "Diffuse irradiance"},
+    )
+    ds_new["dwl"] = (xname_out, dwl, {"units": "μm", "long_name": "Wavelength band width"})
+    # TODO: ensure attrs consistency somehow
+
+    return ds_new
 
 
 def edges_from_centers(x):
