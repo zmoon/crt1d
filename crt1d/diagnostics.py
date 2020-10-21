@@ -23,6 +23,40 @@ def E_to_PFD(E, wl_um):
     return E / e_wl_umol
 
 
+def calc_band_sum(y, xe, bounds):
+    """Calculate the sum of `y` values in `bounds`, including fractional edge contributions.
+
+    Parameters
+    ----------
+    y, xe : array
+    bounds : 2-tuple
+    """
+    assert y.size + 1 == xe.size, "Edges must have one more value than `y`."
+    x1, x2 = xe[:-1], xe[1:]  # left and right
+
+    b1, b2 = bounds[0], bounds[1]
+
+    in_bounds = (x2 >= b1) & (x1 <= b2)
+    x1in, x2in = x1[in_bounds], x2[in_bounds]
+    dx = x2in - x1in
+    # db = b2 - b1
+
+    # need to find a better (non-loop) way to do this, but for now...
+    w = np.zeros_like(x1in)
+    for i in range(x1in.size):
+        x1in_i, x2in_i = x1in[i], x2in[i]
+        if x1in_i < b1:  # extending out on left
+            w[i] = (x2in_i - b1) / dx[i]
+        elif x2in_i > b2:  # extending out on right
+            w[i] = (b2 - x1in_i) / dx[i]
+        else:  # completely within the bounds
+            w[i] = 1
+
+    # print(w)
+
+    return np.sum(y[in_bounds] * w)
+
+
 # TODO: band definitions (wl_a, wl_b) as a dict here
 
 # TODO: maybe want to create and return as xr.Dataset instead
