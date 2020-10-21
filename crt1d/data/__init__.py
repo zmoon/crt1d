@@ -32,8 +32,42 @@ def load_soil_fuentes2007(wl_um):
     )
 
 
+def load_prosail_sample_soil(*, f_wet=0):
+    """From PS5
+    https://github.com/jgomezdans/prosail/blob/master/prosail/soil_reflectance.txt
+
+    Parameters
+    ----------
+    f_wet : float
+        Weighting factor for the wet soil spectrum (0--1)
+    """
+    rho_soil_dry, rho_soil_wet = np.loadtxt(DATA_BASE_DIR / "PROSAIL_sample-soil.txt", unpack=True)
+    wl_ps5 = load_default_ps5()["wl"]
+
+    # weighted sum of wet and dry soil spectra
+    assert f_wet >= 0 and f_wet <= 1, "`f_wet` must be in [0, 1]"
+    rho_soil = f_wet * rho_soil_wet + (1 - f_wet) * rho_soil_dry
+
+    attrs = {}
+    dims = "wl"
+    coords = {
+        "wl": wl_ps5,
+    }
+    dset = xr.Dataset(
+        coords=coords,
+        data_vars={
+            "rs": (dims, rho_soil, {"units": "", "long_name": f"Soil reflectance"}),
+        },
+        attrs=attrs,
+    )
+    return dset
+
+
 def load_default_ps5():
-    """Load the provided default PROSPECT5 leaf element reflectance/transmittance."""
+    """Load the provided default PROSPECT5 leaf element reflectance/transmittance.
+
+    (I believe) these are the default spectra for the online version of PROSPECT.
+    """
     wl_nm, r, t = np.loadtxt(DATA_BASE_DIR / "PROSPECT_sample.txt", unpack=True)
     wl = wl_nm / 1000.0  # nm->um
 
@@ -82,6 +116,8 @@ def load_default_sp2(*, midpt=True):
 
     The SPCTRAL2 irradiances are in spectral form: W m-2 μm-1,
     but we need in-band irradiance for the solvers, since some compute W/m2 absorption.
+
+    This is the default spectrum in the Excel version of SPCTRAL2.
 
     Parameters
     ----------
