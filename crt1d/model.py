@@ -184,6 +184,21 @@ class Model:
 
         return self  # for chaining
 
+    def update_spectra(self, ds):
+        """Update irradiance and leaf/soil optical property spectra from `ds`."""
+        self.update_p(
+            I_dr0_all=ds["I_dr"].values,
+            I_df0_all=ds["I_df"].values,
+            wl=ds["wl"].values,
+            dwl=ds["dwl"].values,
+            wle=ds["wle"].values,
+            leaf_t=ds["tl"].values,
+            leaf_r=ds["rl"].values,
+            soil_r=ds["rs"].values,
+            wl_leafsoil=ds["wl"].values,
+        )
+        return self
+
     def _check_inputs(self):
         """
         Check input LAI profile and compute additional vars from it...,
