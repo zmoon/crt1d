@@ -331,103 +331,65 @@ class Model:
         p = self._p
         out = self.out_all
         out_extra = self.out_extra  # non-standard outputs, such as absorption
+        #
         # -- canopy descrip
         lai = p["lai"]
         dlai = p["dlai"]
         z = p["z"]  # at lai values (layer interfaces)
         zm = p["zm"]
+        #
         # -- wavelength grid
         wl = p["wl"]
         dwl = p["dwl"]
+        #
         # -- radiation geometry/setup
         psi = p["psi"]
         mu = p["mu"]
         sza = np.rad2deg(psi)
         G = p["G"]
         K_b = p["K_b"]
+        #
         # -- scheme info
         scheme_lname = self.scheme["long_name"]
         scheme_sname = self.scheme["short_name"]
         scheme_name = self.scheme["name"]
+        #
         # -- canopy RT solution
         Idr = out["I_dr"]
         Idfd = out["I_df_d"]
         Idfu = out["I_df_u"]
         F = out["F"]
-        crds = ["z", "wl"]  # radiative fluxes are on interface levels
-        crds_m = ["zm", "wl"]  # absorbed is on mid-levels
 
-        # -- unit strings
-        ln = "long_name"
-        z_units = dict(units="m")
-        wl_units = dict(units="μm")
-        E_units = dict(units="W m-2")  # E (energy flux) units
-        # SE_units = dict(units="W m-2 um-1")  # spectral E units
-        pf_units = dict(units="μmol photons m-2 s-1")  # photon flux units
-        lai_units = dict(units="(m2 leaf) m-2")
-
-        # -- construct data vars for absorption (many)
-        # allow abs not calculated or abs from scheme
-        abs_scheme = {f"{k}": v for k, v in out_extra.items() if k[:2] == "aI"}
-        # ^ keys already have `_scheme` appended
-        abs_post = self.absorption if self.absorption is not None else {}
-        absorption = {**abs_scheme, **abs_post}  # merge
-        abs_data_vars = {}  # collect data_vars tuples here
-        for k, v in absorption.items():
-            # -- energy or photon units: irradiance or PFD
-            if "I_" in k or k == "aI":
-                baseq = "irradiance"
-                units = E_units
-            elif "PFD" in k:
-                baseq = "PFD"
-                units = pf_units
-            else:
-                warnings.warn(f"key {k!r} not identified as either PFD or irradiance")
-                baseq = ""
-            # -- sunlit, shaded, or both
-            if "_sl" in k:
-                by = " by sunlit leaves"
-            elif "_sh" in k:
-                by = " by shaded leaves"
-            else:
-                by = ""
-            # -- direct or diffuse (up or down)
-            if "_dr" in k:
-                dfdr = "direct "
-            elif "_df_u" in k:
-                dfdr = "upward diffuse "
-            elif "_df_d" in k:
-                dfdr = "downward diffuse "
-            else:
-                dfdr = ""
-            # -- absorbed or not
-            if k[0] == "a":
-                absorbed = "absorbed "
-                crds_ = crds_m
-            else:
-                absorbed = ""
-                crds_ = crds
-            # -- from scheme or not
-            if k[-7:] == "_scheme":
-                scheme = " in scheme"
-                if v.shape[0] == z.size:  # some schemes have absorption on interface levels
-                    crds_ = crds
-            else:
-                scheme = ""
-            # -- construct long_name
-            lni = f"{absorbed}{dfdr}{baseq}{by}{scheme}"
-            # -- construct data_vars tuple
-            abs_data_vars[k] = (
-                crds_,
-                v,
-                {
-                    **units,
-                    ln: lni,
-                },
-            )
-
+        # -- define fn to look up variable metadata and create data_vars tuple
         def tup(name, data):
             return self.vmd[name].dv_tuple(data)
+
+        # -- construct data vars for absorption (many)
+        abs_data_vars = {}
+
+        # -- standard absorption calculations (layer in-out)
+        #    we can use the standard metadata
+        abs_post = self.absorption if self.absorption is not None else {}
+        abs_data_vars.update({k: tup(k, v) for k, v in abs_post.items()})
+
+        # -- scheme's absorption
+        abs_scheme = {f"{k}": v for k, v in out_extra.items() if k[:2] == "aI"}
+        for name, arr in abs_scheme.items():
+            n_z = arr.shape[0]
+            if n_z == z.size:  # some schemes provide absorption on interface levels
+                dims = ("z", "wl")
+            elif n_z == zm.size:
+                dims = ("zm", "wl")
+            else:
+                raise ValueError("Scheme absorption output has too many or too few levels.")
+
+            name0 = name[:-7]  # without the `_scheme` suffix
+            try:
+                attrs = self.vmd[name0].da_attrs()
+            except KeyError:
+                raise Exception(f"Scheme absorbance variable {name0} not found in vmd.")
+
+            abs_data_vars[name] = (dims, arr, attrs)
 
         dset = xr.Dataset(
             coords={
@@ -444,25 +406,23 @@ class Model:
                 "dwl": tup("dwl", dwl),
                 "lai": tup("lai", lai),
                 "dlai": tup("dlai", dlai),
+                #
                 **abs_data_vars,
+                #
+                "psi": tup("psi", psi),
+                "sza": tup("sza", sza),
+                "G": tup("G", G),
+                "K_b": tup("K_b", K_b),
             },
             attrs={
                 "info": info,
                 "scheme_name": scheme_name,
                 "scheme_long_name": scheme_lname,
                 "scheme_short_name": scheme_sname,
-                "sza": sza,
-                "psi": psi,
-                "mu": mu,
-                "G": G,
-                "K_b": K_b,
                 "crt1d_version": crt1d.__version__,
                 # "run_date": datetime.datetime.now(),
             },
         )
-        # TODO: add crt1d version?
-        # TODO: many of these attrs should be data_vars even though 0-D
-
         return dset
 
     def plot_canopy(self):

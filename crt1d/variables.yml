@@ -7,9 +7,10 @@ aliases:
   - &shape_z_wl '(n_z, n_wl)'
   - &shape_zm_wl '(n_z-1, n_wl)'
   - &units_E 'W m-2'
+  - &units_PFD "\u03bcmol photons m-2 s-1"
   - &units_long_El 'W (m2 leaf)-1'
   - &units_SE "W m-2 \u03bcm"
-  - &units_wl "\u03bcm"  # micron
+  - &units_wl "\u03bcm"  # micron (`03bc` is the code for small letter mu)
 
 
 # all possible params for the variables
@@ -37,6 +38,7 @@ variables:
     desc: $\psi$ is the solar zenith angle (SZA).
     units: radians
     intent: in
+    ln: Solar zenith angle
 
 
   I_dr0_all:
@@ -123,6 +125,7 @@ variables:
     desc: $K_b$ is the direct beam extinction coefficient.
     # units: TODO
     intent: in
+    ln: Black leaf attenuation coefficient
 
 
   K_b_fn:
@@ -135,13 +138,21 @@ variables:
     intent: in
 
 
+  G:
+    type: float
+    desc: The value of the $G$ function for the current solar zenith angle.
+    intent: in
+    ln: Fractional leaf area in the psi direction
+
+
   G_fn:
     type: function
     desc: >
       Function used to compute $G$ from beam angle ($G = G(\psi)$).
-
-      $G = K_b \mu = K_b \cos{\psi}$
-    # units: TODO
+      $G = K_b \mu = K_b \cos{\psi}$.
+      $G$ is the ratio of leaf area projected in the $\psi$ direction to actual leaf area.
+      It is an average over all leaf inclination (and azimuthal) angles
+      in the leaf angle distribution.
     intent: in
 
 
@@ -209,6 +220,13 @@ variables:
     units: *units_E
     ln: Absorbed irradiance
 
+  aI_l:
+    type: array_like
+    shape: *shape_zm_wl
+    desc: Layerwise absorbed irradiance per units leaf area.
+    units: *units_E
+    units_long: *units_long_El
+    ln: Absorbed irradiance
 
   aI_dr:
     type: array_like
@@ -346,3 +364,16 @@ variables:
     desc: Height above ground for the layer midpoints (mass levels).
     units: m
     ln: Height above ground
+
+
+  sza:
+    type: float
+    desc: Solar zenith angle (SZA). $\psi$ is the SZA in radians.
+    units: deg
+    ln: Solar zenith angle
+
+
+  mu:
+    type: float
+    desc: $\cos(\psi)$.
+    ln: cos(psi)

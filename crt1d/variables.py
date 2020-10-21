@@ -31,10 +31,18 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
 
     def da_attrs(self):
         """Contruct dict of attributes to use when creating xarray DataArray for this variable."""
-        return {
+        attrs = {
             "long_name": self.long_name,
             "units": self.s_units,
         }
+        if self.s_units_long:
+            attrs.update(
+                {
+                    "units_long": self.s_units_long,
+                }
+            )
+
+        return attrs
 
     def dv_tuple(self, data):
         """Construct `xr.Dataset` ``data_vars`` tuple."""
