@@ -9,3 +9,6 @@ myst-parser
 # to run examples as notebooks
 jupytext
 notebook
+# for examples
+prosail
+SolarUtils

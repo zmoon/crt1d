@@ -20,6 +20,8 @@ dependencies:
   - pip:
     - sphinx-rtd-theme
     - '-e .'
+    - SolarUtils  # run SPCTRAL2 to get more solar spectra
+    - prosail  # run PROSPECT to get more leaf spectra; has numba as a dep
   # dev tools
   - pylint
   - rope
