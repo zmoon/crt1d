@@ -31,33 +31,38 @@ def solve_zq_pa(*, psi,
 ):
     """
 
-    OUTPUT:
-        SWbo: direct SW at z (Wm-2(ground))
-        SWdo: downwelling diffuse at z (Wm-2(ground))
-        SWuo: upwelling diffuse at z (Wm-2(ground))
-        Q_sl: incident SW normal to sunlit leaves (Wm-2)
-        Q_sh: incident SW normal to shaded leaves (Wm-2)
-        q_sl: absorbed SW by sunlit leaves (Wm-2(leaf))
-        q_sh: absorbed SW by shaded leaves (Wm-2(leaf))
-        q_soil: absorbed SW by soil surface (Wm-2(ground))
-        f_sl: sunlit fraction of leaves (-): Note: to get sunlit fraction below
-            all vegetation f_sl[0] / Clump
-        alb: canopy albedo (-)
-    USES:
-        kbeam(ZEN,x) & kdiffuse(LAI,x=1) for computing beam and diffuse attenuation coeff
-    SOURCE:
-        Zhao W. & Qualls R.J. (2005). A multiple-layer canopy scattering model
-        to simulate shortwave radiation distribution within a homogenous plant
-         canopy. Water Resources Res. 41, W08409, 1-16.
-    NOTE:
-        At least for conifers NIR LeafAlbedo has to be decreased from leaf-scale  values to
-        correctly model canopy albedo of clumped canopies.
-        Adjustment from ~0.7 to 0.55 seems to be sufficient. This corresponds roughlty to
-        a=a_needle*[4*STAR / (1- a_needle*(1-4*STAR))], where a_needle is needle albedo
-        and STAR silhouette to total area ratio of a conifer shoot. STAR ~0.09-0.21 (mean 0.14)
-        for Scots pine (Smolander, Stenberg et al. papers)
-    CODE:
-    Samuli Launiainen, Luke. Converted from Matlab & tested 15.5.2017
+
+    Original notes from Samuli:
+
+    .. code:: none
+
+       OUTPUT:
+           SWbo: direct SW at z (Wm-2(ground))
+           SWdo: downwelling diffuse at z (Wm-2(ground))
+           SWuo: upwelling diffuse at z (Wm-2(ground))
+           Q_sl: incident SW normal to sunlit leaves (Wm-2)
+           Q_sh: incident SW normal to shaded leaves (Wm-2)
+           q_sl: absorbed SW by sunlit leaves (Wm-2(leaf))
+           q_sh: absorbed SW by shaded leaves (Wm-2(leaf))
+           q_soil: absorbed SW by soil surface (Wm-2(ground))
+           f_sl: sunlit fraction of leaves (-): Note: to get sunlit fraction below
+               all vegetation f_sl[0] / Clump
+           alb: canopy albedo (-)
+       USES:
+           kbeam(ZEN,x) & kdiffuse(LAI,x=1) for computing beam and diffuse attenuation coeff
+       SOURCE:
+           Zhao W. & Qualls R.J. (2005). A multiple-layer canopy scattering model
+           to simulate shortwave radiation distribution within a homogenous plant
+           canopy. Water Resources Res. 41, W08409, 1-16.
+       NOTE:
+           At least for conifers NIR LeafAlbedo has to be decreased from leaf-scale  values to
+           correctly model canopy albedo of clumped canopies.
+           Adjustment from ~0.7 to 0.55 seems to be sufficient. This corresponds roughlty to
+           a=a_needle*[4*STAR / (1- a_needle*(1-4*STAR))], where a_needle is needle albedo
+           and STAR silhouette to total area ratio of a conifer shoot. STAR ~0.09-0.21 (mean 0.14)
+           for Scots pine (Smolander, Stenberg et al. papers)
+       CODE:
+       Samuli Launiainen, Luke. Converted from Matlab & tested 15.5.2017
     """
     # original and computational grid
     # // LAI = Clump*sum(LAIz)  # effective LAI, corrected for clumping (m2 m-2)
