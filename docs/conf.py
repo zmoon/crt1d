@@ -53,6 +53,9 @@ nbsphinx_execute_arguments = [
     # "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
+# include __init__() docstring content in autodocs for classes
+autoclass_content = "both"
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 

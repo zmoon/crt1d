@@ -5,7 +5,8 @@ conveniently solve CRT problems using different solvers with minimal boilerplate
 
 This module also contains functions that operate on the model state,
 most of which are also attached as class methods.
-Functions that operate on the model output `xr.Dataset` are in :mod:`.diagnostics`.
+Functions that operate on :class:`xr.Dataset` s
+created by :meth:`Model.to_xr` are in :mod:`.diagnostics`.
 """
 # from dataclasses import dataclass
 import warnings
@@ -58,7 +59,7 @@ class Model:
             "psi",
         ]
     )
-    """Required inputs"""
+    """Required model inputs."""
 
     _schemes = AVAILABLE_SCHEMES
 
@@ -82,12 +83,14 @@ class Model:
         nlayers : int
             Number of in-canopy layers to use in the solver (interface levels).
         **p_kwargs
-            Model parameter keyword arguments passed on to `.update_p()`.
+            Model parameter keyword arguments passed on to :meth:`update_p()`.
         """
         # load default case, for given nlayers
         self.nlayers = nlayers
         self.p_default = load_default_case(nlayers=self.nlayers)
-        # initial settings based on default
+        """Default parameter settings dict."""
+
+        # base initial settings on default
         self._p = deepcopy(self.p_default)
 
         # assign scheme
@@ -102,13 +105,21 @@ class Model:
 
         # run/output variables
         self._run_count = 0  # TODO: store last_state?
+
         self.absorption = None  # initially no absorption data
-        self.out = {}  # standard scheme outputs
-        self.out_extra = {}  # extra outputs
+        """Absorption outputs calculated from the standard outputs :attr:`out`."""
+
+        self.out = {}
+        """Scheme standard outputs."""
+
+        self.out_extra = {}
+        """Scheme extra outputs, such as absorption. Only some schemes provide any."""
 
     @property
     def p(self):
-        """Model parameters."""
+        """Model parameters are indended to be read only (updated with :meth:`update_p`).
+        Invoking this just prints a message.
+        """
         print(
             "Please update parameters using `.update_p()`! Changes to `.p` will not be stored!\n"
             "Extract (copy) the parameters using `.copy_p()` or summarize using `.print_p()`."
@@ -138,8 +149,8 @@ class Model:
         return f"Model(scheme={scheme_name!r}, psi={psi:.4g})"
 
     def assign_scheme(self, scheme_name, *, verbose=False):
-        """Using the :const:`.solvers.AVAILABLE_SCHEMES` dict,
-        assign scheme and necessary scheme attrs
+        """Using the :const:`~crt1d.solvers.AVAILABLE_SCHEMES` dict,
+        assign scheme and necessary scheme attrs.
         """
         schemes = AVAILABLE_SCHEMES
         scheme_names = list(schemes.keys())
@@ -160,7 +171,8 @@ class Model:
         return self  # for chaining
 
     def update_p(self, **kwargs):
-        """
+        """Update parameters, if the validation passes.
+
         Parameters
         ----------
         `**kwargs`
@@ -191,7 +203,9 @@ class Model:
         return self  # for chaining
 
     def update_spectra(self, ds):
-        """Update irradiance and leaf/soil optical property spectra from `ds`."""
+        """Update irradiance and leaf/soil optical property spectra
+        from :class:`xarray.Dataset` `ds`.
+        """
         self.update_p(
             I_dr0_all=ds["I_dr"].values,
             I_df0_all=ds["I_df"].values,
@@ -318,7 +332,7 @@ class Model:
         return self  # for chaining
 
     def to_xr(self, *, info=""):
-        """Construct an `xarray.Dataset`.
+        """Construct an :class:`xarray.Dataset`.
 
         Parameters
         ----------
