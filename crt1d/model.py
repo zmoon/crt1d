@@ -22,6 +22,8 @@ from .solvers import AVAILABLE_SCHEMES
 from .solvers import RET_KEYS_ALL_SCHEMES  # the ones all schemes must return
 from .variables import VMD
 
+__all__ = ("Model", "run_sensitivity")
+
 
 CANOPY_DESCRIPTION_KEYS = [
     "lai",

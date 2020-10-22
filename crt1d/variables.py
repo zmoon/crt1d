@@ -73,17 +73,32 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
             pre = "* - " if i == 0 else "  - "
 
             # original attr
-            p = str(getattr(self, field))
+            p = getattr(self, field)
 
             # convert some
             if field == "s_units":
                 p = cf_units_to_tex(p) if p else ""
             elif field == "desc":
                 p = _desc_for_list_table(p)
+            elif field == "long_name":
+                p = p or ""
+            elif field == "name":
+                hash_link = f"#{p.lower().replace('_', '-')}"  # or could use URL tools
+                p = f"[``{p}``]({hash_link})"
 
             lines.append(f"{pre}{p}")
 
         return "\n".join(lines).rstrip()
+
+    def details_sec(self, *, heading_level=4):
+        """Details section for docs."""
+        pre0 = "#" * heading_level
+        header = f"{pre0} ``{self.name}``"
+        return f"""
+{header}
+
+{self.desc}
+        """.strip()
 
     def __repr__(self):
         return f"{__class__.__name__}(name={self.name}, ...)"
@@ -159,6 +174,12 @@ def _dims_from_s_shape(s_shape):
     return tuple(dims)
 
 
+# TODO: def _s_shape_to_tex(s_shape):
+#     """Create TeX form of shape specification for docs."""
+#     assert s_shape[0] == "(" and s_shape[-1] == ")"
+#     shape_parts = s_shape[1:-1].split(",")
+
+
 def _desc_for_list_table(desc):
     """Properly format the description for MyST list table."""
     lines = [line for line in desc.splitlines() if line.strip()]
@@ -219,30 +240,45 @@ def params_list_table(vmdes=None):
         Default is to use all of the known.
     """
     if vmdes is None:
-        vmdes = VMD.variables.values()
-    fields = ["name", "s_units", "s_shape", "desc"]
+        vmdes = sorted(VMD.variables.values(), key=lambda x: x.name.lower())
+
+    fields = ["name", "s_units", "s_shape", "long_name"]
     entries = "\n".join(vmde.list_table_entry(fields) for vmde in vmdes)
+
     return f"""
 % this table is auto-generated; don't edit directly
-```{{list-table}} Summary of solver input and output variables
-   :widths: 25 25 20 70
+```{{list-table}} Summary table
+   :widths: 20 20 20 70
    :header-rows: 1
 
 * - name
   - units
   - shape
-  - desc
+  - long_name
 {entries}
 """
+
+
+def params_details(vmdes=None):
+    if vmdes is None:
+        vmdes = sorted(VMD.variables.values(), key=lambda x: x.name.lower())
+
+    entries = "\n\n".join(vmde.details_sec() for vmde in vmdes)
+
+    return entries
 
 
 # python -c 'import crt1d; crt1d.variables._write_params_docs_snippets()'
 def _write_params_docs_snippets():
     from pathlib import Path
 
-    p = Path(__file__).parent / "../docs" / "_solvers_summary_table_snippet.txt"
+    p = Path(__file__).parent / "../docs" / "_variables_summary_table_snippet.txt"
     with open(p, "wb") as f:
         f.write(params_list_table().encode("utf-8"))
+
+    p = Path(__file__).parent / "../docs" / "_variables_details_snippet.txt"
+    with open(p, "wb") as f:
+        f.write(params_details().encode("utf-8"))
 
 
 # hack module docstring

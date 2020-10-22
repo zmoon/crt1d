@@ -2,7 +2,7 @@
 Data provided with crt1d: default/sample spectra,
 as well as functions that use external (not-required) libraries to compute more spectra.
 
-Data are loaded as `xarray.Dataset`s for easy inspection.
+Data are loaded as :class:`xarray.Dataset` for easy inspection.
 """
 import numpy as np
 import xarray as xr
@@ -34,13 +34,16 @@ def load_soil_fuentes2007(wl_um):
 
 
 def load_prosail_sample_soil(*, f_wet=0):
-    """From PS5
-    https://github.com/jgomezdans/prosail/blob/master/prosail/soil_reflectance.txt
+    """Sample soil spectra provided in Python PROSAIL.
 
     Parameters
     ----------
     f_wet : float
         Weighting factor for the wet soil spectrum (0--1)
+
+    Notes
+    -----
+    https://github.com/jgomezdans/prosail/blob/master/prosail/soil_reflectance.txt
     """
     rho_soil_dry, rho_soil_wet = np.loadtxt(DATA_BASE_DIR / "PROSAIL_sample-soil.txt", unpack=True)
     wl_ps5 = load_default_ps5()["wl"]
@@ -111,9 +114,6 @@ def load_ideal_leaf(*, midpt=False):
 def load_default_sp2(*, midpt=True):
     """Load sample SPCTRAL2 top-of-canopy spectra (direct and diffuse).
 
-    The SPCTRAL2 irradiances are in spectral form: W m-2 μm-1,
-    but we need in-band irradiance for the solvers, since some compute W/m2 absorption.
-
     This is the default spectrum in the Excel version of SPCTRAL2.
 
     Parameters
@@ -122,7 +122,12 @@ def load_default_sp2(*, midpt=True):
         true (default): irradiance calculated at midpts of the original grid
 
         false: irradiance calculated by estimating the edges of the original grid
-            and treating the original grid as centers
+        and treating the original grid as centers
+
+    Notes
+    -----
+    The SPCTRAL2 irradiances are in spectral form: W m-2 μm-1,
+    but we need in-band irradiance for the solvers, since some compute W/m2 absorption.
     """
     # load original spectra
     fp = DATA_BASE_DIR / "SPCTRAL2_xls_default-spectrum.csv"

@@ -12,7 +12,7 @@ from .leaf_area import distribute_lai_from_cdd
 
 
 def load_default_case(nlayers):
-    """Idealized beta leaf dist, default spectra."""
+    """Idealized beta leaf dist, default spectra from :func:`data.load_default`."""
     # leaf area distribution
     h_c = 20.0
     LAI = 4.0
@@ -59,10 +59,12 @@ def load_default_case(nlayers):
 
 
 def load_canopy_descrip(fpath):
-    """Load items from CSV file and return as dict
-    The file should use the same fieldnames as in the default one!
-    Pandas might also do this.
+    """Load items from CSV file and return as dict.
+
+    .. note::
+       The file should use the same fieldnames as in the default one!
     """
+    # TODO: maybe use pandas?
     varnames, vals = np.genfromtxt(
         fpath, usecols=(0, 1), skip_header=1, delimiter=",", dtype=str, unpack=True
     )

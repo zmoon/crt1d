@@ -45,37 +45,39 @@ variables:
   I_dr0_all:
     type: array_like
     shape: *shape_wl
-    desc: >
+    desc: |
       Incoming (downwelling) *direct* irradiance(s) at the top of the canopy.
 
-      .. warning:: Not spectral, energy flux density in discrete band.
-
+      ```{warning}
+      Not spectral, energy flux density in discrete band.
+      ```
     units: W m-2
     intent: in
+    ln: Incoming direct irradiance at top-of-canopy
 
 
   I_df0_all:
     type: array_like
     shape: *shape_wl
-    desc: >
+    desc: |
       Incoming (downwelling) *diffuse* irradiance(s) at the top of the canopy.
 
-      .. warning:: Not spectral, energy flux density in discrete band.
-
+      ```{warning}
+      Not spectral, energy flux density in discrete band.
+      ```
     units: W m-2
     intent: in
+    ln: Incoming diffuse irradiance at top-of-canopy
 
 
   lai:
     type: array_like
     shape: *shape_z
-    desc: >
+    desc: |
       Leaf area index (LAI) profile.
 
       Bottom to top:
-
       * ``lai[0]``: total LAI
-
       * ``lai[-1] = 0`` (canopy-atmos interface)
 
     units: m2 m-2
@@ -94,6 +96,7 @@ variables:
 
     units: 1
     intent: in
+    ln: Clump factor
 
 
 
@@ -103,6 +106,7 @@ variables:
     desc: Leaf element transmissivity.
     units: 1
     intent: in
+    ln: Leaf transmittance
 
 
   leaf_r:
@@ -111,6 +115,7 @@ variables:
     desc: Leaf element reflectivity.
     units: 1
     intent: in
+    ln: Leaf reflectance
 
 
   soil_r:
@@ -162,6 +167,7 @@ variables:
     desc: Mean leaf (inclination) angle.
     units: deg
     intent: in
+    ln: Mean leaf angle
 
 
   # -- Output irradiances `*I*` are W/m2 in-bin values

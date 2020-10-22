@@ -14,7 +14,7 @@ from scipy.constants import N_A
 
 
 def e_wl_umol(wl_um):
-    """J/(umol photons) at wavelength `wl_um`."""
+    """J/(μmol photons) at wavelength `wl_um`."""
     # convert wavelength to SI units (for compatibility with the constants)
     wl = wl_um * 1e-6  # um -> m
 
@@ -26,7 +26,7 @@ def e_wl_umol(wl_um):
 
 
 def E_to_PFD_da(da):
-    """Assuming wl in microns, convert W/m2 -> (umol photons)/m2/s."""
+    """Assuming wl in microns, convert W/m2 -> (μmol photons)/m2/s."""
     assert da.attrs["units"] == "W m-2"
     wl_um = da.wl
     f = 1 / e_wl_umol(wl_um)  # J/umol -> umol/J
@@ -154,8 +154,13 @@ def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=Fa
 
 
 def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
-    """Multi-panel plot of profiles for specified string bandname `bn`:
+    """Multi-panel plot of profiles for specified string bandname `bn`.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
+
+    Parameters
+    ----------
+    dsets : list(xarray.Dataset)
+        Created using :func:`to_xr`
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
