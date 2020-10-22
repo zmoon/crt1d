@@ -3,12 +3,15 @@
 """
 from pathlib import Path as _Path
 
-# directories TODO: use pathlib
+# directories
 BASE_DIR = _Path(__file__).parent
 DATA_BASE_DIR = BASE_DIR / "data"
 
 # include Model in pkg-level namespace
 from .model import Model
+
+# include diagnostics module (not used by any of the others)
+from . import diagnostics
 
 # set version
 try:

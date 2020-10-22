@@ -6,18 +6,25 @@ Testing MyST with citations!
 ```
 
 Dickinson--Sellers ({cite}`dickinson_land_1983,sellers_canopy_1985`) is quite common.
- 	
-## Solver variables
+
+## Variables
+
+The summary table and detailed descriptions are auto-generated
+using the data from ``variables.yml`` and module {mod}`crt1d.variables`.
 
 ### Summary
 
-```{include} _solvers_summary_table_snippet.txt
+Click on a "name" to jump to the details.
+
+```{include} _variables_summary_table_snippet.txt
 ```
 
-### Detailed?
+### Detailed
 
-Maybe as bullets?
+Detailed descriptions...
 
+```{include} _variables_details_snippet.txt
+```
 
 ## References
 

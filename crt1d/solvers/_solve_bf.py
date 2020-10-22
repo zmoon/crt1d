@@ -147,7 +147,7 @@ def solve_bf(
         I_df_d=I_df_d_all,
         I_df_u=I_df_u_all,
         F=F_all,
-        aI_sl=aI_sl_all,
-        aI_sh=aI_sh_all,
-        aI=aI_sl_all + aI_sh_all,
+        aI_lsl=aI_sl_all,
+        aI_lsh=aI_sh_all,
+        aI_l=aI_sl_all + aI_sh_all,
     )

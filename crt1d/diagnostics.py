@@ -1,165 +1,254 @@
 """
-Calculations from the CRT solutions
+Calculations/plots from the CRT solutions, using the model's output dataset
+created by :meth:`crt1d.model.Model.to_xr()`.
 """
 import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import xarray as xr
 from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import N_A
 
-from .solvers import RET_KEYS_ALL_SCHEMES
 
-
-def E_to_PFD(E, wl_um):
-    """Energy flux (W/m^2) to photon flux (umol photon / m^2 / s)"""
+def e_wl_umol(wl_um):
+    """J/(μmol photons) at wavelength `wl_um`."""
     # convert wavelength to SI units (for compatibility with the constants)
-    wl = wl_um[np.newaxis, :] * 1e-6  # um -> m
+    wl = wl_um * 1e-6  # um -> m
 
     e_wl_1 = h * c / wl  # J (per one photon)
     e_wl_mol = e_wl_1 * N_A  # J/mol
     e_wl_umol = e_wl_mol * 1e-6  # J/mol -> J/umol
 
-    return E / e_wl_umol
+    return e_wl_umol
 
 
-# TODO: band definitions (wl_a, wl_b) as a dict here
+def E_to_PFD_da(da):
+    """Assuming wl in microns, convert W/m2 -> (μmol photons)/m2/s."""
+    assert da.attrs["units"] == "W m-2"
+    wl_um = da.wl
+    f = 1 / e_wl_umol(wl_um)  # J/umol -> umol/J
+    ln = da.attrs["long_name"].replace("irradiance", "PFD")
+    units = "μmol photons m-2 s-1"
+    da_new = da * f  # umol/J * W/m2 -> umol/m2/s
+    da_new.attrs.update(
+        {
+            "long_name": ln,
+            "units": units,
+        }
+    )
 
-# TODO: maybe want to create and return as xr.Dataset instead
-# or like sympl, dict of xr.Dataarrays
-def calc_leaf_absorption(p, out, *, band_names_to_calc=None):
-    """Calculate layerwise leaf absorption from the CRT solver solutions
+    return da_new
+
+
+def band_sum_weights(xe, bounds):
+    """Including fractional edge contributions.
 
     Parameters
     ----------
-    p : dict
-        model parameters
-    out : dict
-        model outputs
-
-    for the state (one time/case)
+    xe : array
+    bounds : 2-tuple(float)
     """
-    if band_names_to_calc is None:
-        band_names_to_calc = ["PAR", "solar"]
-    elif band_names_to_calc == "all":
-        band_names_to_calc = ["PAR", "solar", "NIR", "UV"]
+    x1, x2 = xe[:-1], xe[1:]  # left and right
 
-    lai = p["lai"]
-    dlai = p["dlai"]
-    # K_b = p["K_b"]
-    # G = p["G"]  # fractional leaf area projected in direction psi
-    K_b = p["K_b"]  # G/cos(psi)
+    b1, b2 = bounds[0], bounds[1]
 
-    leaf_r = p["leaf_r"]
-    leaf_t = p["leaf_t"]
-    leaf_a = 1 - (leaf_r + leaf_t)  # leaf element absorption coeff
+    if b1 < x1[0] or b2 > x2[-1]:
+        warnings.warn("`bounds` extend outside the data range")
 
-    wl = p["wl"]
-    # dwl = p["dwl"]
-    I_dr = out["I_dr"]
-    I_df_d = out["I_df_d"]
-    I_df_u = out["I_df_u"]
-    I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
+    in_bounds = (x2 >= b1) & (x1 <= b2)
+    x1in, x2in = x1[in_bounds], x2[in_bounds]
+    dx = x2in - x1in
+    # db = b2 - b1
 
+    # need to find a better (non-loop) way to do this, but for now...
+    w = np.zeros_like(x1in)
+    for i in range(x1in.size):
+        x1in_i, x2in_i = x1in[i], x2in[i]
+        if x1in_i < b1:  # extending out on left
+            w[i] = (x2in_i - b1) / dx[i]
+        elif x2in_i > b2:  # extending out on right
+            w[i] = (b2 - x1in_i) / dx[i]
+        else:  # completely within the bounds
+            w[i] = 1
+
+    w_all = np.zeros(xe.size - 1)
+    w_all[in_bounds] = w
+
+    return w_all
+
+
+def calc_band_sum(y, xe, bounds):
+    assert y.size + 1 == xe.size, "Edges must have one more value than `y`."
+    w = band_sum_weights(xe, bounds)
+
+    return np.sum(y * w)
+
+
+BAND_DEFNS_UM = {
+    "PAR": (0.4, 0.7),
+    "NIR": (0.7, 2.5),
+    "UV": (0.01, 0.4),
+    "solar": (0.3, 5.0),
+}
+
+
+def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
+    """Reduce spectral variables in `ds` by summing in-band irradiances
+    to give the integrated irradiance in that spectral region.
+    `bounds` does not have to be provided if `band_name` is one of the known bands.
+    If `variables` is None, will attempt to guess.
+    """
+    ds = ds.copy()
+    if bounds is None:
+        bounds = BAND_DEFNS_UM[band_name]
+
+    wl = ds.wl.values
+    dwl = ds.dwl.values
     try:
-        wl_l = p["wl_l"]
-        wl_r = p["wl_r"]
-    except KeyError:
-        warnings.warn(
-            "Wavelength band left and right bounds should be provided "
-            "to give the most accurate integrals."
+        wle = ds.wle.values
+    except AttributeError:
+        wle = np.r_[wl - 0.5 * dwl, wl[-1] + 0.5 * dwl[-1]]
+
+    # weights as a function of wavelength
+    w = xr.DataArray(dims="wl", data=band_sum_weights(wle, bounds))
+
+    # default to searching for irradiance variables and actinic flux
+    if variables is None:
+        vns = [vn for vn in ds.variables if vn == "F" or "I" in vn]
+
+    for vn in vns:
+        da = ds[vn]
+        ln_new = f"{da.attrs['long_name']} - {band_name}"
+        units = da.attrs["units"]
+        ds[vn] = (da * w).sum(dim="wl")
+        ds[vn].attrs.update(
+            {
+                "long_name": ln_new,
+                "units": units,
+            }
         )
-        wl_l = wl  # just use the wavelength we have for defining the bands
-        wl_r = wl
+        if calc_PFD:
+            da_pfd = E_to_PFD_da(da)
+            ln_new = f"{da_pfd.attrs['long_name']} - {band_name}"
+            units = da_pfd.attrs["units"]
+            vn_pfd = vn.replace("I", "PFD")
+            ds[vn_pfd] = (da_pfd * w).sum(dim="wl")
+            ds[vn_pfd].attrs.update(
+                {
+                    "long_name": ln_new,
+                    "units": units,
+                }
+            )
 
-    # TODO: include clump factor in f_sl and absorption calculations
+    ds.attrs.update(
+        {
+            "band_name": band_name,
+            "band_bounds": bounds,
+        }
+    )
 
-    f_sl_interfaces = np.exp(-K_b * lai)  # fraction of sunlit
-    f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)
-    f_sh = 1 - f_sl
-
-    nlev = lai.size
-
-    # compute total layerwise absorbed (by leaves, but not per unit LAI)
-    i = np.arange(nlev - 1)
-    ip1 = i + 1
-    a = I_dr[ip1] - I_dr[i] + I_df_d[ip1] - I_df_d[i] + I_df_u[i] - I_df_u[ip1]
-    # ^ layerwise absorption by leaves in all bands
-    #   inputs - outputs
-    #   actual, not per unit LAI
-
-    # compute absorbed direct
-    I_dr0 = I_dr[-1, :][np.newaxis, :]
-    # a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
-    a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
-    # ^ direct beam absorption (sunlit leaves only by definition)
-    #
-    # **technically should be computed with exp**
-    #   1 - exp(-K_b*L)
-    # K_b*L is an approximation for small L
-    # e.g.,
-    #   K=1, L=0.01, 1-exp(-K*L)=0.00995
-
-    a_df = a - a_dr  # absorbed diffuse radiation
-    a_df_sl = a_df * f_sl[:, np.newaxis]
-    a_df_sh = a_df * f_sh[:, np.newaxis]
-    a_sl = a_df_sl + a_dr
-    a_sh = a_df_sh
-    assert np.allclose(a_sl + a_sh, a)
-
-    # compute spectral absorption profile in photon flux density units
-    # a_pfd = E_to_PFD(a, wl)
-
-    # > absorbance in specific bands
-    isPAR = (wl_l >= 0.4) & (wl_r <= 0.7)
-    isNIR = (wl_l >= 0.7) & (wl_r <= 2.5)
-    isUV = (wl_l >= 0.01) & (wl_r <= 0.4)
-    issolar = (wl_l >= 0.3) & (wl_r <= 5.0)
-
-    # integrate spectral profiles over different bands (currently hardcoded)
-    #
-    # for the spectral version (/dwl), we can use an integral
-    # a_PAR = si.simps(Sa[:,isPAR], wl[isPAR])
-    #
-    # for non-spectral, we just need to sum the bands
-    # a_PAR = a[:,isPAR].sum(axis=1)
-    #
-    bands = {
-        "PAR": isPAR,
-        "solar": issolar,
-        "UV": isUV,
-        "NIR": isNIR,
-    }
-    to_int = {
-        "aI": a,
-        "aI_df": a_df,
-        "aI_dr": a_dr,
-        "aI_sh": a_sh,
-        "aI_sl": a_sl,
-        "aI_df_sl": a_df_sl,
-        "aI_df_sh": a_df_sh,
-        "I_d": I_d,
-        "I_dr": I_dr,
-        "I_df_d": I_df_d,
-        "I_df_u": I_df_u,
-    }
-    res_int = {}  # store integration results in dict
-    for i, bn in enumerate(band_names_to_calc):
-        isband = bands[bn]
-        for k, v in to_int.items():
-            k_int = f"{k}_{bn}"  # e.g., `aI_PAR`
-            res_int[k_int] = v[:, isband].sum(axis=1)
-            new_base = k.replace("I", "PFD")  # TODO: don't want to be replacing NIR though!
-            k_int_pfd = f"{new_base}_{bn}"
-            res_int[k_int_pfd] = E_to_PFD(v[:, isband], wl[isband]).sum(axis=1)
-
-    to_int_new = {
-        k: v for k, v in to_int.items() if k not in RET_KEYS_ALL_SCHEMES
-    }  # this is the new spectra
-    res = {**to_int_new, **res_int}  # new spectra + integrated quantities
-
-    return res
+    return ds.drop("wl")
 
 
-# TODO: fn to parse string varname to get dims/coords, units, and long_name
-# need to move from model.to_xr and write better way (re or pyparsing?)
+def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
+    """Multi-panel plot of profiles for specified string bandname `bn`.
+    `bounds` does not have to be provided if `band_name` is one of the known bands.
+
+    Parameters
+    ----------
+    dsets : list(xarray.Dataset)
+        Created using :meth:`~crt1d.model.Model.to_xr`.
+    """
+    if not isinstance(dsets, list):
+        raise Exception("A list of dsets must be provided")
+
+    # integrate over the band
+    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+
+    # variables to show in each panel
+    varnames = [
+        [f"aI", f"aI_sl", f"aI_sh"],
+        [f"I_dr", f"I_df_d", f"I_df_u"],
+    ]  # rows, cols
+
+    nrows = len(varnames)
+    ncols = len(varnames[0])
+
+    fig, axs = plt.subplots(nrows, ncols, sharey=True, figsize=(ncols * 2.4, nrows * 3))
+
+    vns = [vn for row in varnames for vn in row]
+    for i, vn in enumerate(vns):
+        ax = axs.flat[i]
+        for dset in dsets:
+            da = dset[vn]
+            y = da.dims[0]
+            da.plot(y=y, ax=ax, label=dset.attrs["scheme_long_name"], marker=".")
+
+    for ax in axs.flat:
+        ax.grid(True)
+
+    # legend in lower left
+    h, _ = axs.flat[0].get_legend_handles_labels()
+    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=9)
+
+    fig.tight_layout()
+
+
+# TODO: def plot_E_closure_spectra():
+
+
+def df_E_balance(dsets, *, band_name="solar", bounds=None):
+    """
+    For `dsets`, assess energy balance closure by comparing
+    computed canopy and soil absorption to incoming minus outgoing
+    radiation at the top of the canopy.
+
+    Parameters
+    ----------
+    dsets : list(xarray.Dataset)
+        :meth:`~crt1d.model.Model.to_xr`.
+
+    """
+    if not isinstance(dsets, list):
+        raise Exception("A list of dsets must be provided")
+
+    # integrate over the band
+    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+
+    IDs = [ds.attrs["scheme_name"] for ds in dsets]
+    columns = [
+        "incoming",
+        "outgoing (reflected)",
+        "soil absorbed",
+        "layerwise abs sum",
+        "in-out-soil",
+        "canopy abs",
+    ]
+    df = pd.DataFrame(index=IDs, columns=columns)
+
+    for i, ID in enumerate(IDs):
+        ds = dsets[i]
+        incoming = ds["I_d"][-1].values
+        outgoing = ds["I_df_u"][-1].values
+        transmitted = ds["I_d"][0].values  # direct+diffuse transmitted all the way through canopy
+        soil_refl = ds["I_df_u"][0].values
+        soil_abs = transmitted - soil_refl
+        layer_abs_sum = ds["aI"].sum().values
+        canopy_abs = (
+            ds["I_df_d"][-1].values
+            - outgoing
+            + ds["I_dr"][-1].values
+            - ds["I_dr"][0].values
+            + -(ds["I_df_d"][0].values - soil_refl)
+        )  # soil abs is down-up diffuse at last layer?
+        df.loc[ID, columns[0]] = incoming
+        df.loc[ID, columns[1]] = outgoing
+        df.loc[ID, columns[2]] = soil_abs
+        df.loc[ID, columns[3]] = layer_abs_sum
+        df.loc[ID, columns[4]] = incoming - outgoing - soil_abs
+        df.loc[ID, columns[5]] = canopy_abs
+
+    return df
