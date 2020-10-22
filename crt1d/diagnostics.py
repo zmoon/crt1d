@@ -1,6 +1,6 @@
 """
 Calculations/plots from the CRT solutions, using the model's output dataset
-created by :meth:`..model.Model.to_xr()`.
+created by :meth:`crt1d.model.Model.to_xr()`.
 """
 import warnings
 
@@ -160,7 +160,7 @@ def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
     Parameters
     ----------
     dsets : list(xarray.Dataset)
-        Created using :func:`to_xr`
+        Created using :meth:`~crt1d.model.Model.to_xr`.
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
@@ -209,7 +209,7 @@ def df_E_balance(dsets, *, band_name="solar", bounds=None):
     Parameters
     ----------
     dsets : list(xarray.Dataset)
-        Created using :func:`to_xr`
+        :meth:`~crt1d.model.Model.to_xr`.
 
     """
     if not isinstance(dsets, list):

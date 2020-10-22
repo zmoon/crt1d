@@ -183,7 +183,7 @@ def load_default_sp2(*, midpt=True):
 
 def load_default(*, midpt=True):
     """Load default toc irradiance spectra, and leaf & soil optical props,
-    used in :func:`~..cases.load_default_case`.
+    used in :func:`~crt1d.cases.load_default_case`.
     """
     # load individual datasets
     ds_l = load_ideal_leaf(midpt=midpt)

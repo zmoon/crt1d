@@ -12,7 +12,7 @@ from .leaf_area import distribute_lai_from_cdd
 
 
 def load_default_case(nlayers):
-    """Idealized beta leaf dist, default spectra from :func:`data.load_default`."""
+    """Idealized beta leaf dist, default spectra from :func:`~crt1d.data.load_default`."""
     # leaf area distribution
     h_c = 20.0
     LAI = 4.0

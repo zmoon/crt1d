@@ -21,6 +21,7 @@ diagnostics
 cases
 -----
 .. automodule:: crt1d.cases
+   :members:
 
 data
 ----
