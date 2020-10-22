@@ -90,7 +90,7 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
 
         return "\n".join(lines).rstrip()
 
-    def details_sec(self, *, heading_level=4):
+    def details_sec(self, *, heading_level=3):
         """Details section for docs."""
         pre0 = "#" * heading_level
         header = f"{pre0} ``{self.name}``"

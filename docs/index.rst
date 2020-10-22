@@ -17,6 +17,7 @@ Welcome to crt1d's documentation!
    :maxdepth: 3
    :caption: Reference
 
+   variables
    solvers
    api
 

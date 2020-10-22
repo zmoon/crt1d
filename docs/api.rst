@@ -1,6 +1,21 @@
 API
 ===
 
+Top level
+*********
+
+The model class is included in the top-level namespace for ease-of-use.
+
+.. autoclass:: crt1d.Model
+   :members:
+
+.. automodule:: crt1d
+   :members:
+
+
+Submodules
+**********
+
 model
 -----
 
@@ -26,4 +41,19 @@ cases
 data
 ----
 .. automodule:: crt1d.data
+   :members:
+
+spectra
+-------
+.. automodule:: crt1d.spectra
+   :members:
+
+leaf_area
+---------
+.. automodule:: crt1d.leaf_area
+   :members:
+
+leaf_angle
+----------
+.. automodule:: crt1d.leaf_angle
    :members:
