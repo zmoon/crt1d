@@ -8,33 +8,38 @@ long_name = "four-stream"
 def solve_4s(
     *, psi, I_dr0_all, I_df0_all, lai, leaf_t, leaf_r, soil_r, K_b_fn, G_fn, mu_s=0.501  # wl, dwl,
 ):
-    """4-stream from Tian et al. (2007) (featuring Dickinson).
+    r"""4-stream from Tian et al. (2007) (featuring Dickinson).
 
-    All eq./p. references in the code are to Tian et al. 2007 unless otherwise noted.
+    Notes
+    -----
+    All eq./p. references in the code are to Tian et al. 2007 (:cite:`tian_four-stream_2007`)
+    unless otherwise noted.
 
-    Note that the authors use I for radiance, and F for irradiance (or actinic flux?).
+    Note that the authors use :math:`I` for radiance, and :math:`F` for irradiance.
     To be consistent with the other model codes, I am using
 
-    * I for irradiance
+    * ``I`` for irradiance
 
-    * R for radiance
+    * ``R`` for radiance
 
-    * F for actinic flux
+    * ``F`` for actinic flux
 
 
-    mu_s:
-        Cosine of the dividing angle theta_s for the two beams: mu_s = cos(theta_s)
-        Divides the hemisphere into 4 regions [-1, -mu_s], [-mu_s, 0], [0, mu_s], [mu_s, 1]
-            two sectors, defined by [0, mu_s] and [mu_s, 1]
-        Potential values:
-            0.501: value suggested by the authors (~ 60 deg., arccos(0.501)*180/pi = 59.93)
-            0.33998, 0.86114:  Gauss–Legendre quadrature points for n=4
-                ~ 70 deg., ~ 31 deg.
-                Tian et al. (2007) and Li and Dobbie (1998) find the former to give more accurate results
+    `mu_s` (:math:`\mu_s`) is the cosine of the dividing angle for the two beams:
 
-        For 4-stream to provide benefits, the two beams should be diff angles from the vertical.
-        (and I'm pretty sure that they are: technically one is zenith angle 0, the other at an angle to the zenith)
+    .. math::
+       \mu_s = \cos(\theta_s)
 
+    :math:`\mu_s` divides each hemisphere into two sectors:
+    :math:`[0, \mu_s]` and :math:`[\mu_s, 1]` for the upward
+    and :math:`[-1, -\mu_s]` and :math:`[-\mu_s, 0]` for the downward.
+
+    Potential values for the `mu_s` "hyperparameter":
+
+    * 0.501: value suggested by the authors (~ 60 deg., arccos(0.501)*180/pi = 59.93)
+
+    * 0.33998, 0.86114: Gauss–Legendre quadrature points for n=4, ~ 70 deg., ~ 31 deg.
+      Tian et al. (2007) and Li and Dobbie (1998) find (0.33998) the former to give more accurate results.
     """
 
     K_b = K_b_fn(psi)
