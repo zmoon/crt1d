@@ -24,12 +24,9 @@ import crt1d as crt
 # Run the default case (which is loaded automatically when model object is created).
 
 # %%
-schemes_to_test = ["bl", "2s", "4s", "zq"]
-
 ms = []
-for scheme_ID in schemes_to_test:
+for scheme_ID in crt.solvers.AVAILABLE_SCHEMES.keys():  # run all available
     m = crt.Model(scheme_ID, nlayers=60)
-    # m.plot_canopy()
     m.run()
     m.calc_absorption()
     ms.append(m)
