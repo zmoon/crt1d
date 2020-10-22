@@ -1,10 +1,15 @@
 """
 Parameterizations of the impact of leaf angles on canopy RT.
 
-Leaf angle factor G and the extinction coeff K have the following relationship
-    K = G / cos(psi)
+Leaf angle factor :math:`G` and the black leaf extinction coeff :math:`K_b`
+have the following relationship:
 
-G is the mean projection of leaf area in the direction psi.
+.. math::
+   K_b = G / \cos(\psi)
+
+where :math:`\psi` is the solar zenith angle.
+
+:math:`G` is the mean projection of leaf area in the direction psi.
 """
 import numpy as np
 from scipy import integrate
