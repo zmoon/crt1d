@@ -3,12 +3,14 @@ channels:
   - conda-forge
 dependencies:
   - python=3.7
-  # used by crt1d
+  #
+  # used by crt1d (prefer Conda versions though)
   - numpy
   - scipy
   - matplotlib
   - xarray
   - pandas
+  #
   # for docs
   - sphinx
   - nbsphinx
@@ -22,6 +24,7 @@ dependencies:
     - '-e .'
     - SolarUtils  # run SPCTRAL2 to get more solar spectra
     - prosail  # run PROSPECT to get more leaf spectra; has numba as a dep
+  #
   # dev tools
   - pylint
   - rope
