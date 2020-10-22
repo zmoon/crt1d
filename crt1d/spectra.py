@@ -46,7 +46,7 @@ def smear_tuv_1(x, y, xgl, xgu):
 
 
 def smear_tuv(x, y, bins):
-    """Use :func:`smear_tuv_1` to bin `y`(`x`) into `bins` (new x-bin edges).
+    """Use :func:`smear_tuv_1` to bin `y` values at `x` positions into `bins` (new x-bin edges).
     Returns an array of in-bin y-values ynew, such that the sum of ynew*dwl
     is equal to the original integral of y(x).
     """
@@ -188,7 +188,7 @@ def edges_from_centers(x):
 def plot_binned(x, y, xc, yc, dx):
     """Compare an original spectrum to binned one.
 
-    If `x` and `y` are `xr.DataArray`s, their attrs will be used to label the plot.
+    If `x` and `y` are `xr.DataArray` s, their attrs will be used to label the plot.
 
     Parameters
     ----------

@@ -94,7 +94,7 @@ def g_ellipsoidal(theta_l, x):
 def G_ellipsoidal(psi, x):
     """G for the ellipsoidal leaf angle distribution.
 
-    ref: Campbell (1986) eqs. 5, 6
+    ref: Campbell (1986) eqs. 5, 6 (:cite:`campbell_extinction_1986`)
 
     Parameters
     ----------
