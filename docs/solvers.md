@@ -1,14 +1,9 @@
 
 # Solvers
 
-```{note}
-Testing MyST with citations!
-```
-
-Dickinson--Sellers ({cite}`dickinson_land_1983,sellers_canopy_1985`) is quite common.
-
 ## Shortwave schemes
 
+% TODO: auto-gen from scheme metadata and include link to solver fn
 Scheme | Scheme ``name`` | Reference(s)
 --- | :---: | ---
 Beer--Lambert | ``bl`` | {cite}`campbell_introduction_2012`, ...
@@ -18,6 +13,9 @@ Zhao & Qualls multi-scattering | ``zq`` | {cite}`zhao_multiple-layer_2005`
 Bodin & Franklin 1.5 stream | ``bf`` | {cite}`bodin_efficient_2012`
 Goudriaan one-stream | ``gd`` | {cite}`goudriaan_crop_1977,bodin_efficient_2012`
 Zhao & Qualls from pyAPES | ``zq_pa`` |
+
+Dickinson--Sellers ({cite}`dickinson_land_1983,sellers_canopy_1985`) is quite common.
+
 
 ## References
 
