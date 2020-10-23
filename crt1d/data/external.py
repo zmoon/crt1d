@@ -58,7 +58,7 @@ def solar_sp2(
     tau500 : float
         Aerosol optical depth (base e) at 500 nm.
         Typical range: [0.05, 0.55] for clear sky.
-        Should be in [0, 10]
+        Should be in [0, 10].
     watvap : float
         Total column precipitable water vapor (cm).
         Typical range: [0.3, 6].
@@ -76,6 +76,7 @@ def solar_sp2(
     Returns
     -------
     xarray.Dataset
+        Dataset containing the spectra, solar zenith angle, and time/location info.
     """
     import solar_utils
 

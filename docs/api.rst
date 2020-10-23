@@ -43,6 +43,9 @@ data
 .. automodule:: crt1d.data
    :members:
 
+.. automodule:: crt1d.data.external
+   :members:
+
 spectra
 -------
 .. automodule:: crt1d.spectra
