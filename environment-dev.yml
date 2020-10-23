@@ -21,6 +21,7 @@ dependencies:
   - pip  # otherwise conda nags
   - pip:
     - sphinx-rtd-theme
+    - sphinx-book-theme
     - '-e .'
     - SolarUtils  # run SPCTRAL2 to get more solar spectra
     - prosail  # run PROSPECT to get more leaf spectra; has numba as a dep

@@ -3,6 +3,7 @@
 # sphinx extensions
 sphinx
 sphinx-rtd-theme
+sphinx-book-theme
 nbsphinx
 sphinxcontrib-bibtex
 myst-parser
