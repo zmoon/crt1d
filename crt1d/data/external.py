@@ -108,7 +108,6 @@ def solar_sp2(
     # run SOLPOS to get angles
     # (SPCTRAL2 also runs it but whatevs)
     (zenith, azimuth), _ = solar_utils.solposAM(location, list_datetime, weather)
-    print(zenith)
 
     # run SPCTRAL2 (following their readme example)
     specdif, specdir, specetr, specglo, specx = solar_utils.spectrl2(
