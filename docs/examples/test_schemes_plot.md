@@ -18,9 +18,9 @@ jupytext:
 We test the following:
 
 * running the model with default case
-* plot methods for Model class
+* plot methods for {class}`~crt1d.Model` class
 * output xr
-* plots for Model class
+* plots for {class}`~crt1d.Model` class
 * plots for output xr
 
 ```{code-cell}
@@ -39,9 +39,11 @@ import crt1d as crt
 Run the default case (which is loaded automatically when model object is created).
 
 ```{code-cell}
+scheme_names = list(crt.solvers.AVAILABLE_SCHEMES)
+
 ms = []
-for scheme_ID in crt.solvers.AVAILABLE_SCHEMES.keys():  # run all available
-    m = crt.Model(scheme_ID, nlayers=60)
+for scheme_name in scheme_names:  # run all available
+    m = crt.Model(scheme_name, nlayers=60)
     m.run()
     m.calc_absorption()
     ms.append(m)
@@ -51,7 +53,7 @@ dsets = [m.to_xr() for m in ms]
 
 ### Examine default case
 
-Leaf area profile and leaf angle dist, using the plotting methods attached to the `Model` instance.
+Leaf area profile and leaf angle dist, using the plotting methods attached to the {class}`~crt1d.Model` instance.
 
 ```{code-cell}
 ms[0].plot_canopy()
@@ -92,5 +94,6 @@ dsets[0]["zm"]
 ```
 
 ```{code-cell}
-m.out_extra.keys()
+# some have extra outputs
+ms[scheme_names.index("zq")].out_extra
 ```
