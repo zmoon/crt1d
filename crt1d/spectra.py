@@ -185,6 +185,39 @@ def edges_from_centers(x):
     return edges
 
 
+def interpret_spectrum(ydx, x, *, midpt=True):
+    """For spectrally distributed values `ydx`, equivalent to y(x)/dx,
+    determine corresponding y values.
+
+    .. note::
+       No need to use this if the bin edges are known!
+
+    Returns y (ydx * dx), and corresponding x values and bin widths (dx).
+
+    With the midpoint method (``midpt=True``), these will have have size n-1 wrt. `ydx`.
+    Summing these y values is equivalent to the midpoint Riemann sum of the original
+    y(x)/dx.
+
+    With the edges-from-centers method (``midpt=False``), the return arrays will be size n.
+    Estimating the edges allows the original y(x)/dx values to be used to compute y(x).
+    """
+    if midpt:
+        xe = x
+        dx = np.diff(x)
+
+        x_y = xe[:-1] + 0.5 * dx  # x positions of y values (integrated y/dx)
+        y = (ydx[:-1] + y[1:]) / 2 * dx
+
+    else:  # edges-from-centers method
+        xe = edges_from_centers(x)  # n+1 values
+        dx = np.diff(xe)
+
+        x_y = x  # original grid
+        y = ydx * dx
+
+    return y, x_y, dx
+
+
 def plot_binned(x, y, xc, yc, dx):
     """Compare an original spectrum to binned one.
 
