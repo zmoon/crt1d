@@ -69,10 +69,9 @@ def solar_sp2(
         Aerosol asymmetry factor. In the C code they say this is a typical rural value.
         Should be in (0, 1). If you pass ``-1.0``, you will get 0.65.
     albedo : dict
-        keys: wavelength (um), values: albedo at that wavelength; length 6.
-        The default is
-        ``{0.3: 0.2, 0.7: 0.2, 0.8: 0.2, 1.3: 0.2, 2.5: 0.2, 4.0: 0.2}``,
-        that is, 0.2 across the board.
+        keys: wavelength (μm), values: albedo at that wavelength; length 6.
+        The default is 0.2 (across the board) for wavelengths
+        ``[0.3, 0.7, 0.8, 1.3, 2.5, 4.0]``.
 
     Returns
     -------
