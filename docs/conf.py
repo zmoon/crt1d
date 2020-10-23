@@ -38,14 +38,17 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx_rtd_theme",
-    "nbsphinx",
+    # "nbsphinx",
     "sphinxcontrib.bibtex",
-    "myst_parser",  # automatically used to parse .md files
+    # "myst_parser",  # automatically used to parse .md files
+    "autoapi.extension",
+    "myst_nb",
 ]
 
 # Make nbsphinx detect Jupytext files
 nbsphinx_custom_formats = {
-    ".py": ["jupytext.reads", {"fmt": "py:percent"}],
+    # ".py": ["jupytext.reads", {"fmt": "py:percent"}],
+    # ".md": ["jupytext.reads", {"fmt": "md:myst"}],
 }
 # Figure quality
 nbsphinx_execute_arguments = [
@@ -53,8 +56,26 @@ nbsphinx_execute_arguments = [
     # "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
+
 # include __init__() docstring content in autodocs for classes
 autoclass_content = "both"
+
+# autosummary stub generation
+# autosummary_generate = True
+autodoc_default_flags = ["members"]
+
+# autoapi
+autoapi_type = "python"
+autoapi_dirs = ["../crt1d/"]
+autoapi_add_toctree_entry = False
+autoapi_root = "api"  # default: 'autoapi'
+autoapi_options = [
+    "members",
+    "show-module-summary",
+    "imported-members",
+]
+autoapi_python_class_content = "both"
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -62,7 +83,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 
 
 # -- Options for HTML output -------------------------------------------------

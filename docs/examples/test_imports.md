@@ -1,48 +1,74 @@
-# %% [markdown]
-# # Test imports
-# %% [markdown]
-# ## General loading
-# %%
+---
+kernelspec:
+  display_name: Python 3
+  name: python3
+jupytext:
+  cell_metadata_filter: -all
+  formats: md:myst
+  main_language: python
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.12
+    jupytext_version: 1.6.0
+---
+
+
+# Test imports
+
++++
+
+## General loading
+
+```{code-cell}
 import crt1d as crt
+```
 
-# %%
+```{code-cell}
 crt.print_config()
+```
 
-# %%
+```{code-cell}
 crt.Model
+```
 
-# %%
+```{code-cell}
 [attr for attr in dir(crt) if not attr.startswith("__")]
+```
 
-# %% [markdown]
-# ## Submodules
+## Submodules
 
-# %%
+```{code-cell}
 crt.leaf_angle
+```
 
-# %%
+```{code-cell}
 crt.data
+```
 
-# %%
+```{code-cell}
 p = crt.cases.load_default_case(nlayers=2)
 keys = list(p.keys())
 keys
+```
 
-# %% [markdown]
-# ### Solvers
+### Solvers
 
-# %%
+```{code-cell}
 crt.solvers
+```
 
-# %%
+```{code-cell}
 import inspect
 
 inspect.getfullargspec(crt.solvers.solve_bl)
+```
 
-# %%
+```{code-cell}
 inspect.getfullargspec(crt.solvers.solve_4s)
+```
 
-# %%
+```{code-cell}
 import pandas as pd
 
 df_schemes = pd.DataFrame(crt.solvers.AVAILABLE_SCHEMES).T
@@ -53,3 +79,4 @@ df_schemes["args_minus_BL"] = df_schemes["args"].apply(
 )
 
 df_schemes.drop(columns=["args", "solver"])  # solver memory address not very informative
+```

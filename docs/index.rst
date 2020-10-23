@@ -14,7 +14,7 @@ Welcome to crt1d's documentation!
 
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
    :caption: Reference
 
    variables

@@ -1,62 +1,62 @@
 API
-===
+***
 
 Top level
-*********
+=========
 
-The model class is included in the top-level namespace for ease-of-use.
+The model  class is included in the top-level namespace for ease-of-use.
 
-.. autoclass:: crt1d.Model
-   :members:
+.. autosummary::
 
-.. automodule:: crt1d
-   :members:
+   crt1d
 
 
-Submodules
-**********
+Public submodules
+=================
 
-model
+Analysis
+--------
+.. autosummary::
+
+   crt1d.diagnostics
+
+Setup
 -----
+.. autosummary::
+   :recursive:
 
-.. automodule:: crt1d.model
-   :members:
+   crt1d.cases
+   crt1d.spectra
+   crt1d.data
+
+
+Leaf arrangement
+----------------
+.. autosummary::
+
+   crt1d.leaf_area
+   crt1d.leaf_angle
+
+
+
+Other
+=====
 
 solvers
 -------
 
-.. automodule:: crt1d.solvers
-   :members:
+:mod:`solvers` is mostly private, not intended to be used directly. Instead, the solvers
+are used while attached to a :class:`crt1d.Model` instance.
 
-diagnostics
------------
-.. automodule:: crt1d.diagnostics
-   :members:
+.. autosummary::
 
-cases
------
-.. automodule:: crt1d.cases
-   :members:
+   crt1d.solvers
 
-data
-----
-.. automodule:: crt1d.data
-   :members:
 
-.. automodule:: crt1d.data.external
-   :members:
+AutoAPI
+=======
 
-spectra
--------
-.. automodule:: crt1d.spectra
-   :members:
+.. toctree::
+   :maxdepth: 3
 
-leaf_area
----------
-.. automodule:: crt1d.leaf_area
-   :members:
-
-leaf_angle
-----------
-.. automodule:: crt1d.leaf_angle
-   :members:
+   api/crt1d/index
