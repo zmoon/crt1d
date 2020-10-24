@@ -22,6 +22,7 @@ dependencies:
     - sphinx-autoapi
     - myst-nb
     - sphinxcontrib-bibtex
+    # TODO: should add the below to an extras_require for the package
     - SolarUtils  # run SPCTRAL2 to get more solar spectra
     - prosail  # run PROSPECT to get more leaf spectra; has numba as a dep
   #
