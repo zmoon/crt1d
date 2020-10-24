@@ -28,6 +28,7 @@ import crt1d
 
 crt1d.variables._write_params_docs_snippets()
 
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -38,10 +39,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    # "sphinx_rtd_theme",
-    # "nbsphinx",
     "sphinxcontrib.bibtex",
-    # "myst_parser",  # automatically used to parse .md files
     "autoapi.extension",
     "myst_nb",
 ]
@@ -52,29 +50,13 @@ intersphinx_mapping = {
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
-# aliases
+# aliases? doesn't seem to work...
 napoleon_type_aliases = {
     "xr.Dataset": ":class:`xarray.Dataset`",
 }
 
-# Make nbsphinx detect Jupytext files
-nbsphinx_custom_formats = {
-    # ".py": ["jupytext.reads", {"fmt": "py:percent"}],
-    # ".md": ["jupytext.reads", {"fmt": "md:myst"}],
-}
-# Figure quality
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg'}",
-    # "--InlineBackend.rc={'figure.dpi': 96}",
-]
-
-
 # include __init__() docstring content in autodocs for classes
-autoclass_content = "both"
-
-# autosummary stub generation
-# autosummary_generate = True
-autodoc_default_flags = ["members"]
+# autoclass_content = "both"  # doesn't work with autoapi
 
 # autoapi
 autoapi_type = "python"
@@ -86,7 +68,7 @@ autoapi_options = [
     "show-module-summary",
     "imported-members",
 ]
-autoapi_python_class_content = "both"
+autoapi_python_class_content = "both"  # include __init__ docstring as well as class
 
 
 # Add any paths that contain templates here, relative to this directory.

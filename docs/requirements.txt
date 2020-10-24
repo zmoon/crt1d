@@ -2,11 +2,10 @@
 -e ../
 # sphinx extensions
 sphinx
-sphinx-rtd-theme
 sphinx-book-theme
-nbsphinx
+sphinx-autoapi
+myst-nb
 sphinxcontrib-bibtex
-myst-parser
 # to run examples as notebooks
 jupytext
 notebook

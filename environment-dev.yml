@@ -13,16 +13,15 @@ dependencies:
   #
   # for docs
   - sphinx
-  - nbsphinx
   - jupytext
   - notebook
-  - sphinxcontrib-bibtex
-  - myst-parser  # they recommend Conda install over Pip
   - pip  # otherwise conda nags
   - pip:
-    - sphinx-rtd-theme
-    - sphinx-book-theme
     - '-e .'
+    - sphinx-book-theme
+    - sphinx-autoapi
+    - myst-nb
+    - sphinxcontrib-bibtex
     - SolarUtils  # run SPCTRAL2 to get more solar spectra
     - prosail  # run PROSPECT to get more leaf spectra; has numba as a dep
   #
