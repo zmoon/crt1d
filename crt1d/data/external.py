@@ -1,6 +1,8 @@
 """
 Create spectral input data using external packages.
 """
+import warnings
+
 import numpy as np
 import xarray as xr
 
@@ -82,14 +84,14 @@ def solar_sp2(
 
     # tilt and aspect (azimuth angle) of collector panel
     # aspect: S=180, N=0, E=90, W=270
-    # for tilt=lat, doesn't affect direct, only diffuse and global horizontal
-    tilt = lat  # tilted at latitude; note Sun-tracking assumed if pass negative number
-    aspect = 180 if lat >= 0 else 0
-    # 180 is listed as the default in the original C code, which has an example for NH
-    # let's hope this gives "collector" as local surface plane
+    # tilt: pass `lat` for tilted at latitude; note Sun-tracking assumed if pass negative number
+    # note that tilt and aspect don't affect the direct normal calculation
+    tilt = 0
+    aspect = 0  # doesn't matter for tilt=0; `180 if lat >= 0 else 0` to tilt towards Sun
 
+    # by default, send flag to activate the internal ozone parameterization
     if ozone is None:
-        ozone = -1.0  # flag to activate the internal ozone parameterization
+        ozone = -1.0
 
     # construct inputs for solar_utils.spectrl2
     # variable names mostly following the `solar_utils.spectrl2` argument names
@@ -105,18 +107,36 @@ def solar_sp2(
         # note that passing albedo=[-1] to spectrl2 will activate its internal default
     assert len(albedo) == 6, "`albedo` needs to be passed as a length-6 dict"
 
-    # run SOLPOS to get angles
+    # run SOLPOS to get angles (in deg.)
     # (SPCTRAL2 also runs it but whatevs)
     (zenith, azimuth), _ = solar_utils.solposAM(location, list_datetime, weather)
+    mu = np.cos(np.deg2rad(zenith))
+    if zenith > 90:
+        warnings.warn("computed solar zenith angle > 90 deg.")
 
-    # run SPCTRAL2 (following their readme example)
+    # run SPCTRAL2 (following SolarUtils readme example)
     specdif, specdir, specetr, specglo, specx = solar_utils.spectrl2(
         units, location, list_datetime, weather, orientation, atmospheric_conditions, albedo
     )
 
-    specdir = np.array(specdir)
-    specdif = np.array(specdif)
-    specglo = np.array(specglo)  # not necessarily equiv. to dir+dif
+    specdir = np.array(specdir)  # direct, *not* downward hemispherical, but direct normal
+    specdif = np.array(specdif)  # diffuse, downward hemispherical *wrt. panel surface*
+    specglo = np.array(specglo)  # global on panel
+    # from the C code, specglo is calculated as specdir*cosinc + specdif
+    # where, cosinc is the cosine of the inclination angle wrt. the collector
+    # this seems like the wrong equation (or abbreviated),
+    # since the equation 3-18 they reference is much longer
+    cosinc_all = (specglo - specdif) / specdir
+    cosinc = np.nanmean(cosinc_all)
+    # assert np.allclose(cosinc, cosinc_all)
+    inc = np.rad2deg(np.arccos(cosinc), dtype=np.float64)
+    # should be equal to sza for tilt=0, but one might be refraction-corrected
+    assert np.isclose(inc, zenith, rtol=1e-3), "SZA and incidence angle should be = for tilt=0"
+
+    # for tilt=0, we should have specglo and specdif+specdir equal
+    assert np.isclose(
+        np.nansum(specglo), mu * np.nansum(specdir) + np.nansum(specdif), rtol=1e-3
+    ), "specglo should be = mu*specdir + specdif for tilt=0"
 
     specunits = "W m-2 μm-1"  # spectral units
 
@@ -125,18 +145,13 @@ def solar_sp2(
         data_vars={
             "SI_dr": (
                 "wl",
-                specdir,
-                {"units": specunits, "long_name": "Spectral direct irradiance"},
+                specdir * mu,
+                {"units": specunits, "long_name": "Downward direct spectral irradiance"},
             ),
             "SI_df": (
                 "wl",
                 specdif,
-                {"units": specunits, "long_name": "Spectral diffuse irradiance"},
-            ),
-            "SI_gl": (
-                "wl",
-                specglo,
-                {"units": specunits, "long_name": "Global horizontal spectral irradiance"},
+                {"units": specunits, "long_name": "Downward diffuse spectral irradiance"},
             ),
             "SI_et": (
                 "wl",
@@ -146,6 +161,11 @@ def solar_sp2(
             #
             "sza": _tup("sza", zenith),
             "saa": ((), azimuth, {"long_name": "Solar azimuth angle", "units": "deg"}),
+            "inc": (
+                (),
+                inc,
+                {"long_name": "Direct beam incidence angle on collector panel", "units": "deg"},
+            ),
             "time": ((), dt),
             "lat": ((), float(lat), {"long_name": "Latitude", "units": "deg"}),
             "lon": ((), float(lon), {"long_name": "Longitude", "units": "deg"}),
