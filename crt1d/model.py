@@ -332,7 +332,7 @@ class Model:
         return self  # for chaining
 
     def to_xr(self, *, info=""):
-        """Construct an :class:`xarray.Dataset`.
+        """Construct and return an :class:`xarray.Dataset`.
 
         Parameters
         ----------

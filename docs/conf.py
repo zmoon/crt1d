@@ -37,13 +37,25 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    "sphinx_rtd_theme",
+    "sphinx.ext.intersphinx",
+    # "sphinx_rtd_theme",
     # "nbsphinx",
     "sphinxcontrib.bibtex",
     # "myst_parser",  # automatically used to parse .md files
     "autoapi.extension",
     "myst_nb",
 ]
+
+# intersphinx
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "xarray": ("https://xarray.pydata.org/en/stable/", None),
+}
+
+# aliases
+napoleon_type_aliases = {
+    "xr.Dataset": ":class:`xarray.Dataset`",
+}
 
 # Make nbsphinx detect Jupytext files
 nbsphinx_custom_formats = {
