@@ -31,7 +31,7 @@ import xarray as xr
 
 import crt1d as crt
 
-#%matplotlib notebook
+#%matplotlib widget  # currently doesn't work (though the widget buttons show up)
 %matplotlib inline
 ```
 
