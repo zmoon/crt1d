@@ -36,9 +36,10 @@ def solar_sp2(
     #
     albedo=None,
 ):
-    """Run SPCTRAL2 from Python package ``solar_utils`` (``SolarUtils`` on PyPI).
+    """Run SPCTRAL2 using `SolarUtils <https://github.com/SunPower/SolarUtils>`_
+    (Python package name ``solar_utils``).
 
-    The defaults are mostly consistent with `solar_utils.spectrl2`,
+    The defaults are mostly consistent with :func:`solar_utils.spectrl2`,
     but some of the inputs are in a different style.
 
     Parameters
@@ -123,6 +124,7 @@ def solar_sp2(
     specdif = np.array(specdif)  # diffuse, downward hemispherical *wrt. panel surface*
     specglo = np.array(specglo)  # global on panel
     # from the C code, specglo is calculated as specdir*cosinc + specdif
+    # https://github.com/SunPower/SolarUtils/blob/6ea5aca2e354dfec980201e84c7812a305c5eb25/solar_utils/src/spectrl2_2.c#L448
     # where, cosinc is the cosine of the inclination angle wrt. the collector
     # this seems like the wrong equation (or abbreviated),
     # since the equation 3-18 they reference is much longer
