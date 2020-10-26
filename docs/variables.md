@@ -13,7 +13,7 @@ Click on a "name" to jump to the details.
 
 ## Detailed
 
-Detailed descriptions...
+Detailed descriptions.
 
 ```{include} _variables_details_snippet.txt
 ```

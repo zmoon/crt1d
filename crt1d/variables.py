@@ -94,10 +94,23 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
         """Details section for docs."""
         pre0 = "#" * heading_level
         header = f"{pre0} ``{self.name}``"
+        l_units_long = (
+            f"\n* detailed units: {cf_units_to_tex(self.s_units_long)}"
+            if self.s_units_long is not None
+            else ""
+        )
         return f"""
 {header}
 
 {self.desc}
+
+Attributes:
+* ``long_name``: {self.long_name}
+* units: {cf_units_to_tex(self.s_units)}
+{l_units_long}
+* type: ``{self.s_type}``
+* shape: ``{self.s_shape}``
+* dims: ``{self.dims}``
         """.strip()
 
     def __repr__(self):

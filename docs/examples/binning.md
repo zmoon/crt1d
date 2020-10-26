@@ -51,4 +51,4 @@ ds2_l = crt.spectra.smear_ds(ds0_l, bins2)
 crt.spectra.plot_binned_ds(ds0_l, ds2_l, yname="rl")
 ```
 
-Note that the bins do not have to be constant-width--variable grid will also work!
+Note that the bins do not have to be constant-width---variable grid will also work!

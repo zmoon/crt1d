@@ -44,7 +44,7 @@ Other
 solvers
 -------
 
-:mod:`solvers` is mostly private, not intended to be used directly. Instead, the solvers
+:mod:`~crt1d.solvers` is mostly private, not intended to be used directly. Instead, the solvers
 are used while attached to a :class:`crt1d.Model` instance.
 
 .. autosummary::
