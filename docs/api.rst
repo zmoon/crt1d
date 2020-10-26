@@ -23,7 +23,6 @@ Analysis
 Setup
 -----
 .. autosummary::
-   :recursive:
 
    crt1d.cases
    crt1d.spectra
@@ -51,6 +50,7 @@ are used while attached to a :class:`crt1d.Model` instance.
 .. autosummary::
 
    crt1d.solvers
+   crt1d.solvers.common
 
 
 AutoAPI

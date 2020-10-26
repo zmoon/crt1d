@@ -8,7 +8,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 
 def smear_tuv_1(x, y, xgl, xgu):
-    """Smear `y`(`x`) over the region defined by [`xgl`, `xgu`].
+    """Smear `y` values at positions `x` over the region defined by [`xgl`, `xgu`].
 
     Parameters
     ----------
@@ -25,7 +25,7 @@ def smear_tuv_1(x, y, xgl, xgu):
     -----
     Implementation based on F0AM's implementation of TUV's un-named algorithm.
     It works by applying cumulative trapezoidal integration to the original data,
-    but extrapolating so that xgl and xgu don't have to be on the original x grid.
+    but extrapolating so that `xgl` and `xgu` don't have to be on the original `x` grid.
     """
     area = 0
     for k in range(x.size - 1):  # TODO: could try subsetting first instead of over whole grid
@@ -46,9 +46,10 @@ def smear_tuv_1(x, y, xgl, xgu):
 
 
 def smear_tuv(x, y, bins):
-    """Use :func:`smear_tuv_1` to bin `y` values at `x` positions into `bins` (new x-bin edges).
-    Returns an array of in-bin y-values ynew, such that the sum of ynew*dwl
-    is equal to the original integral of y(x).
+    r"""Use :func:`smear_tuv_1` to bin `y` values at `x` positions into `bins` (new *x*-bin edges).
+    Returns an array of in-bin *y*-values ``ynew``, such that
+    :math:`\sum_i y_{\text{new}, i} \Delta x_i`
+    is equal to the original trapezoidal integral of *y(x)* over the range [``bins[0]``, ``bins[-1]``].
     """
     ynew = np.zeros(bins.size - 1)
     for i, (xgl, xgu) in enumerate(zip(bins[:-1], bins[1:])):
@@ -64,7 +65,7 @@ def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
     k : int
         Degree of the spline used (1--5). The spline passes through all data points.
     interp : str
-        'F' to interpolate the cumulative trapz integral, or 'f' to interpolate the `y` data.
+        ``'F'`` to interpolate the cumulative trapz integral, or ``'f'`` to interpolate the `y` data.
     """
     if interp == "f":
         spl = InterpolatedUnivariateSpline(x, y, k=k)
@@ -86,7 +87,7 @@ def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
 
 
 def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
-    """Returns an `xr.Dataset` ``data_vars`` tuple."""
+    """Returns an :class:`xarray.Dataset` ``data_vars`` tuple."""
     x = da[xname].values
     y = da.values
 
@@ -105,8 +106,8 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
 def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
     """
     Smear spectra (with coordinate variable `xname`) to new `bins`.
-    The returned `xr.Dataset` consists of the data variables who have the coordinate
-    variable with name `xname`.
+    The returned :class:`xarray.Dataset` consists of the data variables who have the coordinate
+    variable with ``name`` `xname`.
     """
     da_x = ds[xname]
     dx = np.diff(bins)
@@ -142,7 +143,7 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
 def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     """Smear spectral irradiance, computing in-bin irradiance in the new bins.
     `**kwargs` are passed to :func:`smear_ds`.
-    `ds` must have 'SI_dr', 'SI_df'
+    `ds` must have keys ``'SI_dr'``, ``'SI_df'``.
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
@@ -173,7 +174,9 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
 
 def edges_from_centers(x):
     """Estimate locations of the bin edges by extrapolating the grid spacing on the edges.
-    Note that the true bin edges could be different--this is just a guess!
+
+    .. warning::
+       Note that the true bin edges could be different---this is just a guess!
 
     From specutils:
     https://github.com/astropy/specutils/blob/9ce88d6be700a06e888d9d0cdd04c0afc2ae85f8/specutils/spectra/spectral_axis.py#L46-L55
@@ -187,19 +190,24 @@ def edges_from_centers(x):
 
 def interpret_spectrum(ydx, x, *, midpt=True):
     """For spectrally distributed values `ydx`, equivalent to y(x)/dx,
-    determine corresponding y values.
+    determine corresponding *y* values.
 
     .. note::
        No need to use this if the bin edges are known!
 
-    Returns y (ydx * dx), and corresponding x values and bin widths (dx).
+    Returns *y* (i.e., *ydx dx*), and corresponding *x* values and bin widths (*dx*).
 
-    With the midpoint method (``midpt=True``), these will have have size n-1 wrt. `ydx`.
+    With the midpoint method (``midpt=True``), these will have have size *n*-1 wrt. `ydx`.
     Summing these y values is equivalent to the midpoint Riemann sum of the original
-    y(x)/dx.
+    *y(x)/dx*.
 
     With the edges-from-centers method (``midpt=False``), the return arrays will be size n.
-    Estimating the edges allows the original y(x)/dx values to be used to compute y(x).
+    Estimating the edges allows the original *y(x)/dx* values to be used to compute *y(x*).
+
+    Returns
+    -------
+    tuple(array_like)
+        ``y``, ``x_y``, ``dx``
     """
     if midpt:
         xe = x
@@ -221,7 +229,7 @@ def interpret_spectrum(ydx, x, *, midpt=True):
 def plot_binned(x, y, xc, yc, dx):
     """Compare an original spectrum to binned one.
 
-    If `x` and `y` are `xr.DataArray` s, their attrs will be used to label the plot.
+    If `x` and `y` are :class:`xarray.DataArray`, their attrs will be used to label the plot.
 
     Parameters
     ----------

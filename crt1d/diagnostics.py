@@ -1,6 +1,6 @@
 """
 Calculations/plots from the CRT solutions, using the model's output dataset
-created by :meth:`crt1d.model.Model.to_xr()`.
+created by :meth:`crt1d.Model.to_xr()`.
 """
 import warnings
 
