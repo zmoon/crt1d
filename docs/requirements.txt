@@ -2,10 +2,13 @@
 -e ../
 # sphinx extensions
 sphinx
-sphinx-rtd-theme
-nbsphinx
+sphinx-book-theme
+sphinx-autoapi
+myst-nb
 sphinxcontrib-bibtex
-myst-parser
 # to run examples as notebooks
 jupytext
 notebook
+# for examples
+prosail
+SolarUtils

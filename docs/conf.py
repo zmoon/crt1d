@@ -28,6 +28,7 @@ import crt1d
 
 crt1d.variables._write_params_docs_snippets()
 
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -37,21 +38,38 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    "sphinx_rtd_theme",
-    "nbsphinx",
+    "sphinx.ext.intersphinx",
     "sphinxcontrib.bibtex",
-    "myst_parser",  # automatically used to parse .md files
+    "autoapi.extension",
+    "myst_nb",
 ]
 
-# Make nbsphinx detect Jupytext files
-nbsphinx_custom_formats = {
-    ".py": ["jupytext.reads", {"fmt": "py:percent"}],
+# intersphinx
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
-# Figure quality
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg'}",
-    # "--InlineBackend.rc={'figure.dpi': 96}",
+
+# aliases? doesn't seem to work...
+napoleon_type_aliases = {
+    "xr.Dataset": ":class:`xarray.Dataset`",
+}
+
+# include __init__() docstring content in autodocs for classes
+# autoclass_content = "both"  # doesn't work with autoapi
+
+# autoapi
+autoapi_type = "python"
+autoapi_dirs = ["../crt1d/"]
+autoapi_add_toctree_entry = False
+autoapi_root = "api"  # default: 'autoapi'
+autoapi_options = [
+    "members",
+    "show-module-summary",
+    "imported-members",
 ]
+autoapi_python_class_content = "both"  # include __init__ docstring as well as class
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -59,7 +77,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -68,7 +86,8 @@ exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store"]
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = "sphinx_rtd_theme"
+# html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

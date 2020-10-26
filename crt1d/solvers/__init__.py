@@ -41,8 +41,9 @@ assert all(k in _vmd.intent("out") for k in RET_KEYS_ALL_SCHEMES)
 
 AVAILABLE_SCHEMES = {scheme_name: {} for scheme_name in _scheme_names}
 """
-Dictionary of available canopy RT schemes, where keys are the scheme ID,
-and values are ``short_name``, ``long_name``, ``solver`` (the associated solver function).
+Dictionary of available canopy RT schemes, where keys are the scheme name/ID,
+and values are dicts of scheme info: ``short_name``, ``long_name``,
+``solver`` (the associated solver function), etc.
 """
 
 # TODO: fn to load one scheme at a time, to support user adding their own from outside the package

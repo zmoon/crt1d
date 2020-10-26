@@ -74,7 +74,7 @@ variables:
     type: array_like
     shape: *shape_z
     desc: |
-      Leaf area index (LAI) profile.
+      Leaf area index (LAI) profile, accumulated from the top ($z=h_c$).
 
       Bottom to top:
       * ``lai[0]``: total LAI
@@ -103,7 +103,7 @@ variables:
   leaf_t:
     type: array_like
     shape: *shape_wl
-    desc: Leaf element transmissivity.
+    desc: Leaf element transmittance.
     units: 1
     intent: in
     ln: Leaf transmittance
@@ -112,7 +112,7 @@ variables:
   leaf_r:
     type: array_like
     shape: *shape_wl
-    desc: Leaf element reflectivity.
+    desc: Leaf element reflectance.
     units: 1
     intent: in
     ln: Leaf reflectance

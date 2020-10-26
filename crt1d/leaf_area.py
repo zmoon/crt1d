@@ -148,25 +148,30 @@ def test_plot_distribute_lai_beta_bonan():
 # adapted from: https://github.com/LukeEcomod/pyAPES_skeleton/blob/master/tools/utilities.py
 # unlike the above, z is a required input
 def distribute_lai_weibull_z(z, LAI, h, hb=0.0, *, b=None, c=None, species=None):
-    """
-    Generates leaf-area density profile from Weibull-distribution
-    Args:
-        z: height array (m), monotonic and constant steps
-        LAI: leaf-area index (m2m-2)
-        h: canopy height (m), scalar
-        hb: crown base height (m), scalar
-        b: Weibull shape parameter 1, scalar
-        c: Weibull shape parameter 2, scalar
-        species: 'pine', 'spruce', 'birch' to use table values
-    Returns:
-        LAD: leaf-area density (m2m-3), array
-    SOURCE:
-        Teske, M.E., and H.W. Thistle, 2004, A library of forest canopy structure for
-        use in interception modeling. Forest Ecology and Management, 198, 341-350.
-        Note: their formula is missing brackets for the scale param.
-        Here their profiles are used between hb and h
-    AUTHOR:
-        Gabriel Katul, 2009. Coverted to Python 16.4.2014 / Samuli Launiainen
+    """Leaf area profile from Weibull distribution for given `z` grid.
+
+    Samuli's notes:
+
+    .. code:: none
+
+       Generates leaf-area density profile from Weibull-distribution
+       Args:
+           z: height array (m), monotonic and constant steps
+           LAI: leaf-area index (m2m-2)
+           h: canopy height (m), scalar
+           hb: crown base height (m), scalar
+           b: Weibull shape parameter 1, scalar
+           c: Weibull shape parameter 2, scalar
+           species: 'pine', 'spruce', 'birch' to use table values
+       Returns:
+           LAD: leaf-area density (m2m-3), array
+       SOURCE:
+           Teske, M.E., and H.W. Thistle, 2004, A library of forest canopy structure for
+           use in interception modeling. Forest Ecology and Management, 198, 341-350.
+           Note: their formula is missing brackets for the scale param.
+           Here their profiles are used between hb and h
+       AUTHOR:
+           Gabriel Katul, 2009. Coverted to Python 16.4.2014 / Samuli Launiainen
     """
 
     para = {"pine": [0.906, 2.145], "spruce": [2.375, 1.289], "birch": [0.557, 1.914]}

@@ -1,29 +1,62 @@
 API
-===
+***
 
-model
+Top level
+=========
+
+The model  class is included in the top-level namespace for ease-of-use.
+
+.. autosummary::
+
+   crt1d
+
+
+Public submodules
+=================
+
+Analysis
+--------
+.. autosummary::
+
+   crt1d.diagnostics
+
+Setup
 -----
+.. autosummary::
 
-.. automodule:: crt1d.model
-   :members:
+   crt1d.cases
+   crt1d.spectra
+   crt1d.data
+
+
+Leaf arrangement
+----------------
+.. autosummary::
+
+   crt1d.leaf_area
+   crt1d.leaf_angle
+
+
+
+Other
+=====
 
 solvers
 -------
 
-.. automodule:: crt1d.solvers
-   :members:
+:mod:`~crt1d.solvers` is mostly private, not intended to be used directly. Instead, the solvers
+are used while attached to a :class:`crt1d.Model` instance.
 
-diagnostics
------------
-.. automodule:: crt1d.diagnostics
-   :members:
+.. autosummary::
 
-cases
------
-.. automodule:: crt1d.cases
-   :members:
+   crt1d.solvers
+   crt1d.solvers.common
 
-data
-----
-.. automodule:: crt1d.data
-   :members:
+
+AutoAPI
+=======
+
+.. toctree::
+   :maxdepth: 3
+
+   api/crt1d/index

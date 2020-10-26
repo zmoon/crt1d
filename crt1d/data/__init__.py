@@ -10,6 +10,7 @@ import xarray as xr
 from .. import DATA_BASE_DIR
 from ..spectra import edges_from_centers
 from ..variables import _tup
+from .external import solar_sp2
 
 DATA_DIR_STR = DATA_BASE_DIR.as_posix()
 

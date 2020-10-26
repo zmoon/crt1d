@@ -90,14 +90,27 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
 
         return "\n".join(lines).rstrip()
 
-    def details_sec(self, *, heading_level=4):
+    def details_sec(self, *, heading_level=3):
         """Details section for docs."""
         pre0 = "#" * heading_level
         header = f"{pre0} ``{self.name}``"
+        l_units_long = (
+            f"\n* detailed units: {cf_units_to_tex(self.s_units_long)}"
+            if self.s_units_long is not None
+            else ""
+        )
         return f"""
 {header}
 
 {self.desc}
+
+Attributes:
+* ``long_name``: {self.long_name}
+* units: {cf_units_to_tex(self.s_units)}
+{l_units_long}
+* type: ``{self.s_type}``
+* shape: ``{self.s_shape}``
+* dims: ``{self.dims}``
         """.strip()
 
     def __repr__(self):
@@ -125,6 +138,11 @@ class Vmd:
     """Container for variable metadata of multiple variables."""
 
     def __init__(self, vmdes):
+        """
+        Parameters
+        ----------
+        vmdes : list(VmdEntry)
+        """
         self.variables = {vmde.name: vmde for vmde in vmdes}
 
     def intent(self, intent="in"):
@@ -221,17 +239,20 @@ def _vmd_from_yaml():
 
 # Create the Vmd instance
 VMD = _vmd_from_yaml()
+"""
+:class:`Vmd` instance with all the variables from ``variables.yml``.
+"""
 
 
 def _tup(name, data):
-    """Shortcut function for creating an `xr.Dataset` ``data_vars`` tuple
+    """Shortcut function for creating an :class:`xarray.Dataset` ``data_vars`` tuple
     for variable `name` using the values of `data`
-    and the standard variable metadata `VMD`.
+    and the standard variable metadata :const:`VMD`.
     """
     return VMD[name].dv_tuple(data)
 
 
-def params_list_table(vmdes=None):
+def _params_list_table(vmdes=None):
     """Form an entire MyST list-table.
 
     Parameters
@@ -256,10 +277,10 @@ def params_list_table(vmdes=None):
   - shape
   - long_name
 {entries}
-"""
+    """.rstrip()
 
 
-def params_details(vmdes=None):
+def _params_details(vmdes=None):
     if vmdes is None:
         vmdes = sorted(VMD.variables.values(), key=lambda x: x.name.lower())
 
@@ -274,11 +295,11 @@ def _write_params_docs_snippets():
 
     p = Path(__file__).parent / "../docs" / "_variables_summary_table_snippet.txt"
     with open(p, "wb") as f:
-        f.write(params_list_table().encode("utf-8"))
+        f.write(_params_list_table().encode("utf-8"))
 
     p = Path(__file__).parent / "../docs" / "_variables_details_snippet.txt"
     with open(p, "wb") as f:
-        f.write(params_details().encode("utf-8"))
+        f.write(_params_details().encode("utf-8"))
 
 
 # hack module docstring
