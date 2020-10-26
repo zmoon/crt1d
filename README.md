@@ -2,6 +2,16 @@
 
 Testbed for 1-D canopy radiative transfer schemes.
 
-## Schemes
+[![Documentation Status](https://readthedocs.org/projects/crt1d/badge/?version=latest)](https://crt1d.readthedocs.io/en/latest/?badge=latest)
 
-See `docs/solvers` for info.
+## Installation
+
+Latest:
+```
+pip install git+https://github.com/zmoon/crt1d
+```
+
+## Documentation
+
+See [docs/solvers](https://crt1d.readthedocs.io/en/latest/solvers.html) for information on included canopy radiative transfer schemes
+and [docs/examples](https://crt1d.readthedocs.io/en/latest/examples.html) for examples of `crt1d` in action.
