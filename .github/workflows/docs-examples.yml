@@ -28,9 +28,13 @@ jobs:
           set -xe
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install .
+          python -m pip install jupytext
 
       - name: Run the docs examples
         run: |
           set -xe
           cd docs/examples
-          for f in *.py; do python $f; done
+          for f in *.md; do
+            jupytext --to py $f
+            python ${f%.md}.py
+          done
