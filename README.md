@@ -13,5 +13,7 @@ pip install git+https://github.com/zmoon/crt1d
 
 ## Documentation
 
+[Read the docs](https://crt1d.readthedocs.io/en/latest/).
+
 See [docs/solvers](https://crt1d.readthedocs.io/en/latest/solvers.html) for information on included canopy radiative transfer schemes
 and [docs/examples](https://crt1d.readthedocs.io/en/latest/examples.html) for examples of `crt1d` in action.
