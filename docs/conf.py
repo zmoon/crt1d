@@ -70,6 +70,9 @@ autoapi_options = [
 ]
 autoapi_python_class_content = "both"  # include __init__ docstring as well as class
 
+# bibtex
+bibtex_bibfiles = ["crt1d-refs.bib"]  # required in sphinxcontrib-bibtex v2
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
