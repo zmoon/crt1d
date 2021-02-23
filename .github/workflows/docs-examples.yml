@@ -3,8 +3,10 @@ name: docs-examples
 on:
   push:
     branches: [ master ]
+    paths: [ '**.py', '.github/workflows/docs-examples.yml' ]
   pull_request:
     branches: [ master ]
+    paths: [ '**.py', '.github/workflows/docs-examples.yml' ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
