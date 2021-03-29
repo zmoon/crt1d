@@ -14,69 +14,66 @@ def solve_2s(*, psi,
     K_b_fn, G_fn,
     mla,
     ):
-    """Dickinson-Sellers 2-stream solution,
-    the most common scheme used in regional/climate models.
+    """Dickinson-Sellers 2-stream solution---the most common scheme used in regional/climate models.
 
     Implementation follows Dickinson (1983) and Sellers (1985)
     (mainly Sellers -- variable names chosen to match his)
     and includes the minor correction from the later Sellers paper (1996).
-
     """
     K_b = K_b_fn(psi)
     mu = np.cos(psi)
     theta_bar = np.deg2rad(mla)  # mean leaf inclination angle, deg->rad; eq. 3
 
     # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
-    #   sa: angle of scattered flux
+    # sa := angle of scattered flux
     mu_bar  = integrate.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
-    mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
     # TODO: following could be another optional check
-    # assert( mu_bar == mu_bar2 )
-    assert( np.isclose(mu_bar, mu_bar2) )
+    # mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
+    # assert( np.isclose(mu_bar, mu_bar2) )
 
     L_T = lai[0]  # total LAI
 
     K = K_b  # for black leaves; should grey leaf version, K_b * k_prime, be used ???
 
-    #> allocate arrays in which to save the solutions for each band
-    nbands = I_dr0_all.size
+    # Allocate arrays in which to save the solutions for each band
+    nb = I_dr0_all.size  # number of wavebands
     nz = lai.size
-    s = (nz, nbands)  # to make pylint shut up until it supports _like()
+    s = (nz, nb)
     I_dr_all   = np.zeros(s)
     I_df_d_all = np.zeros(s)
     I_df_u_all = np.zeros(s)
     F_all      = np.zeros(s)
 
     #
-    #> run for each band individually
+    # Run for each band individually
     #
-    for i in range(nbands):
+    for i in range(nb):
 
-        # calculate top-of-canopy irradiance present in the band
+        # Load top-of-canopy irradiance present in the band
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
 
-        # load canopy optical properties
+        # Load canopy optical properties
         alpha = leaf_r[i]  # leaf element reflectance
         tau   = leaf_t[i]  # leaf element transmittance
         rho_s = soil_r[i]         # soil reflectivity
 
-        omega = alpha + tau  # scattering coefficient := omega = alpha + tau
+        omega = alpha + tau  # scattering coefficient: omega := alpha + tau
 
-        # diffuse beam upscatter param; eq. 3
+        # beta := diffuse beam upscatter param; eq. 3
         beta = ( 0.5 * ( alpha + tau + (alpha - tau) * np.cos(theta_bar)**2) ) / omega
 
-        # single scattering albeo a_s; Table 2, p. 1339
-        #   strictly should use the ellipsoidal version, but the orientation/eccentricity param is ~ 1,
-        #   so spherical is good approx, and the form is much simpler
+        # a_s := single scattering albeo; Table 2, p. 1339
+        # Strictly we should use the ellipsoidal version, but the orientation/eccentricity param is ~ 1,
+        # so spherical is good approx, and the form is much simpler.
         a_s = omega/2 * ( 1 - mu * np.log( (mu + 1) / mu) )
 
-        # direct beam upscatter param; eq. 4
+        # beta_0 := direct beam upscatter param; eq. 4
         beta_0 = (1 + mu_bar * K ) / ( omega * mu_bar * K ) * a_s
 
 
         # ----------------------------------------------------------------------------
-        # intermediate params used in calculation of solns
+        # Intermediate params used in calculation of solns
 
         b = (1 - (1 - beta)*omega)
         c = omega * beta
@@ -118,8 +115,8 @@ def solve_2s(*, psi,
 
 
         # ----------------------------------------------------------------------------
-        # direct beam soln ???
-        #   contributions to downward and upward diffuse by scattering of direct radiation by leaves
+        # Contributions to the downward and upward diffuse streams
+        # by scattering of direct radiation by leaves
 
         # I feel like this should work vector-ly without needing to use vectorize
         # maybe it is the dividing by sigma that is the issue
@@ -129,8 +126,8 @@ def solve_2s(*, psi,
 
 
         # ----------------------------------------------------------------------------
-        # diffuse soln ???
-        #   contributions to downward and upward diffuse by attenuation/scattering of top-of-canopy diffuse
+        # Contributions to the downward and upward diffuse streams
+        # by attenuation/scattering of top-of-canopy diffuse
 
         I_df_u_df_fn = np.vectorize( lambda L: h7 * np.exp(-h * L) +  h8 * np.exp(h * L) )
         I_df_d_df_fn = np.vectorize( lambda L: h9 * np.exp(-h * L) + h10 * np.exp(h * L) )
@@ -156,18 +153,16 @@ def solve_2s(*, psi,
         # Beer--Lambert direct beam attenuation
         I_dr = I_dr0 * np.exp(-K * lai)
 
-
-        # save
+        # Save solution for band `i`
         I_dr_all[:,i] = I_dr
         I_df_d_all[:,i] = I_df_d
         I_df_u_all[:,i] = I_df_u
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
 
 
-    # return I_dr_all, I_df_d_all, I_df_u_all, F_all
-    return dict(\
-        I_dr = I_dr_all,
-        I_df_d = I_df_d_all,
-        I_df_u = I_df_u_all,
-        F = F_all
-        )
+    return {
+        "I_dr": I_dr_all,
+        "I_df_d": I_df_d_all,
+        "I_df_u": I_df_u_all,
+        "F": F_all,
+    }
