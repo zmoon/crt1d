@@ -12,7 +12,7 @@ import crt1d
 # -- Project information -----------------------------------------------------
 
 project = "crt1d"
-copyright = f"2020\u2013{datetime.datetime.now().year}, Zachary Moon"
+copyright = f"2020\u2013{datetime.datetime.now().year}"
 author = "Zachary Moon"
 
 # Get version from metadata
@@ -87,7 +87,7 @@ exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 html_theme = "sphinx_book_theme"
 
 html_title = "crt1d"  # shown in top left, overriding "{project} {release} documentation"
-html_last_updated_fmt = ""
+html_last_updated_fmt = "%Y-%m-%d"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
