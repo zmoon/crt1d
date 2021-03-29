@@ -30,7 +30,8 @@ def solve_2s(*, psi,
     #   sa: angle of scattered flux
     mu_bar  = si.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
     mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
-    #assert( mu_bar == mu_bar2 )
+    # TODO: following could be another optional check
+    # assert( mu_bar == mu_bar2 )
     assert( np.isclose(mu_bar, mu_bar2) )
 
     L_T = lai[0]  # total LAI
@@ -145,6 +146,12 @@ def solve_2s(*, psi,
         I_df_u = I_df_u_dr + I_df_u_df
         I_df_d = I_df_d_dr + I_df_d_df
 
+        # TODO: make checks like this optional for solvers with a `check` kwarg
+        # for name, arr in {'I_df_u_dr': I_df_u_dr, 'I_df_u_df': I_df_u_df, 'I_df_d_dr': I_df_d_dr, 'I_df_d_df': I_df_d_df}.items():
+        #     # if np.any(arr < -np.finfo(float).eps):
+        #     if np.any(arr < -1e-12):
+        #         print(f"{name} has elements < 0")
+        #         print(arr)
 
         # Beer--Lambert direct beam attenuation
         I_dr = I_dr0 * np.exp(-K * lai)
