@@ -44,19 +44,36 @@ def E_to_PFD_da(da):
 
 
 def band_sum_weights(xe, bounds):
-    """Including fractional edge contributions.
+    """Weights for the computation of a band sum (integral).
+    The calculation includes fractional contributions from bands that are partially
+    within the `bounds`.
 
     Parameters
     ----------
     xe : array
+        Edges
     bounds : 2-tuple(float)
+        Bounds
+
+    Raises
+    ------
+    UserWarning
+        If the bounds extend outside the data range (ignored for solar).
+
+    Returns
+    -------
+    array
+        Weights, size ``xe.size - 1``.
     """
     x1, x2 = xe[:-1], xe[1:]  # left and right
 
     b1, b2 = bounds[0], bounds[1]
 
-    if b1 < x1[0] or b2 > x2[-1]:
-        warnings.warn("`bounds` extend outside the data range")
+    if (b1 < x1[0] or b2 > x2[-1]) and bounds != BAND_DEFNS_UM["solar"]:
+        warnings.warn(
+            f"`bounds` ({b1:.3g}, {b2:.3g}) extend outside the data range "
+            f"defined by `xe` ({x1[0]:.3g}, {x2[-1]:.3g})"
+        )
 
     in_bounds = (x2 >= b1) & (x1 <= b2)
     x1in, x2in = x1[in_bounds], x2[in_bounds]
