@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.integrate as si
+import scipy.integrate as integrate
 
 short_name = "4s"
 long_name = "four-stream"
@@ -145,8 +145,8 @@ def solve_4s(
     LAI = lai[0]  # total LAI
     P = 1  # probably phase function ???, 1 indicates isotropic scattering <-- note: not exactly satisfied in the leaf optical data (refl doesn't always = transmit)
     G = G_fn(psi)
-    G_int_1 = si.quad(lambda mu_prime: G_fn(np.arccos(mu_prime)), 0, mu_s)[0]
-    G_int_2 = si.quad(lambda mu_prime: G_fn(np.arccos(mu_prime)), mu_s, 1)[0]
+    G_int_1 = integrate.quad(lambda mu_prime: G_fn(np.arccos(mu_prime)), 0, mu_s)[0]
+    G_int_2 = integrate.quad(lambda mu_prime: G_fn(np.arccos(mu_prime)), mu_s, 1)[0]
     # ^ note: Barr code did not do these integrals, assumed a constant G fn
 
     # > allocate arrays in which to save the solutions for each band
@@ -238,7 +238,7 @@ def solve_4s(
         fun = lambda x, y: eqns(x, y, d, direct=1)
         bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=1, R0=R_dr0)
 
-        res = si.solve_bvp(fun, bcs, x, y0, tol=1e-6)
+        res = integrate.solve_bvp(fun, bcs, x, y0, tol=1e-6)
 
         y = res.sol(lai)  # solution splined over LAI vals
 
@@ -257,7 +257,7 @@ def solve_4s(
         fun = lambda x, y: eqns(x, y, d, direct=0)
         bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=0, R0=R_df0)
 
-        res = si.solve_bvp(fun, bcs, x, y0, tol=1e-6)
+        res = integrate.solve_bvp(fun, bcs, x, y0, tol=1e-6)
 
         y = res.sol(lai)  # solution splined over LAI vals
 

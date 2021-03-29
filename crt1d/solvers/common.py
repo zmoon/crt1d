@@ -2,7 +2,7 @@
 Common functions used by canopy RT solvers.
 """
 import numpy as np
-import scipy.integrate as si
+import scipy.integrate as integrate
 
 
 def tau_b_fn(K_b_fn, psi, lai_val):
@@ -34,7 +34,7 @@ def tau_df_fn(K_b_fn, lai_val):
     """
     tau_b = lambda psi_, L_: tau_b_fn(K_b_fn, psi_, L_)
     f = lambda psi_: tau_b(psi_, lai_val) * np.sin(psi_) * np.cos(psi_)
-    return 2 * si.quad(f, 0, np.pi / 2, epsrel=1e-9)[0]
+    return 2 * integrate.quad(f, 0, np.pi / 2, epsrel=1e-9)[0]
 
 
 # TODO: vectorize tau_df_fn

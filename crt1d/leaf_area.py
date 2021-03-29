@@ -11,8 +11,8 @@ LAI is cumulative and defined at the model interface levels.
 from collections import namedtuple
 
 import numpy as np
-import scipy.integrate as si
-import scipy.optimize as so
+import scipy.integrate as integrate
+import scipy.optimize as optimize
 from scipy.interpolate import interp1d
 from scipy.stats import beta
 from scipy.stats import gamma
@@ -207,7 +207,7 @@ def distribute_lai_weibull_z(z, LAI, h, hb=0.0, *, b=None, c=None, species=None)
     LAD = LAI * a
 
     # numerically estimate the cumulative LAI profile from the LAD profile
-    lai = -1 * si.cumtrapz(LAD[::-1], z[::-1], initial=0)[::-1]
+    lai = -1 * integrate.cumtrapz(LAD[::-1], z[::-1], initial=0)[::-1]
 
     return _LeafAreaProfile(lai, LAD, z)
 
@@ -402,8 +402,8 @@ class layer:
         self.h2 = h2
         self.lad_h2 = lad_h2
 
-        fun = lambda X: si.quad(lambda h: self.pdf0(h, lai_mult=X), h1, h2)[0] - LAI
-        self.lai_mult = so.fsolve(fun, 0.1)[0]
+        fun = lambda X: integrate.quad(lambda h: self.pdf0(h, lai_mult=X), h1, h2)[0] - LAI
+        self.lai_mult = optimize.fsolve(fun, 0.1)[0]
         if self.lai_mult <= 0:
             print("desired LAI too small")
 
@@ -572,8 +572,8 @@ class canopy_lai_dist:
 
         using scipy.optimize.fsolve
         """
-        fun = lambda lb: si.quad(self.pdf, lb, ub)[0] - lai
-        lb = so.fsolve(fun, ub - 1e-6)
+        fun = lambda lb: integrate.quad(self.pdf, lb, ub)[0] - lai
+        lb = optimize.fsolve(fun, ub - 1e-6)
 
         return lb
 
@@ -650,7 +650,7 @@ def test_plot_canopy_layer_class():
     lai = np.array([layer_test.cdf(x) for x in h])
     dlai = np.diff(lai)
     lai2 = dh_step * np.nancumsum(lad[::-1])[::-1]
-    lai3 = np.array([-si.quad(layer_test.pdf, 8, x)[0] for x in midpts])
+    lai3 = np.array([-integrate.quad(layer_test.pdf, 8, x)[0] for x in midpts])
 
     plt.figure()
     plt.title("Leaf area density")
