@@ -3,29 +3,23 @@
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-# -- Path setup --------------------------------------------------------------
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import datetime
+from pkg_resources import get_distribution  # noreorder
+
+import crt1d
+
+
 # -- Project information -----------------------------------------------------
 
 project = "crt1d"
-copyright = "2020, Zachary Moon"
+copyright = f"2020\u2013{datetime.datetime.now().year}, Zachary Moon"
 author = "Zachary Moon"
 
-# get version from metadata
-from pkg_resources import get_distribution
-
+# Get version from metadata
 release = get_distribution("crt1d").version
 version = ".".join(release.split(".")[:2])
 
-# create some docs info
-import crt1d
-
+# Create some docs content
 crt1d.variables._write_params_docs_snippets()
 
 
@@ -91,6 +85,9 @@ exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 # html_theme = 'alabaster'
 # html_theme = "sphinx_rtd_theme"
 html_theme = "sphinx_book_theme"
+
+html_title = "crt1d"  # shown in top left, overriding "{project} {release} documentation"
+html_last_updated_fmt = ""
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

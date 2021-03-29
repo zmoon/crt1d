@@ -15,7 +15,7 @@ jupytext:
 
 # Demonstrate binning functionality
 
-In module `crt1d.spectra`.
+In module {mod}`crt1d.spectra`.
 
 ```{code-cell}
 import numpy as np
@@ -34,9 +34,8 @@ ds0_l = crt.data.load_ideal_leaf().dropna(dim="wl")
 
 ```{code-cell}
 bins1 = np.linspace(0.3, 2.5, 20)
-ds1 = crt.spectra.smear_si(
-    ds0, bins1
-)  # special function needed to calculate smeared I by smearing SI
+ds1 = crt.spectra.smear_si(ds0, bins1)
+# ^ we use a special function to calculate smeared I by smearing SI
 crt.spectra.plot_binned_ds(ds0, ds1, yname="SI_df")
 ```
 
