@@ -5,7 +5,6 @@ import numpy as np
 import scipy.integrate as integrate
 import scipy.optimize as optimize
 
-
 short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
 
@@ -36,7 +35,7 @@ def solve_2s(*, psi,
     L = lai  # cumulative LAI, cLAI(z)
     L_T = lai[0]  # total LAI
 
-    K = K_b  # for black leaves; should grey leaf version, K_b * k_prime, be used ???
+    K = K_b  # for black leaves; TODO: could provie grey leaf (K_b * k_prime) option?
 
     # Allocate arrays in which to save the solutions for each band
     nb = I_dr0_all.size  # number of wavebands
@@ -76,7 +75,6 @@ def solve_2s(*, psi,
 
         # ------------------------------------------------------------------------------------------
         # Intermediate params used in calculation of solns
-
         b = (1 - (1 - beta)*omega)
         c = omega * beta
         d = omega * mu_bar * K * beta_0
@@ -93,28 +91,31 @@ def solve_2s(*, psi,
         p2 = b - mu_bar * h
         p3 = b + mu_bar * K
         p4 = b - mu_bar * K
-        D1 = p1 * (u1 - mu_bar * h) * S1**-1 - p2 * (u1 + mu_bar * h) * S1
-        D2 = (u2 + mu_bar * h) * S1**-1 - (u2 - mu_bar * h) * S1
+        D1 = p1 * (u1 - mu_bar * h) / S1 - p2 * (u1 + mu_bar * h) * S1
+        D2 = (u2 + mu_bar * h) / S1 - (u2 - mu_bar * h) * S1
 
         h1 = - d * p4 - c * f
-        h2 = D1**-1 * ( (d - h1 / sigma * p3) * (u1 - mu_bar * h) * S1**-1          \
-                        - p2 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2       \
-                    )
-        h3 = -D1**-1  * ( (d - h1 / sigma * p3) * (u1 + mu_bar * h) * S1           \
-                        - p1 * (d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2    \
-                        )
-        h4 = -f * p3 - c * d
-        h5 = -D2**-1 * ( h4 / sigma * (u2 + mu_bar * h) / S1 \
-                        + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
-                    )
-        h6 = D2**-1  * ( h4 / sigma * (u2 - mu_bar * h) * S1 \
-                        + (u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2 \
-                    )
+        h2 = 1/D1 * (
+            (d - h1 / sigma * p3) * (u1 - mu_bar * h) / S1
+            - p2 * ( d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2
+        )
+        h3 = -1/D1 * (
+            (d - h1 / sigma * p3) * (u1 + mu_bar * h) * S1
+            - p1 * ( d - c - h1 / sigma * (u1 + mu_bar * K) ) * S2
+        )
+        h4 = -f * p3 - c * d  # the aforementioned Sellers (1996) correction
+        h5 = -1/D2 * (
+            h4 / sigma * (u2 + mu_bar * h) / S1
+            + ( u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2
+        )
+        h6 = 1/D2 * (
+            h4 / sigma * (u2 - mu_bar * h) * S1
+            + ( u3 - h4 / sigma * (u2 - mu_bar * K) ) * S2
+        )
         h7 =  c / D1 * (u1 - mu_bar * h) / S1
         h8 = -c / D1 * (u1 + mu_bar * h) * S1
-        h9 =   D2**-1  * (u2 + mu_bar * h) / S1
-        h10 = -D2**-1  * (u2 - mu_bar * h) * S1
-
+        h9 =   1/D2 * (u2 + mu_bar * h) / S1
+        h10 = -1/D2 * (u2 - mu_bar * h) * S1
         # ------------------------------------------------------------------------------------------
 
         # Contributions to the upward and downward diffuse streams
@@ -132,7 +133,12 @@ def solve_2s(*, psi,
         I_df_d = I_df_d_dr + I_df_d_df
 
         # TODO: make checks like this optional for solvers with a `check` kwarg
-        # for name, arr in {'I_df_u_dr': I_df_u_dr, 'I_df_u_df': I_df_u_df, 'I_df_d_dr': I_df_d_dr, 'I_df_d_df': I_df_d_df}.items():
+        # for name, arr in {
+        #     'I_df_u_dr': I_df_u_dr,
+        #     'I_df_u_df': I_df_u_df,
+        #     'I_df_d_dr': I_df_d_dr,
+        #     'I_df_d_df': I_df_d_df,
+        # }.items():
         #     # if np.any(arr < -np.finfo(float).eps):
         #     if np.any(arr < -1e-12):
         #         print(f"{name} has elements < 0")
@@ -146,7 +152,6 @@ def solve_2s(*, psi,
         I_df_d_all[:,i] = I_df_d
         I_df_u_all[:,i] = I_df_u
         F_all[:,i] = I_dr / mu + 2 * I_df_u + 2 * I_df_d
-
 
     return {
         "I_dr": I_dr_all,
