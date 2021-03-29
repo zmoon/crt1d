@@ -1,7 +1,7 @@
 # fmt: off
 import numpy as np
-import scipy.integrate as si
-import scipy.optimize as so
+import scipy.integrate as integrate
+import scipy.optimize as optimize
 
 
 short_name = '2s'
@@ -28,8 +28,8 @@ def solve_2s(*, psi,
 
     # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
     #   sa: angle of scattered flux
-    mu_bar  = si.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
-    mu_bar2 = si.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
+    mu_bar  = integrate.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
+    mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
     # TODO: following could be another optional check
     # assert( mu_bar == mu_bar2 )
     assert( np.isclose(mu_bar, mu_bar2) )
