@@ -25,7 +25,7 @@ def solve_2s(*, psi,
     mu = math.cos(psi)
     theta_bar = math.radians(mla)  # mean leaf inclination angle, deg->rad; eq. 3
 
-    # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
+    # Calculate mu_bar := average inverse diffuse optical depth per unit leaf area; p. 1336
     # sa := angle of scattered flux
     mu_bar  = integrate.quad(lambda sa: math.cos(sa) / G_fn(sa) * -math.sin(sa), math.pi/2, 0)[0]  # p. 1336
     # TODO: following could be another optional check
@@ -58,7 +58,7 @@ def solve_2s(*, psi,
         # Load canopy optical properties
         alpha = leaf_r[i]  # leaf element reflectance
         tau   = leaf_t[i]  # leaf element transmittance
-        rho_s = soil_r[i]         # soil reflectivity
+        rho_s = soil_r[i]  # soil reflectivity
 
         omega = alpha + tau  # scattering coefficient: omega := alpha + tau
 
