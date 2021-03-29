@@ -1,4 +1,6 @@
 # fmt: off
+import math
+
 import numpy as np
 import scipy.integrate as integrate
 import scipy.optimize as optimize
@@ -21,15 +23,15 @@ def solve_2s(*, psi,
     and includes the minor correction from the later Sellers paper (1996).
     """
     K_b = K_b_fn(psi)
-    mu = np.cos(psi)
-    theta_bar = np.deg2rad(mla)  # mean leaf inclination angle, deg->rad; eq. 3
+    mu = math.cos(psi)
+    theta_bar = math.radians(mla)  # mean leaf inclination angle, deg->rad; eq. 3
 
     # mu_bar := average inverse diffuse optical depth, per unit leaf area; p. 1336
     # sa := angle of scattered flux
-    mu_bar  = integrate.quad(lambda sa: np.cos(sa) / G_fn(sa) * -np.sin(sa), np.pi/2, 0)[0]  # p. 1336
+    mu_bar  = integrate.quad(lambda sa: math.cos(sa) / G_fn(sa) * -math.sin(sa), math.pi/2, 0)[0]  # p. 1336
     # TODO: following could be another optional check
-    # mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(np.arccos(mu_prime)), 0, 1)[0]
-    # assert( np.isclose(mu_bar, mu_bar2) )
+    # mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(math.acos(mu_prime)), 0, 1)[0]
+    # assert( math.isclose(mu_bar, mu_bar2) )
 
     L_T = lai[0]  # total LAI
 
@@ -61,12 +63,12 @@ def solve_2s(*, psi,
         omega = alpha + tau  # scattering coefficient: omega := alpha + tau
 
         # beta := diffuse beam upscatter param; eq. 3
-        beta = ( 0.5 * ( alpha + tau + (alpha - tau) * np.cos(theta_bar)**2) ) / omega
+        beta = ( 0.5 * ( alpha + tau + (alpha - tau) * math.cos(theta_bar)**2) ) / omega
 
         # a_s := single scattering albeo; Table 2, p. 1339
         # Strictly we should use the ellipsoidal version, but the orientation/eccentricity param is ~ 1,
         # so spherical is good approx, and the form is much simpler.
-        a_s = omega/2 * ( 1 - mu * np.log( (mu + 1) / mu) )
+        a_s = omega/2 * ( 1 - mu * math.log( (mu + 1) / mu) )
 
         # beta_0 := direct beam upscatter param; eq. 4
         beta_0 = (1 + mu_bar * K ) / ( omega * mu_bar * K ) * a_s
@@ -79,14 +81,14 @@ def solve_2s(*, psi,
         c = omega * beta
         d = omega * mu_bar * K * beta_0
         f = omega * mu_bar * K * (1 - beta_0)
-        h = (b**2 - c**2)**0.5 / mu_bar
+        h = math.sqrt(b**2 - c**2) / mu_bar
         sigma = (mu_bar * K)**2 + c**2 - b**2
 
         u1 = b - c / rho_s
         u2 = b - c * rho_s
         u3 = f + c * rho_s
-        S1 = np.exp(-h * L_T)
-        S2 = np.exp(-K * L_T)
+        S1 = math.exp(-h * L_T)
+        S2 = math.exp(-K * L_T)
         p1 = b + mu_bar * h
         p2 = b - mu_bar * h
         p3 = b + mu_bar * K
