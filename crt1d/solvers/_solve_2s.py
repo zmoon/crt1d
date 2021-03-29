@@ -33,6 +33,7 @@ def solve_2s(*, psi,
     # mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(math.acos(mu_prime)), 0, 1)[0]
     # assert( math.isclose(mu_bar, mu_bar2) )
 
+    L = lai  # cumulative LAI, cLAI(z)
     L_T = lai[0]  # total LAI
 
     K = K_b  # for black leaves; should grey leaf version, K_b * k_prime, be used ???
@@ -73,8 +74,7 @@ def solve_2s(*, psi,
         # beta_0 := direct beam upscatter param; eq. 4
         beta_0 = (1 + mu_bar * K ) / ( omega * mu_bar * K ) * a_s
 
-
-        # ----------------------------------------------------------------------------
+        # ------------------------------------------------------------------------------------------
         # Intermediate params used in calculation of solns
 
         b = (1 - (1 - beta)*omega)
@@ -115,33 +115,19 @@ def solve_2s(*, psi,
         h9 =   D2**-1  * (u2 + mu_bar * h) / S1
         h10 = -D2**-1  * (u2 - mu_bar * h) * S1
 
+        # ------------------------------------------------------------------------------------------
 
-        # ----------------------------------------------------------------------------
-        # Contributions to the downward and upward diffuse streams
+        # Contributions to the upward and downward diffuse streams
         # by scattering of direct radiation by leaves
+        I_df_u_dr = I_dr0 * (h1 * np.exp(-K * L) / sigma + h2 * np.exp(-h * L) + h3 * np.exp(h * L))
+        I_df_d_dr = I_dr0 * (h4 * np.exp(-K * L) / sigma + h5 * np.exp(-h * L) + h6 * np.exp(h * L))
 
-        # I feel like this should work vector-ly without needing to use vectorize
-        # maybe it is the dividing by sigma that is the issue
-        # I know I wouldn't have done this if there wasn't one (an issue)
-        I_df_u_dr_fn = np.vectorize( lambda L: h1 * np.exp(-K * L) / sigma + h2 * np.exp(-h * L) + h3 * np.exp(h * L) )
-        I_df_d_dr_fn = np.vectorize( lambda L: h4 * np.exp(-K * L) / sigma + h5 * np.exp(-h * L) + h6 * np.exp(h * L) )
-
-
-        # ----------------------------------------------------------------------------
-        # Contributions to the downward and upward diffuse streams
+        # Contributions to the upward and downward diffuse streams
         # by attenuation/scattering of top-of-canopy diffuse
+        I_df_u_df = I_df0 * (h7 * np.exp(-h * L) +  h8 * np.exp(h * L))
+        I_df_d_df = I_df0 * (h9 * np.exp(-h * L) + h10 * np.exp(h * L))
 
-        I_df_u_df_fn = np.vectorize( lambda L: h7 * np.exp(-h * L) +  h8 * np.exp(h * L) )
-        I_df_d_df_fn = np.vectorize( lambda L: h9 * np.exp(-h * L) + h10 * np.exp(h * L) )
-
-
-        # apply them fns
-        I_df_u_dr = I_df_u_dr_fn(lai) * I_dr0
-        I_df_d_dr = I_df_d_dr_fn(lai) * I_dr0
-        I_df_u_df = I_df_u_df_fn(lai) * I_df0
-        I_df_d_df = I_df_d_df_fn(lai) * I_df0
-
-        # combine the contributions
+        # Combine the contributions to the upward and downward diffuse streams
         I_df_u = I_df_u_dr + I_df_u_df
         I_df_d = I_df_d_dr + I_df_d_df
 
