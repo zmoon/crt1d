@@ -42,11 +42,22 @@ extensions = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
 }
 
-# aliases? doesn't seem to work...
+# napoleon
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_preprocess_types = True
 napoleon_type_aliases = {
-    "xr.Dataset": ":class:`xarray.Dataset`",
+    "xr.Dataset": "xarray.Dataset",
+    # NumPy
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "np.ndarray": "numpy.ndarray",
+    "ndarray": "numpy.ndarray",
 }
 
 # include __init__() docstring content in autodocs for classes

@@ -124,6 +124,9 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
 
     Parameters
     ----------
+    ds : xr.Dataset
+    bins : array_like
+        Bin edges for the smeared spectrum.
     xname_out : str, optional
         By default, same as `xname`.
     method : str
