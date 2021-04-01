@@ -7,42 +7,46 @@ from scipy.integrate import cumtrapz
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 
-def smear_tuv_1(x, y, xgl, xgu):
-    """Smear `y` values at positions `x` over the region defined by [`xgl`, `xgu`].
+def smear_tuv_1(x, y, bin):
+    r"""Smear `y` values at positions `x` over the region defined by `bin`.
+    Returns a single value, corresponding to the (trapezoidally) integrated average of
+    :math:`y(x)` in the bin.
+
+    .. math::
+       \frac{\int_{x_l}^{x_u} y(x) \, dx}{x_u - x_l}
 
     Parameters
     ----------
     x : array_like
         the original grid
     y : array_like
-        the values y(x) to be smeared
-    xgl : float
-        left side x bound
-    xgu : float
-        right side x bound
+        the values :math:`y(x)` to be smeared
+    bin : tuple(float)
+        a lower and upper bound: (:math:`x_l`, :math:`x_u`)
 
     Notes
     -----
-    Implementation based on F0AM's implementation of TUV's un-named algorithm.
+    Implementation based on
+    `F0AM's implementation <https://github.com/AirChem/F0AM/blob/281f80adbdaeaf580d4757f8bf6ca02407251974/Chem/Photolysis/IntegrateJ.m#L193-L217>`_
+    of TUV's un-named algorithm.
     It works by applying cumulative trapezoidal integration to the original data,
-    but extrapolating so that `xgl` and `xgu` don't have to be on the original `x` grid.
+    interpolating within `x` so that :math:`x_l` and :math:`x_u` don't have to be on the original `x` grid.
     """
+    xl, xu = bin  # shadowing a builtin but whatever
     area = 0
     for k in range(x.size - 1):  # TODO: could try subsetting first instead of over whole grid
-        if x[k + 1] < xgl or x[k] > xgu:  # outside window
+        if x[k + 1] < xl or x[k] > xu:  # outside window
             continue
 
-        a1 = max(x[k], xgl)
-        a2 = min(x[k + 1], xgu)
+        a1 = max(x[k], xl)
+        a2 = min(x[k + 1], xu)
 
         slope = (y[k + 1] - y[k]) / (x[k + 1] - x[k])
         b1 = y[k] + slope * (a1 - x[k])
         b2 = y[k] + slope * (a2 - x[k])
         area = area + (a2 - a1) * (b2 + b1) / 2
 
-    yg = area / (xgu - xgl)
-
-    return yg
+    return area / (xu - xl)
 
 
 def smear_tuv(x, y, bins):
@@ -52,13 +56,16 @@ def smear_tuv(x, y, bins):
     is equal to the original trapezoidal integral of *y(x)* over the range [``bins[0]``, ``bins[-1]``].
     """
     ynew = np.zeros(bins.size - 1)
-    for i, (xgl, xgu) in enumerate(zip(bins[:-1], bins[1:])):
-        ynew[i] = smear_tuv_1(x, y, xgl, xgu)
+    for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
+        ynew[i] = smear_tuv_1(x, y, bin_)
     return ynew  # valid for band, not at left edge
 
 
 def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
-    """Interpolate y(x) to bin values, then apply trapezoidal integration.
+    r"""Smear `y`\(`x`) to the centers of `bins`,
+    using
+    `spline <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.InterpolatedUnivariateSpline.html>`_
+    interpolation and trapezoidal integration.
 
     Parameters
     ----------
@@ -104,10 +111,26 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
 
 
 def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
-    """
-    Smear spectra (with coordinate variable `xname`) to new `bins`.
+    """Smear spectra (with coordinate variable `xname`) to new `bins`.
+
     The returned :class:`xarray.Dataset` consists of the data variables who have the coordinate
     variable with ``name`` `xname`.
+
+    .. warning::
+       Smearing irradiance (W m-2) will not have the desired result.
+       Instead, be sure to smear *spectral* irradiance (W m-2 μm-1),
+       e.g., using :func:`smear_si`,
+       to preserve the spectrum shape and total integrated irradiance.
+
+    Parameters
+    ----------
+    xname_out : str, optional
+        By default, same as `xname`.
+    method : str
+        Smear method.
+        ``'tuv'`` for :func:`smear_tuv` or ``'trapz_interp'`` for :func:`smear_trapz_interp`.
+    **method_kwargs
+        Passed on to the smear method function.
     """
     da_x = ds[xname]
     dx = np.diff(bins)
@@ -143,7 +166,7 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
 def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     """Smear spectral irradiance, computing in-bin irradiance in the new bins.
     `**kwargs` are passed to :func:`smear_ds`.
-    `ds` must have keys ``'SI_dr'``, ``'SI_df'``.
+    `ds` must have variables ``'SI_dr'`` (direct spectral irradiance), ``'SI_df'`` (diffuse).
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
@@ -173,7 +196,7 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
 
 
 def edges_from_centers(x):
-    """Estimate locations of the bin edges by extrapolating the grid spacing on the edges.
+    """Estimate locations of the bin edges by extrapolating the grid spacing at the edges.
 
     .. warning::
        Note that the true bin edges could be different---this is just a guess!
@@ -189,19 +212,22 @@ def edges_from_centers(x):
 
 
 def interpret_spectrum(ydx, x, *, midpt=True):
-    """For spectrally distributed values `ydx`, equivalent to y(x)/dx,
+    r"""For spectrally distributed values `ydx`,
+    equivalent to :math:`y(x)/dx` (e.g., spectral irradiance in W m-2 μm-1),
     determine corresponding *y* values.
 
     .. note::
        No need to use this if the bin edges are known!
+       (Just multiply by the bin edges :math:`\delta x`.)
 
     Returns *y* (i.e., *ydx dx*), and corresponding *x* values and bin widths (*dx*).
 
     With the midpoint method (``midpt=True``), these will have have size *n*-1 wrt. `ydx`.
-    Summing these y values is equivalent to the midpoint Riemann sum of the original
+    Summing these *y* values is equivalent to the midpoint Riemann sum of the original
     *y(x)/dx*.
 
-    With the edges-from-centers method (``midpt=False``), the return arrays will be size n.
+    With the edges-from-centers method (``midpt=False``; uses :func:`edges_from_centers`),
+    the return arrays will be size *n*.
     Estimating the edges allows the original *y(x)/dx* values to be used to compute *y(x*).
 
     Returns
@@ -271,8 +297,12 @@ def plot_binned(x, y, xc, yc, dx):
 
 def plot_binned_ds(ds0, ds, *, yname=None):
     """Compare an original spectrum in `ds0` to binned one in `ds`.
-    Uses :func:`plot_binned` with auto-detection of ``x``, ``dx``, and ``xc``.
+    Uses :func:`plot_binned` with auto-detection of ``x``, ``dx``, and ``xc``
+    (though `yname`, the ``name`` of the spectrum to be plotted, must be provided).
     """
+    if yname is None:
+        raise ValueError("`yname` must be provided in order to plot the spectrum")
+
     y = ds0[yname]
     xname = list(y.coords)[0]
     x = ds0[xname]
