@@ -90,12 +90,9 @@ exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-# html_theme = 'alabaster'
 # html_theme = "sphinx_rtd_theme"
-html_theme = "sphinx_book_theme"
+# html_theme = "sphinx_book_theme"
+html_theme = "furo"
 
 html_title = "crt1d"  # shown in top left, overriding "{project} {release} documentation"
 html_last_updated_fmt = "%Y-%m-%d"
