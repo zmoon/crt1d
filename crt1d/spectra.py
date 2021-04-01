@@ -3,8 +3,41 @@ Spectral manipulations.
 """
 import numpy as np
 import xarray as xr
+from scipy.constants import c
+from scipy.constants import h
+from scipy.constants import k as k_B
 from scipy.integrate import cumtrapz
+from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
+
+
+def l_wl_planck(T_K, wl_um):
+    """Planck radiance.
+
+    Parameters
+    ----------
+    T_K : float, ndarray
+        Temperature (K).
+    wl_um : float, ndarray
+        Wavelength (μm).
+    """
+    wl = wl_um * 1e-6  # -> m
+    return (2 * h * c ** 2) / (wl ** 5 * (np.exp(h * c / (wl * k_B * T_K)) - 1))
+
+
+def l_wl_planck_integ(T_K, wla_um, wlb_um):
+    """Numerical integral of Planck radiance from `wla_um` to `wlb_um`.
+
+    Parameters
+    ----------
+    T_K : float, ndarray
+        Temperature (K).
+    wla_um : float
+        Integration lower bound.
+    wlb_um : float
+        Upper bound.
+    """
+    return quad(l_wl_planck, wla_um, wlb_um)[0]
 
 
 def smear_tuv_1(x, y, bin):
@@ -275,7 +308,7 @@ def plot_binned(x, y, xc, yc, dx):
     spectrum_ls = "r-" if x.size > 150 else "r.-"
     xbounds = (x[0], x[-1])
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(7, 4))
 
     ax.bar(xc, yc, width=dx, label="binned", align="center", alpha=0.7, edgecolor="blue")
 
@@ -284,10 +317,10 @@ def plot_binned(x, y, xc, yc, dx):
     if isinstance(x, xr.DataArray) and isinstance(y, xr.DataArray):
         unx = cf_units_to_tex(x.attrs["units"])
         lnx = x.attrs["long_name"]
-        xlabel = f"{lnx} ({unx})"
+        xlabel = f"{lnx} [{unx}]"
         uny = cf_units_to_tex(y.attrs["units"])
         lny = y.attrs["long_name"]
-        ylabel = f"{lny} ({uny})"
+        ylabel = f"{lny} [{uny}]"
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 

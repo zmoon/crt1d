@@ -14,7 +14,7 @@ dependencies:
   #
   # for docs work
   - jupytext
-  - notebook
+  - jupyterlab>=3
   - sphinx
   #
   - pip  # otherwise conda nags
