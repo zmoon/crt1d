@@ -91,12 +91,6 @@ Instead, for computing irradiance in bins, {func}`crt1d.spectra.smear_si` can be
 
 ### Leaf/soil optical properties
 
-Smearing leaf/soil optical properties directly comes with its own issues.
-
-Reflectance/transmittance are like albedo in that they depend on the incoming light as well. We can account for this by weighting with a light spectrum when averaging the optical property spectra.
-
-Below, we can see that when we compute the average reflectance, over certain regions this doesn't matter much (PAR/visible). In the NIR, however, there is a strong preference for smaller wavelengths, which overall weights leaf reflectance towards higher values.
-
 ```{code-cell} ipython3
 ds0_l
 ```
@@ -106,6 +100,28 @@ bins2 = np.linspace(0.3, 2.6, 21)
 ds2_l = crt.spectra.smear(ds0_l, bins2)
 crt.spectra.plot_binned_ds(ds0_l, ds2_l, yname="rl")
 ```
+
+Function {func}`crt1d.spectra.smear` can be applied to array-like, {class}`xarray.DataArray`, or {class}`xarray.Dataset`.
+
+```{code-cell} ipython3
+# `x` array must be provided if passing array
+crt.spectra.smear(ds2_l.rl.values, bins2, x=ds2_l.wl)
+```
+
+```{code-cell} ipython3
+# `x` assumed to be the variable with `name` `'wl'`
+crt.spectra.smear(ds2_l.rl, bins2)
+```
+
+```{code-cell} ipython3
+crt.spectra.smear(ds2_l, bins2)
+```
+
+```{warning}
+Smearing leaf/soil optical properties directly causes issues as well, though more subtle than for irradiance.
+```
+
+Reflectance/transmittance are like albedo in that they depend on the incoming light as well. We can account for this by weighting with a light spectrum when averaging the optical property spectra.
 
 The influence of accounting for the incoming light spectrum is most apparent when the bins are large and few.
 
@@ -119,6 +135,10 @@ for method, ax in zip(["tuv", "avg_optical_prop"], axs.flat):
 ```
 
 ## Average optical properties
+
+Below, we can see that when we compute the average reflectance, over certain regions the above doesn't matter much (PAR/visible). In the NIR, however, there is a strong preference for smaller wavelengths, which overall weights leaf reflectance towards higher values.
+
+In the below, `'unifrom'` corresponds to standard smearing, with no solar weighting.
 
 ```{code-cell} ipython3
 # On the original leaf reflectance spectrum
@@ -135,7 +155,7 @@ for bounds in boundss:
 ```
 
 ```{code-cell} ipython3
-# On the smeared/binned leaf reflectance spectrum
+# On a smeared/binned leaf reflectance spectrum
 ds2 = crt.spectra.smear(ds0, bins2)
 data = (
     ds2.sel(wl=ds2_l.wl.values, method="nearest").I_dr +
@@ -155,7 +175,7 @@ for bounds in boundss:
             print(f" data: {ybar:.4g}")
 ```
 
-👆 Notice that over the whole spectrum, the values for 'uniform' and 'planck' are very similar to the calculations on the pre-smeared spectrum.
+👆 Notice that the values for `'uniform'` and `'planck'` are similar (though not identical) to the calculations on the pre-smeared spectrum.
 
 +++
 
@@ -174,18 +194,4 @@ ax.set(
     ylabel=r"Spectral radiance $L(\lambda)$ [W sr$^{-1}$ m$^{-2}$ m$^{-1}$]",
 )
 ax.legend(title="Blackbody temperature (K)");
-```
-
-Function {func}`crt1d.spectra.smear` can be applied to array-like, {class}`xarray.DataArray`, or {class}`xarray.Dataset`.
-
-```{code-cell} ipython3
-crt.spectra.smear(ds2_l.rl.values, bins2, x=ds2_l.wl)
-```
-
-```{code-cell} ipython3
-crt.spectra.smear(ds2_l.rl, bins2)
-```
-
-```{code-cell} ipython3
-crt.spectra.smear(ds2_l, bins2)
 ```
