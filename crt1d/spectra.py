@@ -339,11 +339,7 @@ def smear_avg_optical_prop(x, y, bins, **kwargs):
     return ynew
 
 
-def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
-    """Returns an :class:`xarray.Dataset` ``data_vars`` tuple."""
-    x = da[xname].values
-    y = da.values
-
+def _smear_arr(x, y, bins, *, method, **method_kwargs):
     if method == "tuv":
         ynew = smear_tuv(x, y, bins)
 
@@ -356,10 +352,20 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
     else:
         raise ValueError(f"invalid `method` {method!r}")
 
+    return ynew
+
+
+def _smear_da_dv(da, bins, *, xname, xname_out, method, **method_kwargs):
+    """Returns an :class:`xarray.Dataset` ``data_vars`` tuple."""
+    x = da[xname].values
+    y = da.values
+
+    ynew = _smear_arr(x, y, bins, method=method, **method_kwargs)
+
     return (xname_out, ynew, da.attrs)
 
 
-def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
+def _smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
     """Smear spectra (with coordinate variable `xname`) to new `bins`.
 
     The returned :class:`xarray.Dataset` consists of the data variables who have the coordinate
@@ -393,7 +399,7 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
         xname_out = xname
 
     new_data_vars = {
-        vn: _smear_da(
+        vn: _smear_da_dv(
             ds[vn], bins, xname=xname, xname_out=xname_out, method=method, **method_kwargs
         )
         for vn in ds.variables
@@ -416,19 +422,76 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
     )
 
 
+def smear(y, bins, *, x="wl", xname_out="wl", method="tuv", **method_kwargs):
+    """Smear `y` into `bins`.
+
+    This function dispatches to the different smearing method functions,
+    which take array-like inputs and can be used directly instead if desired.
+
+    If `y` is array-like, this returns a :class:`numpy.ndarray`.
+
+    If `y` is an xarray type, this returns an :class:`xarray.Dataset`.
+
+    Parameters
+    ----------
+    y : array_like, xr.DataArray, xr.Dataset
+        Variable(s) to smear.
+        If :class:`xarray.Dataset`, all variables that have coordinate `x` will be included.
+    bins : array_like
+        Bin edges for the smeared spectrum.
+    x : str, array_like, xr.DataArray
+        Coordinates at which the `y` values are valid/defined.
+        If `y` is `array`, `x` must be provided as an `array` of the same size.
+        If `y` is an xarray type, providing the ``name`` as a string is sufficient.
+    xname_out : str
+        Used to label the new dimension of `y` is an `xarray.Dataset`, for example.
+    method : str
+        Smear method.
+
+        * ``'tuv'``: :func:`smear_tuv`
+
+        * ``'trapz_interp'``: :func:`smear_trapz_interp`
+
+        * ``'avg_optical_prop'``: :func:`smear_avg_optical_prop`
+    **method_kwargs
+        Passed on to the smear method function.
+    """
+    # Convert DataArray to Dataset if necessary
+    if isinstance(y, xr.DataArray):
+        y = xr.Dataset(data_vars={y.name: y})
+
+    if isinstance(y, xr.Dataset):
+        assert isinstance(x, str), "specify `x` as string"
+        # TODO: support `x` as DataArray?
+        return _smear_ds(y, bins, xname=x, xname_out=xname_out, method=method, **method_kwargs)
+
+    else:  # assume array-like
+        assert not isinstance(x, str), "`x` array must be provided if `y` is array"
+        y = np.asarray(y)
+        x = np.asarray(x)
+        bins = np.asarray(bins)
+        assert x.size == y.size, "`x` and `y` must be same size"
+        return _smear_arr(x, y, bins, method=method, **method_kwargs)
+
+
 def smear_si(ds, bins, *, xname_out="wl", **kwargs):
-    """Helper function to smear spectral irradiance and then compute in-bin irradiance in the new bins.
-    `**kwargs` are passed to :func:`smear_ds`.
+    """Helper function to smear spectral irradiance
+    and then compute in-bin irradiance in the new bins.
+    `**kwargs` can include ``method`` and ``**method_kwargs`` (see :func:`smear`).
 
     .. note::
        `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
        and ``'SI_df'`` (diffuse).
+
+    Parameters
+    ----------
+    ds : xr.Dataset
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
 
     # smear the spectral irradiances
-    ds_new = smear_ds(
+    ds_new = _smear_ds(
         ds[["SI_dr", "SI_df", xname_out]], bins=bins, xname=xname, xname_out=xname_out, **kwargs
     )
 
@@ -449,31 +512,6 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     # TODO: ensure attrs consistency somehow
 
     return ds_new
-
-
-def smear(y, bins, *, x="wl", xname_out="wl", method="tuv", **method_kwargs):
-    """Smear `y` into `bins`.
-
-    Parameters
-    ----------
-    y : array_like, xr.DataArray, xr.Dataset
-        Variable(s) to smear.
-    bins : array_like
-        Bin edges for the smeared spectrum.
-    x : str, array_like, xr.DataArray
-        Coordinates at which the `y` values are valid/defined.
-        If `y` is `array`, `x` must be provided as an `array` of the same size.
-        If `y` is an xarray type, providing the ``name`` as a string is sufficient.
-    xname_out : str
-        Used to label the new dimension of `y` is an `xarray.Dataset`, for example.
-    method : str
-        Smear method.
-        ``'tuv'`` for :func:`smear_tuv` or ``'trapz_interp'`` for :func:`smear_trapz_interp`.
-    **method_kwargs
-        Passed on to the smear method function.
-    """
-    # TODO
-    raise NotImplementedError
 
 
 def edges_from_centers(x):

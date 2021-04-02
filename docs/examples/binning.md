@@ -58,7 +58,7 @@ fig, ax = plt.subplots(2, 2, figsize=(11, 7))
 
 for bins, ax in zip(binss, ax.flat):
     # The spectral variables have coord `wl0`
-    crt.spectra.plot_binned_ds(ds0, crt.spectra.smear_ds(ds0, bins, xname="wl0"), yname="SI_df", xtight="bins", ax=ax)
+    crt.spectra.plot_binned_ds(ds0, crt.spectra.smear(ds0, bins, x="wl0"), yname="SI_df", xtight="bins", ax=ax)
 ```
 
 ```{warning}
@@ -75,7 +75,7 @@ tot0 = ds0.I_dr.sum().values
 tot = []
 nbands = np.arange(1, 200, 10)
 for n in nbands:
-    tot.append(crt.spectra.smear_ds(ds0, np.linspace(0.3, 4.0, n)).I_dr.sum().values)
+    tot.append(crt.spectra.smear(ds0, np.linspace(0.3, 4.0, n)).I_dr.sum().values)
 
 res = stats.linregress(nbands, tot)
 
@@ -103,7 +103,7 @@ ds0_l
 
 ```{code-cell} ipython3
 bins2 = np.linspace(0.3, 2.6, 21)
-ds2_l = crt.spectra.smear_ds(ds0_l, bins2)
+ds2_l = crt.spectra.smear(ds0_l, bins2)
 crt.spectra.plot_binned_ds(ds0_l, ds2_l, yname="rl")
 ```
 
@@ -115,7 +115,7 @@ bins3 = np.linspace(0.3, 2.6, 4)
 fig, axs = plt.subplots(2, 1, figsize=(6, 6))
 
 for method, ax in zip(["tuv", "avg_optical_prop"], axs.flat):
-    crt.spectra.plot_binned_ds(ds0_l, crt.spectra.smear_ds(ds0_l, bins3, method=method), yname="rl", ax=ax)
+    crt.spectra.plot_binned_ds(ds0_l, crt.spectra.smear(ds0_l, bins3, method=method), yname="rl", ax=ax)
 ```
 
 ## Average optical properties
@@ -136,7 +136,7 @@ for bounds in boundss:
 
 ```{code-cell} ipython3
 # On the smeared/binned leaf reflectance spectrum
-ds2 = crt.spectra.smear_ds(ds0, bins2)
+ds2 = crt.spectra.smear(ds0, bins2)
 data = (
     ds2.sel(wl=ds2_l.wl.values, method="nearest").I_dr +
     ds2.sel(wl=ds2_l.wl.values, method="nearest").I_df
@@ -174,4 +174,18 @@ ax.set(
     ylabel=r"Spectral radiance $L(\lambda)$ [W sr$^{-1}$ m$^{-2}$ m$^{-1}$]",
 )
 ax.legend(title="Blackbody temperature (K)");
+```
+
+Function {func}`crt1d.spectra.smear` can be applied to array-like, {class}`xarray.DataArray`, or {class}`xarray.Dataset`.
+
+```{code-cell} ipython3
+crt.spectra.smear(ds2_l.rl.values, bins2, x=ds2_l.wl)
+```
+
+```{code-cell} ipython3
+crt.spectra.smear(ds2_l.rl, bins2)
+```
+
+```{code-cell} ipython3
+crt.spectra.smear(ds2_l, bins2)
 ```
