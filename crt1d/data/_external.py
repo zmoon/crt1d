@@ -11,7 +11,7 @@ from ..variables import _tup
 from ..variables import _wl_coord_dict
 
 
-def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbrown=1.0, ewt=0.015, lma=0.009):
+def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbr=1.0, ewt=0.015, lma=0.009):
     """Run PROSPECT-5 from Python package ``prosail``
     (source `on GitHub <https://github.com/jgomezdans/prosail>`_)
     to generate leaf spectra.
@@ -30,7 +30,7 @@ def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbrown=1.0, ewt=0.015, lma=0.009):
     car : float
         Carotenoid concentration (μg cm-2).
         Typical range: [0, 25].
-    cbrown : float
+    cbr : float
         Brown pigment fraction/factor in [0, 1].
     ewt : float
         Equivalent leaf water thickness (cm).
@@ -39,13 +39,19 @@ def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbrown=1.0, ewt=0.015, lma=0.009):
         Leaf dry mass per unit area (g cm-2).
         Typical range: [0, 0.02].
 
+    Returns
+    -------
+    xr.Dataset
+        Dataset of the leaf reflectance and transmittance spectra,
+        and PROSPECT input parameters as dimensionless variables.
+
     Notes
     -----
     Quoted typical ranges are based on the PROSPECT page and Python PROSAIL readme linked above.
     """
     import prosail
 
-    wl_nm, r, t = prosail.run_prospect(n, cab, car, cbrown, ewt, lma, prospect_version="5")
+    wl_nm, r, t = prosail.run_prospect(n, cab, car, cbr, ewt, lma, prospect_version="5")
 
     wl = wl_nm / 1000  # nm -> um
 
@@ -55,6 +61,12 @@ def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbrown=1.0, ewt=0.015, lma=0.009):
         data_vars={
             "rl": _tup("leaf_r", r),
             "tl": _tup("leaf_t", t),
+            "n": ((), n, {"long_name": "Leaf structure parameter", "units": ""}),
+            "cab": ((), cab, {"long_name": "Chlorophyll a+b", "units": "μg cm-2"}),
+            "car": ((), car, {"long_name": "Carotenoid", "units": "μg cm-2"}),
+            "cbr": ((), cbr, {"long_name": "Brown pigment", "units": ""}),
+            "ewt": ((), ewt, {"long_name": "Equivalent leaf water thickness", "units": "cm"}),
+            "lma": ((), lma, {"long_name": "Leaf dry mass density", "units": "g cm-2"}),
         },
         attrs=attrs,
     )

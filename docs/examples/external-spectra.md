@@ -115,7 +115,10 @@ plot(ds)
 
 ```{code-cell} ipython3
 ds = crt.data.leaf_ps5()
+ds
+```
 
+```{code-cell} ipython3
 fig, ax = plt.subplots()
 
 ds.rl.plot(ax=ax, label="reflectance")
