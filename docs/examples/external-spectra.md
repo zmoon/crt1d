@@ -52,11 +52,11 @@ ds.SI_dr.plot(ax=ax, label="direct")
 ds.SI_df.plot(ax=ax, label="diffuse")
 
 ax.set(ylabel=f"Spectral irradiance [{ds.SI_dr.units}]")
-ax.legend()
+ax.legend();
 ```
 
 ```{code-cell} ipython3
-ds.plot.scatter(x="SI_dr", y="SI_df")
+ds.plot.scatter(x="SI_dr", y="SI_df");
 ```
 
 ### Variations
@@ -113,6 +113,8 @@ plot(ds)
 
 ## PROSPECT-5
 
+{func}`crt1d.data.leaf_ps5` runs PROSPECT-5 (via [Python PROSAIL](https://github.com/jgomezdans/prosail)) and saves the results to an {class}`xarray.Dataset`.
+
 ```{code-cell} ipython3
 ds = crt.data.leaf_ps5()
 ds
@@ -125,5 +127,5 @@ ds.rl.plot(ax=ax, label="reflectance")
 ds.tl.plot(ax=ax, label="transmittance")
 
 ax.set(ylabel="")
-ax.legend(title="Leaf element")
+ax.legend(title="Leaf element");
 ```
