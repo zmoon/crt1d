@@ -25,16 +25,7 @@ from scipy import stats
 import crt1d as crt
 ```
 
-## Load included spectra
-
-```{code-cell} ipython3
-ds0 = crt.data.load_default_sp2()
-ds0_l = crt.data.load_ideal_leaf().dropna(dim="wl")
-```
-
-## Different binnings
-
-### Solar
+## Solar
 
 Although the main purpose of the "smear" functions is to provide the ability to go to lower spectral resolution while conserving certain properties, they also work as interpolators when a higher resolution grid is used.
 
@@ -43,6 +34,7 @@ The bins do not have to be equal-width---variable grid will also work!
 ```
 
 ```{code-cell} ipython3
+ds0 = crt.data.load_default_sp2()
 ds0
 ```
 
@@ -89,32 +81,34 @@ Instead, for computing irradiance in bins, {func}`crt1d.spectra.smear_si` can be
 
 +++
 
-### Leaf/soil optical properties
+(leafsoil)=
+## Leaf/soil optical properties
 
 ```{code-cell} ipython3
+ds0_l = crt.data.load_ideal_leaf().dropna(dim="wl")
 ds0_l
 ```
 
 ```{code-cell} ipython3
 bins2 = np.linspace(0.3, 2.6, 21)
-ds2_l = crt.spectra.smear(ds0_l, bins2)
-crt.spectra.plot_binned_ds(ds0_l, ds2_l, yname="rl")
+ds1_l = crt.spectra.smear(ds0_l, bins2)
+crt.spectra.plot_binned_ds(ds0_l, ds1_l, yname="rl")
 ```
 
 Function {func}`crt1d.spectra.smear` can be applied to array-like, {class}`xarray.DataArray`, or {class}`xarray.Dataset`.
 
 ```{code-cell} ipython3
 # `x` array must be provided if passing array
-crt.spectra.smear(ds2_l.rl.values, bins2, x=ds2_l.wl)
+crt.spectra.smear(ds1_l.rl.values, bins2, x=ds1_l.wl)
 ```
 
 ```{code-cell} ipython3
 # `x` assumed to be the variable with `name` `'wl'`
-crt.spectra.smear(ds2_l.rl, bins2)
+crt.spectra.smear(ds1_l.rl, bins2)
 ```
 
 ```{code-cell} ipython3
-crt.spectra.smear(ds2_l, bins2)
+crt.spectra.smear(ds1_l, bins2)
 ```
 
 ```{warning}
@@ -140,6 +134,8 @@ Below, we can see that when we compute the average reflectance, over certain reg
 
 In the below, `'unifrom'` corresponds to standard smearing, with no solar weighting.
 
+First, we calculate average values using the original spectrum, loaded [above](leafsoil).
+
 ```{code-cell} ipython3
 # On the original leaf reflectance spectrum
 boundss = [(0.4, 0.7), (0.7, 1.0), (1.0, 2.5), (0.3, 2.5)]
@@ -154,12 +150,14 @@ for bounds in boundss:
         print(f" {light}: {ybar:.4g}")
 ```
 
+Now, we use the spectrum smeared [above](leafsoil).
+
 ```{code-cell} ipython3
 # On a smeared/binned leaf reflectance spectrum
 ds2 = crt.spectra.smear(ds0, bins2)
 data = (
-    ds2.sel(wl=ds2_l.wl.values, method="nearest").I_dr +
-    ds2.sel(wl=ds2_l.wl.values, method="nearest").I_df
+    ds2.sel(wl=ds1_l.wl.values, method="nearest").I_dr +
+    ds2.sel(wl=ds1_l.wl.values, method="nearest").I_df
 )
 lights = ["planck", "uniform", data]
 
@@ -167,7 +165,7 @@ for bounds in boundss:
     print(bounds)
     for light in lights:
         ybar = crt.spectra.avg_optical_prop(
-            ds2_l.rl, bounds, xe=ds2_l.wle, light=light
+            ds1_l.rl, bounds, xe=ds1_l.wle, light=light
         )
         if isinstance(light, str):
             print(f" {light}: {ybar:.4g}")
@@ -182,7 +180,7 @@ for bounds in boundss:
 ## Planck function
 
 [Planck](https://en.wikipedia.org/wiki/Planck%27s_law) radiance is one of the `light` options can be used to weight values
-when smearing the spectra with the `avg_optical_prop` option. This is important for albedo, for example, because albedo in some waveband (such as visible or shortwave) depends on both the albedo spectrum and the spectrum of the illuminating light.
+when smearing the spectra with the `method='avg_optical_prop'` option. This is important for albedo, for example, because albedo in some waveband (such as visible or shortwave) depends on both the albedo spectrum and the spectrum of the illuminating light.
 
 ```{code-cell} ipython3
 wl_um = np.linspace(0.3, 2.6, 200)
