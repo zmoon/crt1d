@@ -193,13 +193,10 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
     return (y * w).sum() / w.sum()  # weighted average
 
 
-def smear_tuv_1(x, y, bin):
+def _smear_tuv_1(x, y, bin):
     r"""Smear `y` values at positions `x` over the region defined by `bin`.
     Returns a single value, corresponding to the (trapezoidally) integrated average of
     :math:`y(x)` in the bin.
-
-    .. math::
-       \frac{\int_{x_l}^{x_u} y(x) \, dx}{x_u - x_l}
 
     Parameters
     ----------
@@ -209,14 +206,6 @@ def smear_tuv_1(x, y, bin):
         the values :math:`y(x)` to be smeared
     bin : array_like
         a lower and upper bound: (:math:`x_l`, :math:`x_u`)
-
-    Notes
-    -----
-    Implementation based on
-    `F0AM's implementation <https://github.com/AirChem/F0AM/blob/281f80adbdaeaf580d4757f8bf6ca02407251974/Chem/Photolysis/IntegrateJ.m#L193-L217>`_
-    of TUV's un-named algorithm.
-    It works by applying cumulative trapezoidal integration to the original data,
-    interpolating within `x` so that :math:`x_l` and :math:`x_u` don't have to be on the original `x` grid.
     """
     xl, xu = bin  # shadowing a builtin but whatever
     area = 0
@@ -236,31 +225,73 @@ def smear_tuv_1(x, y, bin):
 
 
 def smear_tuv(x, y, bins):
-    r"""Use :func:`smear_tuv_1` to bin `y` values at `x` positions into `bins` (new *x*-bin edges).
+    r"""Smear `y`\(`x`) into `bins`,
+    using the TUV method.
     Returns an array of in-bin *y*-values ``ynew``, such that
-    :math:`\sum_i y_{\text{new}, i} \Delta x_i`
-    is equal to the original trapezoidal integral of *y(x)* over the range [``bins[0]``, ``bins[-1]``].
+    :math:`\sum_i y_{\text{new}, i} \Delta x_i` (``(ynew * np.diff(dx)).sum()``)
+    is equal to the original trapezoidal integral of *y(x)*
+    over the range [``bins[0]``, ``bins[-1]``], ie.,
+
+    Each value in the result is the (trapezoidally) integrated average of :math:`y(x)`
+    in the corresponding bin (:math:`x_{l,i}`, :math:`x_{u,i}`).
+
+    .. math::
+       \frac{\int_{x_l}^{x_u} y(x) \, dx}{x_u - x_l}
+
+    Parameters
+    ----------
+    x : array_like
+        Coordinates of the `y` values (the original grid).
+    y : array_like
+        Values :math:`y(x)` to be smeared/binned.
+    bins : array_like
+        Bin edges.
+
+    Returns
+    -------
+    ynew : array_like
+        New values, valid for each bin (size ``bins.size - 1``).
+
+    Notes
+    -----
+    Implementation based on
+    `F0AM's implementation <https://github.com/AirChem/F0AM/blob/281f80adbdaeaf580d4757f8bf6ca02407251974/Chem/Photolysis/IntegrateJ.m#L193-L217>`_
+    of TUV's un-named algorithm.
+    It works by applying cumulative trapezoidal integration to the original data,
+    interpolating within `x` so that :math:`x_l` and :math:`x_u` don't have to be on the original `x` grid.
     """
-    # TODO: make smear_tuv_1 non-public and move its docs here
     ynew = np.zeros(bins.size - 1)
     # TODO: more efficient looping, maybe `while` over `x`
     for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
-        ynew[i] = smear_tuv_1(x, y, bin_)
+        ynew[i] = _smear_tuv_1(x, y, bin_)
     return ynew  # valid for band, not at left edge
 
 
 def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
-    r"""Smear `y`\(`x`) to the centers of `bins`,
+    r"""Smear `y`\(`x`) into `bins`,
     using
     `spline <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.InterpolatedUnivariateSpline.html>`_
     interpolation and trapezoidal integration.
 
     Parameters
     ----------
+    x : array_like
+        Coordinates of the `y` values (the original grid).
+    y : array_like
+        Values :math:`y(x)` to be smeared/binned.
+    bins : array_like
+        Bin edges.
     k : int
         Degree of the spline used (1--5). The spline passes through all data points.
     interp : str
-        ``'F'`` to interpolate the cumulative trapz integral, or ``'f'`` to interpolate the `y` data.
+        ``'F'`` to interpolate the cumulative trapz integral,
+        or ``'f'`` to interpolate the `y` data.
+
+    Returns
+    -------
+    ynew : array_like
+        New values, valid for each bin (size ``bins.size - 1``).
+
     """
     if interp == "f":
         spl = InterpolatedUnivariateSpline(x, y, k=k)
@@ -282,9 +313,23 @@ def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
 
 
 def smear_avg_optical_prop(x, y, bins, **kwargs):
-    """Use :func:`avg_optical_prop` with `x` as ``x``.
-    to bin `y` values at `x` positions into `bins` (new *x*-bin edges).
+    r"""Smear `y`\(`x`) into `bins`,
+    using :func:`avg_optical_prop` with `x` as ``x``.
     `**kwargs` are passed on to :func:`avg_optical_prop`.
+
+    Parameters
+    ----------
+    x : array_like
+        Coordinates of the `y` values (the original grid).
+    y : array_like
+        Values :math:`y(x)` to be smeared/binned.
+    bins : array_like
+        Bin edges.
+
+    Returns
+    -------
+    ynew : array_like
+        New values, valid for each bin (size ``bins.size - 1``).
     """
     ynew = np.zeros((bins.size - 1))
     for i, bounds in enumerate(zip(bins[:-1], bins[1:])):
@@ -372,9 +417,12 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
 
 
 def smear_si(ds, bins, *, xname_out="wl", **kwargs):
-    """Smear spectral irradiance and compute in-bin irradiance in the new bins.
+    """Helper function to smear spectral irradiance and then compute in-bin irradiance in the new bins.
     `**kwargs` are passed to :func:`smear_ds`.
-    `ds` must have variables ``'SI_dr'`` (direct spectral irradiance), ``'SI_df'`` (diffuse).
+
+    .. note::
+       `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
+       and ``'SI_df'`` (diffuse).
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
