@@ -10,13 +10,11 @@ import xarray as xr
 from .. import DATA_BASE_DIR
 from ..spectra import _edges_from_centers
 from ..variables import _tup
-from .external import solar_sp2
+from ..variables import _wl_coord_dict
+from ._external import leaf_ps5
+from ._external import solar_sp2
 
 DATA_DIR_STR = DATA_BASE_DIR.as_posix()
-
-
-def _wl_coord_dict(wl, *, units="μm"):
-    return {"wl": (("wl"), wl, {"long_name": "Wavelength", "units": units})}
 
 
 def load_soil_fuentes2007(wl_um):
@@ -134,7 +132,7 @@ def load_default_sp2(*, midpt=True):
     fp = DATA_BASE_DIR / "SPCTRAL2_xls_default-spectrum.csv"
     wl0, SI_dr0, SI_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
 
-    # TODO: use `_interpret_dx_relative_spectrum` here and in `solar_sp2`?
+    # TODO: use `_interpret_dx_relative_spectrum` here and in `solar_sp2`? and ideal leaf?
     if midpt:
         wle = wl0
         dwl = np.diff(wle)
@@ -186,6 +184,14 @@ def load_default_sp2(*, midpt=True):
 def load_default(*, midpt=True):
     """Load default toc irradiance spectra, and leaf & soil optical props,
     used in :func:`~crt1d.cases.load_default_case`.
+
+    The defaults are given by:
+
+    * :func:`load_ideal_leaf`
+
+    * :func:`load_default_sp2`
+
+    * :func:`load_soil_fuentes2007`
     """
     # load individual datasets
     ds_l = load_ideal_leaf(midpt=midpt)

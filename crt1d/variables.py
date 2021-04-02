@@ -265,6 +265,10 @@ def _tup(name, data):
     return VMD[name].dv_tuple(data)
 
 
+def _wl_coord_dict(wl, *, units="μm"):
+    return {"wl": (("wl"), wl, {"long_name": "Wavelength", "units": units})}
+
+
 def _params_list_table(vmdes=None):
     """Form an entire MyST list-table.
 

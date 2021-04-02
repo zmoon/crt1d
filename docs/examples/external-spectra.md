@@ -110,3 +110,17 @@ plot(ds)
 ```{code-cell} ipython3
 # TODO: others
 ```
+
+## PROSPECT-5
+
+```{code-cell} ipython3
+ds = crt.data.leaf_ps5()
+
+fig, ax = plt.subplots()
+
+ds.rl.plot(ax=ax, label="reflectance")
+ds.tl.plot(ax=ax, label="transmittance")
+
+ax.set(ylabel="")
+ax.legend(title="Leaf element")
+```

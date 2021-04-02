@@ -8,13 +8,57 @@ import xarray as xr
 
 from ..spectra import _interpret_dx_relative_spectrum
 from ..variables import _tup
+from ..variables import _wl_coord_dict
 
 
-def leaf_ps5():
-    """Run PROSPECT from Python package ``prosail`` to generate leaf spectra."""
+def leaf_ps5(n=1.2, cab=30.0, car=10.0, cbrown=1.0, ewt=0.015, lma=0.009):
+    """Run PROSPECT-5 from Python package ``prosail``
+    (source `on GitHub <https://github.com/jgomezdans/prosail>`_)
+    to generate leaf spectra.
+
+    Default values are the same as those on the
+    `online PROSPECT page <http://opticleaf.ipgp.fr/index.php?page=prospect>`_.
+
+    Parameters
+    ----------
+    n : float
+        Leaf structure parameter (number of effective layers of leaf?; dimensionless).
+        Typical range: [0.8, 3.0].
+    cab : float
+        Chlorophyll a+b concentration (μg cm-2).
+        Typical range: [0, 100].
+    car : float
+        Carotenoid concentration (μg cm-2).
+        Typical range: [0, 25].
+    cbrown : float
+        Brown pigment fraction/factor in [0, 1].
+    ewt : float
+        Equivalent leaf water thickness (cm).
+        Typical range: [0, 0.05].
+    lma : float
+        Leaf dry mass per unit area (g cm-2).
+        Typical range: [0, 0.02].
+
+    Notes
+    -----
+    Quoted typical ranges are based on the PROSPECT page and Python PROSAIL readme linked above.
+    """
     import prosail
 
-    raise NotImplementedError
+    wl_nm, r, t = prosail.run_prospect(n, cab, car, cbrown, ewt, lma, prospect_version="5")
+
+    wl = wl_nm / 1000  # nm -> um
+
+    attrs = {}
+    ds = xr.Dataset(
+        coords=_wl_coord_dict(wl),
+        data_vars={
+            "rl": _tup("leaf_r", r),
+            "tl": _tup("leaf_t", t),
+        },
+        attrs=attrs,
+    )
+    return ds
 
 
 def solar_sp2(
