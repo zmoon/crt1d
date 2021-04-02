@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from .. import DATA_BASE_DIR
-from ..spectra import edges_from_centers
+from ..spectra import _edges_from_centers
 from ..variables import _tup
 from .external import solar_sp2
 
@@ -146,7 +146,7 @@ def load_default_sp2(*, midpt=True):
         I_df = (SI_df0[:-1] + SI_df0[1:]) / 2 * dwl
 
     else:  # edges-from-centers method
-        wle = edges_from_centers(wl0)
+        wle = _edges_from_centers(wl0)
         dwl = np.diff(wle)
         wl = wl0  # for in-band irradiance (and original spectral irradiance)
 

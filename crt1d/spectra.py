@@ -514,7 +514,7 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     return ds_new
 
 
-def edges_from_centers(x):
+def _edges_from_centers(x):
     """Estimate locations of the bin edges by extrapolating the grid spacing at the edges.
 
     .. warning::
@@ -545,7 +545,7 @@ def _interpret_dx_relative_spectrum(ydx, x, *, midpt=True):
     Summing these *y* values is equivalent to the midpoint Riemann sum of the original
     *y(x)/dx*.
 
-    With the edges-from-centers method (``midpt=False``; uses :func:`edges_from_centers`),
+    With the edges-from-centers method (``midpt=False``; uses :func:`_edges_from_centers`),
     the return arrays will be size *n*.
     Estimating the edges allows the original *y(x)/dx* values to be used to compute *y(x*).
 
@@ -562,7 +562,7 @@ def _interpret_dx_relative_spectrum(ydx, x, *, midpt=True):
         y = (ydx[:-1] + y[1:]) / 2 * dx
 
     else:  # edges-from-centers method
-        xe = edges_from_centers(x)  # n+1 values
+        xe = _edges_from_centers(x)  # n+1 values
         dx = np.diff(xe)
 
         x_y = x  # original grid
