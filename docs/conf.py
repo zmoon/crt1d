@@ -12,8 +12,8 @@ import crt1d
 # -- Project information -----------------------------------------------------
 
 project = "crt1d"
-copyright = f"2020\u2013{datetime.datetime.now().year}"
-author = "Zachary Moon"
+author = "Z. Moon"
+copyright = f"2020\u2013{datetime.datetime.now().year}, {author}"
 
 # Get version from metadata
 release = get_distribution("crt1d").version
