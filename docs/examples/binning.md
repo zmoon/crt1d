@@ -73,3 +73,49 @@ ax.set(
 )
 ax.legend(title="Blackbody temperature (K)")
 ```
+
+## Optical properties
+
+Smearing optical properties as shown above is a bit unfair(?). As mentioned in the previous section, reflectance/transmittance are like albedo in that they depend on the incoming light as well. We can account for this by weighting with a light spectrum when averaging the optical property spectra.
+
+Below, we can see that when we compute the average reflectance, over certain regions this doesn't matter much (PAR/visible). In the NIR, however, there is a strong preference for smaller wavelengths, which overall weights leaf reflectance towards higher values.
+
+```{code-cell} ipython3
+# On the original leaf reflectance spectrum
+boundss = [(0.4, 0.7), (0.7, 1.0), (1.0, 2.5), (0.3, 2.5)]
+lights = ["planck", "uniform"]
+
+for bounds in boundss:
+    print(bounds)
+    for light in lights:
+        ybar = crt.spectra.avg_optical_prop(
+            ds0_l.rl, bounds, x=ds0_l.wl, light=light
+        )
+        print(f" {light}: {ybar:.4g}")
+```
+
+```{code-cell} ipython3
+# On the smeared/binned leaf reflectance spectrum
+data = (
+    ds1.sel(wl=ds1_l.wl.values, method="nearest").I_dr +
+    ds1.sel(wl=ds1_l.wl.values, method="nearest").I_df
+)
+lights = ["planck", "uniform", data]
+
+for bounds in boundss:
+    print(bounds)
+    for light in lights:
+        ybar = crt.spectra.avg_optical_prop(
+            ds1_l.rl, bounds, xe=ds1_l.wle, light=light
+        )
+        if isinstance(light, str):
+            print(f" {light}: {ybar:.4g}")
+        else:
+            print(f" data: {ybar:.4g}")
+```
+
+👆 Notice that over the whole spectrum, the values for 'uniform' and 'planck' are very similar to the calculations on the pre-smeared spectrum.
+
+```{code-cell} ipython3
+
+```

@@ -37,7 +37,82 @@ def l_wl_planck_integ(T_K, wla_um, wlb_um):
     wlb_um : float
         Upper bound.
     """
-    return quad(l_wl_planck, wla_um, wlb_um)[0]
+    return quad(lambda wl_um: l_wl_planck(T_K, wl_um), wla_um, wlb_um)[0]
+
+
+def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs=None):
+    r"""Average reflectance or transmittance over some region,
+    from a spectrum or binned (smeared) spectrum.
+
+    The average value depends on the spectrum of the illuminating light
+    as well as the property's spectrum.
+
+    Parameters
+    ----------
+    y : array_like
+        Reflectance or transmittance spectrum.
+    bounds : array_like
+        Region lower and upper bounds.
+    x : array_like, optional
+        Wavelength values where `y` is defined.
+        (Bin centers, or coordinates of original spectrum.)
+    xe : array_like, optional
+        Bin edges.
+        Don't provide `x` if using `xe`.
+    light : str, array_like, callable
+        Method for constructing the light weights used in the weighted average.
+
+        Default method integrates 6000 K Planck radiance over each bin
+        using :func:`l_wl_planck_integ`.
+
+        Can be an array-like of weights (e.g., irradiances).
+
+        TODO: Can be function that can take `x` as its first parameter to provide
+        a weight for `y`\(`x`).
+    light_kwargs : dict
+        For example, ``T_K`` for ``light='planck'``.
+    """
+    from .diagnostics import band_sum_weights
+
+    if light_kwargs is None:
+        light_kwargs = {}
+
+    y = np.asarray(y)
+    if x is not None and xe is not None:
+        raise ValueError("only provide one of `x` and `xe`.")
+
+    # Spectrum
+    if x is not None:
+        x = np.asarray(x)
+        assert x.size == y.size
+
+        # Now bin (temporary!? until working weights into smear)
+        xe = np.linspace(*bounds, 200)
+        y = smear_tuv(x, y, xe)
+
+    # Already been binned -- respect the edges
+    if xe is not None:
+        xe = np.asarray(xe)
+        assert xe.size == y.size + 1
+
+    w = band_sum_weights(xe, bounds)  # initial weights
+    # print(w)
+
+    # Add weights based on light spectrum
+    if isinstance(light, str):
+        if light == "planck":
+            T_K = light_kwargs.get("T_K", 6000)
+            w *= [l_wl_planck_integ(T_K, a, b) for a, b in zip(xe[:-1], xe[1:])]
+        elif light == "uniform":
+            w *= np.ones_like(y)
+        else:
+            raise ValueError("invalid choice of `light`")
+    else:  # assume array-like
+        w *= np.asarray(light)
+
+    # print(w / w.sum())
+
+    return (y * w).sum() / w.sum()  # weighted average
 
 
 def smear_tuv_1(x, y, bin):
