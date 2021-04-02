@@ -1,6 +1,6 @@
 """
-Calculations/plots from the CRT solutions, using the model's output dataset
-created by :meth:`crt1d.Model.to_xr()`.
+Calculations/plots using the CRT solutions (irradiance spectral profiles),
+using the model output dataset created by :meth:`crt1d.Model.to_xr()`.
 """
 import warnings
 
@@ -8,25 +8,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.constants import c
-from scipy.constants import h
-from scipy.constants import N_A
+
+from .spectra import _x_frac_in_bounds
+from .spectra import BAND_DEFNS_UM
+from .spectra import e_wl_umol
 
 
-def e_wl_umol(wl_um):
-    """J/(μmol photons) at wavelength `wl_um`."""
-    # convert wavelength to SI units (for compatibility with the constants)
-    wl = wl_um * 1e-6  # um -> m
-
-    e_wl_1 = h * c / wl  # J (per one photon)
-    e_wl_mol = e_wl_1 * N_A  # J/mol
-    e_wl_umol = e_wl_mol * 1e-6  # J/mol -> J/umol
-
-    return e_wl_umol
-
-
-def E_to_PFD_da(da):
-    """Assuming wl in microns, convert W/m2 -> (μmol photons)/m2/s."""
+def _E_to_PFD_da(da):
+    """Assuming wavelength in microns, convert W/m2 -> (μmol photons)/m2/s.
+    Returns a new :class:`xr.DataArray`.
+    """
     assert da.attrs["units"] == "W m-2"
     wl_um = da.wl
     f = 1 / e_wl_umol(wl_um)  # J/umol -> umol/J
@@ -43,80 +34,21 @@ def E_to_PFD_da(da):
     return da_new
 
 
-def band_sum_weights(xe, bounds):
-    """Weights for the computation of a band sum (integral).
-    The calculation includes fractional contributions from bands that are partially
-    within the `bounds`.
+def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
+    """Reduce spectral variables in `ds` by summing in-band irradiances
+    to give the integrated irradiance in a given spectral band.
 
-    Parameters
-    ----------
-    xe : array
-        Edges
-    bounds : 2-tuple(float)
-        Bounds
+    `bounds` does not have to be provided if `band_name` is one of the known bands.
+    If `variables` is ``None``, we attempt to guess.
 
-    Raises
-    ------
-    UserWarning
-        If the bounds extend outside the data range (ignored for solar).
+    Optionally, we additionally calculate photon flux density (PFD) variants of the quantities.
+    It is important to do this at this stage (rather than after integrating) due to the non-linear
+    dependence of photon energy on wavelength.
 
     Returns
     -------
-    array
-        Weights, size ``xe.size - 1``.
-    """
-    x1, x2 = xe[:-1], xe[1:]  # left and right
-
-    b1, b2 = bounds[0], bounds[1]
-
-    if (b1 < x1[0] or b2 > x2[-1]) and bounds != BAND_DEFNS_UM["solar"]:
-        warnings.warn(
-            f"`bounds` ({b1:.3g}, {b2:.3g}) extend outside the data range "
-            f"defined by `xe` ({x1[0]:.3g}, {x2[-1]:.3g})"
-        )
-
-    in_bounds = (x2 >= b1) & (x1 <= b2)
-    x1in, x2in = x1[in_bounds], x2[in_bounds]
-    dx = x2in - x1in
-    # db = b2 - b1
-
-    # need to find a better (non-loop) way to do this, but for now...
-    w = np.zeros_like(x1in)
-    for i in range(x1in.size):
-        x1in_i, x2in_i = x1in[i], x2in[i]
-        if x1in_i < b1:  # extending out on left
-            w[i] = (x2in_i - b1) / dx[i]
-        elif x2in_i > b2:  # extending out on right
-            w[i] = (b2 - x1in_i) / dx[i]
-        else:  # completely within the bounds
-            w[i] = 1
-
-    w_all = np.zeros(xe.size - 1)
-    w_all[in_bounds] = w
-
-    return w_all
-
-
-def calc_band_sum(y, xe, bounds):
-    assert y.size + 1 == xe.size, "Edges must have one more value than `y`."
-    w = band_sum_weights(xe, bounds)
-
-    return np.sum(y * w)
-
-
-BAND_DEFNS_UM = {
-    "PAR": (0.4, 0.7),
-    "NIR": (0.7, 2.5),
-    "UV": (0.01, 0.4),
-    "solar": (0.3, 5.0),
-}
-
-
-def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
-    """Reduce spectral variables in `ds` by summing in-band irradiances
-    to give the integrated irradiance in that spectral region.
-    `bounds` does not have to be provided if `band_name` is one of the known bands.
-    If `variables` is None, will attempt to guess.
+    xr.Dataset
+        New dataset with no wavelength dimension, only height.
     """
     ds = ds.copy()
     if bounds is None:
@@ -127,10 +59,11 @@ def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=Fa
     try:
         wle = ds.wle.values
     except AttributeError:
+        # TODO: warn; use edges_from_centers instead?
         wle = np.r_[wl - 0.5 * dwl, wl[-1] + 0.5 * dwl[-1]]
 
     # weights as a function of wavelength
-    w = xr.DataArray(dims="wl", data=band_sum_weights(wle, bounds))
+    w = xr.DataArray(dims="wl", data=_x_frac_in_bounds(wle, bounds))
 
     # default to searching for irradiance variables and actinic flux
     if variables is None:
@@ -148,7 +81,7 @@ def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=Fa
             }
         )
         if calc_PFD:
-            da_pfd = E_to_PFD_da(da)
+            da_pfd = _E_to_PFD_da(da)
             ln_new = f"{da_pfd.attrs['long_name']} - {band_name}"
             units = da_pfd.attrs["units"]
             vn_pfd = vn.replace("I", "PFD")
@@ -171,19 +104,21 @@ def ds_band_sum(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=Fa
 
 
 def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
-    """Multi-panel plot of profiles for specified string bandname `bn`.
+    """Multi-panel plot of profiles for specified band.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
+
+    This uses :func:`band` to sum irradiances within the band.
 
     Parameters
     ----------
-    dsets : list(xarray.Dataset)
-        Created using :meth:`~crt1d.model.Model.to_xr`.
+    dsets : list of xr.Dataset
+        Created using :meth:`~crt1d.Model.to_xr`.
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
 
     # integrate over the band
-    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+    dsets = [band(ds, band_name=band_name, bounds=bounds) for ds in dsets]
 
     # variables to show in each panel
     varnames = [
@@ -217,7 +152,7 @@ def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
 # TODO: def plot_E_closure_spectra():
 
 
-def df_E_balance(dsets, *, band_name="solar", bounds=None):
+def compare_ebal(dsets, *, band_name="solar", bounds=None):
     """
     For `dsets`, assess energy balance closure by comparing
     computed canopy and soil absorption to incoming minus outgoing
@@ -225,15 +160,18 @@ def df_E_balance(dsets, *, band_name="solar", bounds=None):
 
     Parameters
     ----------
-    dsets : list(xarray.Dataset)
-        :meth:`~crt1d.model.Model.to_xr`.
+    dsets : list of xr.Dataset
+        Created using :meth:`~crt1d.Model.to_xr`.
 
+    Returns
+    -------
+    pd.DataFrame
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
 
     # integrate over the band
-    dsets = [ds_band_sum(ds, band_name=band_name, bounds=bounds) for ds in dsets]
+    dsets = [band(ds, band_name=band_name, bounds=bounds) for ds in dsets]
 
     IDs = [ds.attrs["scheme_name"] for ds in dsets]
     columns = [

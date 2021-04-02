@@ -115,7 +115,3 @@ for bounds in boundss:
 ```
 
 👆 Notice that over the whole spectrum, the values for 'uniform' and 'planck' are very similar to the calculations on the pre-smeared spectrum.
-
-```{code-cell} ipython3
-
-```

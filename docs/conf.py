@@ -38,11 +38,15 @@ extensions = [
     "myst_nb",
 ]
 
+
+# -- Extension settings ------------------------------------------------------
+
 # intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
 }
 
 # napoleon
@@ -51,6 +55,7 @@ napoleon_numpy_docstring = True
 napoleon_preprocess_types = True
 napoleon_type_aliases = {
     "xr.Dataset": "xarray.Dataset",
+    "xr.DataArray": "xarray.DataArray",
     # NumPy
     "array_like": ":term:`array_like`",
     "array-like": ":term:`array-like <array_like>`",
@@ -58,6 +63,8 @@ napoleon_type_aliases = {
     "array": ":term:`array`",
     "np.ndarray": "numpy.ndarray",
     "ndarray": "numpy.ndarray",
+    # pandas
+    "pd.DataFrame": "pandas.DataFrame",
 }
 
 # include __init__() docstring content in autodocs for classes
@@ -74,6 +81,7 @@ autoapi_options = [
     "imported-members",
 ]
 autoapi_python_class_content = "both"  # include __init__ docstring as well as class
+autoapi_member_order = "groupwise"  # default is 'bysource'
 
 # bibtex
 bibtex_bibfiles = ["crt1d-refs.bib"]  # required in sphinxcontrib-bibtex v2

@@ -1,14 +1,37 @@
 """
 Spectral manipulations.
 """
+import warnings
+
 import numpy as np
 import xarray as xr
 from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import k as k_B
+from scipy.constants import N_A
 from scipy.integrate import cumtrapz
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
+
+
+BAND_DEFNS_UM = {
+    "PAR": (0.4, 0.7),
+    "NIR": (0.7, 2.5),
+    "UV": (0.01, 0.4),
+    "solar": (0.3, 5.0),
+}
+
+
+def e_wl_umol(wl_um):
+    """J/(μmol photons) at wavelength `wl_um`."""
+    # convert wavelength to SI units (for compatibility with the constants)
+    wl = wl_um * 1e-6  # um -> m
+
+    e_wl_1 = h * c / wl  # J (per one photon)
+    e_wl_mol = e_wl_1 * N_A  # J/mol
+    e_wl_umol = e_wl_mol * 1e-6  # J/mol -> J/umol
+
+    return e_wl_umol
 
 
 def l_wl_planck(T_K, wl_um):
@@ -38,6 +61,63 @@ def l_wl_planck_integ(T_K, wla_um, wlb_um):
         Upper bound.
     """
     return quad(lambda wl_um: l_wl_planck(T_K, wl_um), wla_um, wlb_um)[0]
+
+
+def _x_frac_in_bounds(xe, bounds):
+    """Fraction in region defined by `bounds` for the bins defined by edges `xe`.
+    The calculation includes fractional contributions from bands that are partially
+    within the `bounds`.
+
+    For bins of irradiance (W m-2, not W m-2 μm-1),
+    this can be used as weights to integrate over a region.
+
+    Parameters
+    ----------
+    xe : array
+        Edges
+    bounds : 2-tuple(float)
+        Bounds
+
+    Raises
+    ------
+    UserWarning
+        If the bounds extend outside the data range (ignored for solar).
+
+    Returns
+    -------
+    array
+        Weights, size ``xe.size - 1``.
+    """
+    x1, x2 = xe[:-1], xe[1:]  # left and right
+
+    b1, b2 = bounds[0], bounds[1]
+
+    if (b1 < x1[0] or b2 > x2[-1]) and bounds != BAND_DEFNS_UM["solar"]:
+        warnings.warn(
+            f"`bounds` ({b1:.3g}, {b2:.3g}) extend outside the data range "
+            f"defined by `xe` ({x1[0]:.3g}, {x2[-1]:.3g})"
+        )
+
+    in_bounds = (x2 >= b1) & (x1 <= b2)
+    x1in, x2in = x1[in_bounds], x2[in_bounds]
+    dx = x2in - x1in
+    # db = b2 - b1
+
+    # need to find a better (non-loop) way to do this, but for now...
+    w = np.zeros_like(x1in)
+    for i in range(x1in.size):
+        x1in_i, x2in_i = x1in[i], x2in[i]
+        if x1in_i < b1:  # extending out on left
+            w[i] = (x2in_i - b1) / dx[i]
+        elif x2in_i > b2:  # extending out on right
+            w[i] = (b2 - x1in_i) / dx[i]
+        else:  # completely within the bounds
+            w[i] = 1
+
+    w_all = np.zeros(xe.size - 1)
+    w_all[in_bounds] = w
+
+    return w_all
 
 
 def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs=None):
@@ -72,8 +152,6 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
     light_kwargs : dict
         For example, ``T_K`` for ``light='planck'``.
     """
-    from .diagnostics import band_sum_weights
-
     if light_kwargs is None:
         light_kwargs = {}
 
@@ -95,7 +173,7 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
         xe = np.asarray(xe)
         assert xe.size == y.size + 1
 
-    w = band_sum_weights(xe, bounds)  # initial weights
+    w = _x_frac_in_bounds(xe, bounds)  # initial weights
     # print(w)
 
     # Add weights based on light spectrum
@@ -216,6 +294,9 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
         raise ValueError(f"invalid `method` {method!r}")
 
     return (xname_out, ynew, da.attrs)
+
+
+# TODO: single `smear` fn that will dispatch to the others
 
 
 def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
