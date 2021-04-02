@@ -17,8 +17,8 @@ We test the following:
 
 * running the model with default case
 * plot methods for {class}`~crt1d.Model` class
-* :class:`xarray.Dataset` output
-* plots for output `xarray.Dataset`s
+* {class}`xarray.Dataset` output
+* plots for output {class}`xarray.Dataset`s
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt

@@ -21,3 +21,4 @@ Data
    :maxdepth: 1
 
    examples/binning
+   examples/external-spectra
