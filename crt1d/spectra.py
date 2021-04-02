@@ -207,7 +207,7 @@ def smear_tuv_1(x, y, bin):
         the original grid
     y : array_like
         the values :math:`y(x)` to be smeared
-    bin : tuple(float)
+    bin : array_like
         a lower and upper bound: (:math:`x_l`, :math:`x_u`)
 
     Notes
@@ -241,7 +241,9 @@ def smear_tuv(x, y, bins):
     :math:`\sum_i y_{\text{new}, i} \Delta x_i`
     is equal to the original trapezoidal integral of *y(x)* over the range [``bins[0]``, ``bins[-1]``].
     """
+    # TODO: make smear_tuv_1 non-public and move its docs here
     ynew = np.zeros(bins.size - 1)
+    # TODO: more efficient looping, maybe `while` over `x`
     for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
         ynew[i] = smear_tuv_1(x, y, bin_)
     return ynew  # valid for band, not at left edge
@@ -312,9 +314,6 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
     return (xname_out, ynew, da.attrs)
 
 
-# TODO: single `smear` fn that will dispatch to the others
-
-
 def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwargs):
     """Smear spectra (with coordinate variable `xname`) to new `bins`.
 
@@ -340,6 +339,7 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
     **method_kwargs
         Passed on to the smear method function.
     """
+    bins = np.asarray(bins)
     da_x = ds[xname]
     dx = np.diff(bins)
     xnewc = bins[:-1] + 0.5 * dx
@@ -485,29 +485,45 @@ def _interpret_dx_relative_spectrum(ydx, x, *, midpt=True):
     return y, x_y, dx  # TODO: return `xe` as well, maybe as named tuple?
 
 
-def plot_binned(x, y, xc, yc, dx):
+def plot_binned(x, y, xc, yc, dx, *, ax=None, xtight="orig"):
     """Compare an original spectrum to binned one.
 
     If `x` and `y` are :class:`xarray.DataArray`, their attrs will be used to label the plot.
 
     Parameters
     ----------
-    x, y :
+    x, y : array_like
         original/actual values at wavelengths (original spectra)
-    xc, yc :
+    xc, yc : array_like
         values at wave band centers
-    dx :
-        wave band widths
+    dx : array_like
+        wave band widths, same size as `xc`, `yc`.
     """
     import matplotlib.pyplot as plt
     from .utils import cf_units_to_tex
 
     spectrum_ls = "r-" if x.size > 150 else "r.-"
-    xbounds = (x[0], x[-1])
+    if xtight == "orig":
+        xbounds = (x[0], x[-1])
+    elif xtight == "bins":
+        xbounds = (xc[0] - 0.5 * dx[0], xc[-1] + 0.5 * dx[-1])
+    else:
+        raise ValueError("invalid `xtight`")
 
-    fig, ax = plt.subplots(figsize=(7, 4))
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(7, 4))
+    else:
+        fig = ax.get_figure()
 
-    ax.bar(xc, yc, width=dx, label="binned", align="center", alpha=0.7, edgecolor="blue")
+    ax.bar(
+        xc,
+        yc,
+        width=dx,
+        label=f"binned\n$N = {len(xc)}$",
+        align="center",
+        alpha=0.7,
+        edgecolor="blue",
+    )
 
     ax.plot(x, y, spectrum_ls, lw=1.5, label="spectrum")
 
@@ -520,18 +536,19 @@ def plot_binned(x, y, xc, yc, dx):
         ylabel = f"{lny} [{uny}]"
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+    else:
+        ax.set(xlabel="$x$", ylabel="$y$")
 
     ax.set_xlim(xbounds)
-
     ax.legend()
-
     fig.tight_layout()
 
 
-def plot_binned_ds(ds0, ds, *, yname=None):
+def plot_binned_ds(ds0, ds, *, yname=None, **kwargs):
     """Compare an original spectrum in `ds0` to binned one in `ds`.
     Uses :func:`plot_binned` with auto-detection of ``x``, ``dx``, and ``xc``
     (though `yname`, the ``name`` of the spectrum to be plotted, must be provided).
+    `**kwargs` are passed on to :func:`plot_binned`.
     """
     if yname is None:
         raise ValueError("`yname` must be provided in order to plot the spectrum")
@@ -551,7 +568,7 @@ def plot_binned_ds(ds0, ds, *, yname=None):
         xe = ds[f"{xcname}e"]
         dx = np.diff(xe)
 
-    plot_binned(x, y, xc, yc, dx)
+    plot_binned(x, y, xc, yc, dx, **kwargs)
 
 
 if __name__ == "__main__":
