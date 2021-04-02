@@ -134,6 +134,7 @@ def load_default_sp2(*, midpt=True):
     fp = DATA_BASE_DIR / "SPCTRAL2_xls_default-spectrum.csv"
     wl0, SI_dr0, SI_df0 = np.loadtxt(fp, delimiter=",", skiprows=1, unpack=True)
 
+    # TODO: use `_interpret_dx_relative_spectrum` here and in `solar_sp2`?
     if midpt:
         wle = wl0
         dwl = np.diff(wle)

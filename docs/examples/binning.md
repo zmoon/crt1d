@@ -53,6 +53,17 @@ ds2_l = crt.spectra.smear_ds(ds0_l, bins2)
 crt.spectra.plot_binned_ds(ds0_l, ds2_l, yname="rl")
 ```
 
+```{code-cell} ipython3
+bins3 = np.linspace(0.3, 2.6, 4)
+ds3_l = crt.spectra.smear_ds(ds0_l, bins3, method="tuv")
+crt.spectra.plot_binned_ds(ds0_l, ds3_l, yname="rl")
+```
+
+```{code-cell} ipython3
+ds3_l_2 = crt.spectra.smear_ds(ds0_l, bins3, method="avg_optical_prop")
+crt.spectra.plot_binned_ds(ds0_l, ds3_l_2, yname="rl")
+```
+
 ```{note}
 The bins do not have to be constant-width---variable grid will also work!
 ```

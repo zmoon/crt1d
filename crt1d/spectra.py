@@ -279,6 +279,19 @@ def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
     return dYnew / dxnew
 
 
+def smear_avg_optical_prop(x, y, bins, **kwargs):
+    """Use :func:`avg_optical_prop` with `x` as ``x``.
+    to bin `y` values at `x` positions into `bins` (new *x*-bin edges).
+    `**kwargs` are passed on to :func:`avg_optical_prop`.
+    """
+    ynew = np.zeros((bins.size - 1))
+    for i, bounds in enumerate(zip(bins[:-1], bins[1:])):
+        # TODO: allow `xe` option somehow?
+        ynew[i] = avg_optical_prop(y, bounds, x=x, **kwargs)
+
+    return ynew
+
+
 def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
     """Returns an :class:`xarray.Dataset` ``data_vars`` tuple."""
     x = da[xname].values
@@ -289,6 +302,9 @@ def _smear_da(da, bins, *, xname, xname_out, method, **method_kwargs):
 
     elif method == "trapz_interp":
         ynew = smear_trapz_interp(x, y, bins, **method_kwargs)
+
+    elif method == "avg_optical_prop":
+        ynew = smear_avg_optical_prop(x, y, bins, **method_kwargs)
 
     else:
         raise ValueError(f"invalid `method` {method!r}")
@@ -356,7 +372,7 @@ def smear_ds(ds, bins, *, xname="wl", xname_out=None, method="tuv", **method_kwa
 
 
 def smear_si(ds, bins, *, xname_out="wl", **kwargs):
-    """Smear spectral irradiance, computing in-bin irradiance in the new bins.
+    """Smear spectral irradiance and compute in-bin irradiance in the new bins.
     `**kwargs` are passed to :func:`smear_ds`.
     `ds` must have variables ``'SI_dr'`` (direct spectral irradiance), ``'SI_df'`` (diffuse).
     """
@@ -387,6 +403,31 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     return ds_new
 
 
+def smear(y, bins, *, x="wl", xname_out="wl", method="tuv", **method_kwargs):
+    """Smear `y` into `bins`.
+
+    Parameters
+    ----------
+    y : array_like, xr.DataArray, xr.Dataset
+        Variable(s) to smear.
+    bins : array_like
+        Bin edges for the smeared spectrum.
+    x : str, array_like, xr.DataArray
+        Coordinates at which the `y` values are valid/defined.
+        If `y` is `array`, `x` must be provided as an `array` of the same size.
+        If `y` is an xarray type, providing the ``name`` as a string is sufficient.
+    xname_out : str
+        Used to label the new dimension of `y` is an `xarray.Dataset`, for example.
+    method : str
+        Smear method.
+        ``'tuv'`` for :func:`smear_tuv` or ``'trapz_interp'`` for :func:`smear_trapz_interp`.
+    **method_kwargs
+        Passed on to the smear method function.
+    """
+    # TODO
+    raise NotImplementedError
+
+
 def edges_from_centers(x):
     """Estimate locations of the bin edges by extrapolating the grid spacing at the edges.
 
@@ -403,7 +444,7 @@ def edges_from_centers(x):
     return edges
 
 
-def interpret_spectrum(ydx, x, *, midpt=True):
+def _interpret_dx_relative_spectrum(ydx, x, *, midpt=True):
     r"""For spectrally distributed values `ydx`,
     equivalent to :math:`y(x)/dx` (e.g., spectral irradiance in W m-2 μm-1),
     determine corresponding *y* values.
@@ -441,7 +482,7 @@ def interpret_spectrum(ydx, x, *, midpt=True):
         x_y = x  # original grid
         y = ydx * dx
 
-    return y, x_y, dx
+    return y, x_y, dx  # TODO: return `xe` as well, maybe as named tuple?
 
 
 def plot_binned(x, y, xc, yc, dx):

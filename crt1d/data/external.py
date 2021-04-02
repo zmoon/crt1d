@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from ..spectra import interpret_spectrum
+from ..spectra import _interpret_dx_relative_spectrum
 from ..variables import _tup
 
 
