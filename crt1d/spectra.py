@@ -44,7 +44,7 @@ def l_wl_planck(T_K, wl_um):
     wl_um : float, ndarray
         Wavelength (μm).
     """
-    wl = wl_um * 1e-6  # -> m
+    wl = wl_um * 1e-6  # um -> m
     return (2 * h * c ** 2) / (wl ** 5 * (np.exp(h * c / (wl * k_B * T_K)) - 1))
 
 
@@ -120,7 +120,7 @@ def _x_frac_in_bounds(xe, bounds):
     return w_all
 
 
-def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs=None):
+def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwargs):
     r"""Average reflectance or transmittance over some region,
     from a spectrum or binned (smeared) spectrum.
 
@@ -136,6 +136,8 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
     x : array_like, optional
         Wavelength values where `y` is defined.
         (Bin centers, or coordinates of original spectrum.)
+        If `x` is provided (instead of `xe`), `y`\(`x`) is first smeared with :func:`smear_tuv`
+        into 200 equally spaced bins over the `bounds` region.
     xe : array_like, optional
         Bin edges.
         Don't provide `x` if using `xe`.
@@ -149,12 +151,10 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
 
         TODO: Can be function that can take `x` as its first parameter to provide
         a weight for `y`\(`x`).
-    light_kwargs : dict
-        For example, ``T_K`` for ``light='planck'``.
+    **light_kwargs
+        For the `light` method.
+        Currently this only includes ``T_K`` for ``light='planck'``.
     """
-    if light_kwargs is None:
-        light_kwargs = {}
-
     y = np.asarray(y)
     if x is not None and xe is not None:
         raise ValueError("only provide one of `x` and `xe`.")
@@ -165,16 +165,16 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
         assert x.size == y.size
 
         # Now bin (temporary!? until working weights into smear)
-        xe = np.linspace(*bounds, 200)
+        # TODO: arg to control nbins and/or dx resolution (1 nm?)?
+        xe = np.linspace(*bounds, 201)
         y = smear_tuv(x, y, xe)
 
-    # Already been binned -- respect the edges
+    # Already been binned -- use the edges
     if xe is not None:
         xe = np.asarray(xe)
         assert xe.size == y.size + 1
 
     w = _x_frac_in_bounds(xe, bounds)  # initial weights
-    # print(w)
 
     # Add weights based on light spectrum
     if isinstance(light, str):
@@ -187,8 +187,6 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", light_kwargs
             raise ValueError("invalid choice of `light`")
     else:  # assume array-like
         w *= np.asarray(light)
-
-    # print(w / w.sum())
 
     return (y * w).sum() / w.sum()  # weighted average
 
