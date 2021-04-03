@@ -12,8 +12,8 @@ import crt1d
 # -- Project information -----------------------------------------------------
 
 project = "crt1d"
-copyright = f"2020\u2013{datetime.datetime.now().year}"
-author = "Zachary Moon"
+author = "Z. Moon"
+copyright = f"2020\u2013{datetime.datetime.now().year}, {author}"
 
 # Get version from metadata
 release = get_distribution("crt1d").version
@@ -38,15 +38,33 @@ extensions = [
     "myst_nb",
 ]
 
+
+# -- Extension settings ------------------------------------------------------
+
 # intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
 }
 
-# aliases? doesn't seem to work...
+# napoleon
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_preprocess_types = True
 napoleon_type_aliases = {
-    "xr.Dataset": ":class:`xarray.Dataset`",
+    "xr.Dataset": "xarray.Dataset",
+    "xr.DataArray": "xarray.DataArray",
+    # NumPy
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "np.ndarray": "numpy.ndarray",
+    "ndarray": "numpy.ndarray",
+    # pandas
+    "pd.DataFrame": "pandas.DataFrame",
 }
 
 # include __init__() docstring content in autodocs for classes
@@ -63,6 +81,7 @@ autoapi_options = [
     "imported-members",
 ]
 autoapi_python_class_content = "both"  # include __init__ docstring as well as class
+autoapi_member_order = "groupwise"  # default is 'bysource'
 
 # bibtex
 bibtex_bibfiles = ["crt1d-refs.bib"]  # required in sphinxcontrib-bibtex v2
@@ -79,12 +98,9 @@ exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-# html_theme = 'alabaster'
 # html_theme = "sphinx_rtd_theme"
-html_theme = "sphinx_book_theme"
+# html_theme = "sphinx_book_theme"
+html_theme = "furo"
 
 html_title = "crt1d"  # shown in top left, overriding "{project} {release} documentation"
 html_last_updated_fmt = "%Y-%m-%d"

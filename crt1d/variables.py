@@ -8,6 +8,17 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
     """Variable metadata for one variable."""
 
     def __init__(self, name, params, param_defaults):
+        """
+        Parameters
+        ----------
+        name : str
+            Code variable name associated with the variable.
+            Used as the ``name`` for :class:`xarray.DataArray`\s.
+        params : dict
+            Parameters for this variable.
+        param_defaults : dict
+            Default parameters (to use if `params` is missing any of the needed).
+        """
         self.name = name
 
         # required (we want it to fail if not provided)
@@ -30,7 +41,9 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
             self.dims = ()
 
     def da_attrs(self):
-        """Contruct dict of attributes to use when creating xarray DataArray for this variable."""
+        """Return dict of attributes to use when creating an :class:`xarray.DataArray`
+        for this variable.
+        """
         attrs = {
             "long_name": self.long_name,
             "units": self.s_units,
@@ -45,7 +58,7 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
         return attrs
 
     def dv_tuple(self, data):
-        """Construct `xr.Dataset` ``data_vars`` tuple."""
+        """Construct an :class:`xarray.Dataset` ``data_vars`` tuple."""
         return (self.dims, data, self.da_attrs())
 
     def param_entry(self, optional=False) -> str:
@@ -60,11 +73,11 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
         """.strip()
 
     def list_table_entry(self, fields) -> str:
-        """Construct a MyST list-table entry.
+        """Construct a MyST list-table entry for the docs variable summary table.
 
         Parameters
         ----------
-        fields : list(str)
+        fields : list of str
             Parameters to include (in desired order).
         """
         lines = []
@@ -90,8 +103,8 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
 
         return "\n".join(lines).rstrip()
 
-    def details_sec(self, *, heading_level=3):
-        """Details section for docs."""
+    def details_sec(self, *, heading_level=3) -> str:
+        """Construct details section for docs variables page."""
         pre0 = "#" * heading_level
         header = f"{pre0} ``{self.name}``"
         l_units_long = (
@@ -141,12 +154,12 @@ class Vmd:
         """
         Parameters
         ----------
-        vmdes : list(VmdEntry)
+        vmdes : list of VmdEntry
         """
         self.variables = {vmde.name: vmde for vmde in vmdes}
 
     def intent(self, intent="in"):
-        """Filtered set of variables with intent=`intent`.
+        """Return filtered set of variables that have the specified `intent`.
 
         Parameters
         ----------
@@ -155,7 +168,7 @@ class Vmd:
         Returns
         -------
         dict
-            name: VmdEntry
+            ``name: VmdEntry``
         """
         if intent is None or intent == "all":
             return self.variables.copy()
@@ -250,6 +263,10 @@ def _tup(name, data):
     and the standard variable metadata :const:`VMD`.
     """
     return VMD[name].dv_tuple(data)
+
+
+def _wl_coord_dict(wl, *, units="μm"):
+    return {"wl": (("wl"), wl, {"long_name": "Wavelength", "units": units})}
 
 
 def _params_list_table(vmdes=None):
