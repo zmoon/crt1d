@@ -363,7 +363,7 @@ def test_plot_distribute_lai_res(res, *, title=None):
 
     ax1.set_title("LAD")
     if lad is not None:
-        ax1.plot(res.lad, z, ".-", label=f"from dist\ntrapz = {si.trapz(lad, z):.4g}")
+        ax1.plot(res.lad, z, ".-", label=f"from dist\ntrapz = {integrate.trapz(lad, z):.4g}")
         # note: the trapz converges to true total LAI as n increases (number of layers)
     ax1.plot(dlai / dz, zm, "s-", mfc="none", label="dlai/dz at midpts")
     ax1.legend()
@@ -402,7 +402,9 @@ class layer:
         self.h2 = h2
         self.lad_h2 = lad_h2
 
-        fun = lambda X: integrate.quad(lambda h: self.pdf0(h, lai_mult=X), h1, h2)[0] - LAI
+        fun = (
+            lambda X: integrate.quad(lambda h: self.pdf0(h, lai_mult=X), h1, h2)[0] - LAI
+        )  # noqa: E731
         self.lai_mult = optimize.fsolve(fun, 0.1)[0]
         if self.lai_mult <= 0:
             print("desired LAI too small")
@@ -411,7 +413,7 @@ class layer:
         """ """
         #        linear = lambda h: (h - self.h1) * 0.07 + self.lad_h1
         #        curve = lambda h: np.sqrt((h - self.h1)**2 - 1)
-        curve = lambda h: np.sin(1.3 * (h - self.h1) / (self.hmax - self.h1))
+        curve = lambda h: np.sin(1.3 * (h - self.h1) / (self.hmax - self.h1))  # noqa: E731
 
         mult = 1 / (curve(self.hmax) + self.lad_h1) * lai_mult
         return curve(h) * mult + self.lad_h1
@@ -421,7 +423,7 @@ class layer:
         cum. LAI (from bottom)
         http://www.wolframalpha.com/input/?i=integral+of+sin(1.3+*+(x+-+a)+%2F+(b+-+a))+*+c+%2B+d
         """
-        curve = lambda h: np.sin(1.3 * (h - self.h1) / (self.hmax - self.h1))
+        curve = lambda h: np.sin(1.3 * (h - self.h1) / (self.hmax - self.h1))  # noqa: E731
         a = self.h1
         b = self.hmax
         c = 1 / (curve(self.hmax) + self.lad_h1) * self.lai_mult
@@ -523,7 +525,8 @@ class canopy_lai_dist:
             h2 = ld["h_top"]
             lad_h2 = ld["lad_h_top"]
 
-            l = layer(h1, lad_h1, hmax, LAI, h2, lad_h2)  # create instance of layer class
+            # create instance of layer class
+            l = layer(h1, lad_h1, hmax, LAI, h2, lad_h2)  # noqa: E741
 
             ld["pdf"] = l.pdf
             ld["cdf"] = l.cdf
@@ -572,7 +575,7 @@ class canopy_lai_dist:
 
         using scipy.optimize.fsolve
         """
-        fun = lambda lb: integrate.quad(self.pdf, lb, ub)[0] - lai
+        fun = lambda lb: integrate.quad(self.pdf, lb, ub)[0] - lai  # noqa: E731
         lb = optimize.fsolve(fun, ub - 1e-6)
 
         return lb

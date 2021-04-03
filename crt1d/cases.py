@@ -26,7 +26,7 @@ def load_default_case(nlayers):
     # leaf angle
     mla = 57  # approximately the value for spherical leaf angle dist
     orient = mla_to_orient(mla)
-    G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)
+    G_fn = lambda psi_: G_ellipsoidal_approx(psi_, orient)  # noqa: E731
 
     # Solar zenith angle
     sza = 20  # deg.

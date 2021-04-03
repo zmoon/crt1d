@@ -8,10 +8,10 @@ BASE_DIR = _Path(__file__).parent
 DATA_BASE_DIR = BASE_DIR / "data"
 
 # include Model in pkg-level namespace
-from .model import Model
+from .model import Model  # noqa: F401 unused import
 
 # include diagnostics module (not used by any of the others)
-from . import diagnostics
+from . import diagnostics  # noqa: F401 unused import
 
 # set version
 try:

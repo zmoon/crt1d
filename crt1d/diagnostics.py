@@ -2,8 +2,6 @@
 Calculations/plots using the CRT solutions (irradiance spectral profiles),
 using the model output dataset created by :meth:`crt1d.Model.to_xr()`.
 """
-import warnings
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -122,8 +120,8 @@ def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
 
     # variables to show in each panel
     varnames = [
-        [f"aI", f"aI_sl", f"aI_sh"],
-        [f"I_dr", f"I_df_d", f"I_df_u"],
+        ["aI", "aI_sl", "aI_sh"],
+        ["I_dr", "I_df_d", "I_df_u"],
     ]  # rows, cols
 
     nrows = len(varnames)

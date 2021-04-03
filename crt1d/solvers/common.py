@@ -32,8 +32,11 @@ def tau_df_fn(K_b_fn, lai_val):
 
     ref. Campbell & Norman eq. 15.5
     """
-    tau_b = lambda psi_, L_: tau_b_fn(K_b_fn, psi_, L_)
-    f = lambda psi_: tau_b(psi_, lai_val) * np.sin(psi_) * np.cos(psi_)
+    from functools import partial
+
+    tau_b_psi = partial(tau_b_fn, K_b_fn=K_b_fn, lai_val=lai_val)
+
+    f = lambda psi: tau_b_psi(psi=psi) * np.sin(psi) * np.cos(psi)  # noqa: E731
     return 2 * integrate.quad(f, 0, np.pi / 2, epsrel=1e-9)[0]
 
 

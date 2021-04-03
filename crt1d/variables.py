@@ -8,7 +8,7 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
     """Variable metadata for one variable."""
 
     def __init__(self, name, params, param_defaults):
-        """
+        r"""
         Parameters
         ----------
         name : str

@@ -3,18 +3,21 @@ import math
 
 import numpy as np
 import scipy.integrate as integrate
-import scipy.optimize as optimize
+
 
 short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
 
-def solve_2s(*, psi,
+
+def solve_2s(
+    *,
+    psi,
     I_dr0_all, I_df0_all,
     lai,
-    leaf_t, leaf_r, soil_r,
-    K_b_fn, G_fn,
-    mla,
-    ):
+    leaf_t, leaf_r,
+    soil_r,
+    K_b_fn, G_fn, mla,
+):
     """Dickinson-Sellers 2-stream solution---the most common scheme used in regional/climate models.
 
     Implementation follows Dickinson (1983) and Sellers (1985)
@@ -27,7 +30,7 @@ def solve_2s(*, psi,
 
     # Calculate mu_bar := average inverse diffuse optical depth per unit leaf area; p. 1336
     # sa := angle of scattered flux
-    mu_bar  = integrate.quad(lambda sa: math.cos(sa) / G_fn(sa) * -math.sin(sa), math.pi/2, 0)[0]  # p. 1336
+    mu_bar = integrate.quad(lambda sa: math.cos(sa) / G_fn(sa) * -math.sin(sa), math.pi/2, 0)[0]  # p. 1336
     # TODO: following could be another optional check
     # mu_bar2 = integrate.quad(lambda mu_prime: mu_prime / G_fn(math.acos(mu_prime)), 0, 1)[0]
     # assert( math.isclose(mu_bar, mu_bar2) )

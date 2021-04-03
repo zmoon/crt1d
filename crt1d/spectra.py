@@ -557,7 +557,7 @@ def _interpret_dx_relative_spectrum(ydx, x, *, midpt=True):
         dx = np.diff(x)
 
         x_y = xe[:-1] + 0.5 * dx  # x positions of y values (integrated y/dx)
-        y = (ydx[:-1] + y[1:]) / 2 * dx
+        y = (ydx[:-1] + ydx[1:]) / 2 * dx
 
     else:  # edges-from-centers method
         xe = _edges_from_centers(x)  # n+1 values

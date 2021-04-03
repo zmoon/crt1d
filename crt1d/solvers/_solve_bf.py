@@ -107,7 +107,7 @@ def solve_bf(
 
         # > total direct beam radiation scattered by foliage elements
         #  B&F eq. 10
-        I_sc = I_sc_d + I_sc_u
+        # I_sc = I_sc_d + I_sc_u
 
         # > ground-sfc reflectance term (upward)
         #  B&F eq. 11
@@ -151,4 +151,5 @@ def solve_bf(
         aI_lsl=aI_sl_all,
         aI_lsh=aI_sh_all,
         aI_l=aI_sl_all + aI_sh_all,
+        rho_c=rho_c,
     )

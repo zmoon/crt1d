@@ -6,15 +6,18 @@ from scipy.sparse.linalg import spsolve
 from .common import tau_b_fn
 from .common import tau_df_fn
 
+
 short_name = 'ZQ'
 long_name = 'Zhao & Qualls multi-scattering'
 
-def solve_zq(*, psi,
-    I_dr0_all, I_df0_all, #wl, dwl,
+
+def solve_zq(
+    *, psi,
+    I_dr0_all, I_df0_all,
     lai,
     leaf_t, leaf_r, soil_r,
     K_b_fn, G_fn,
-    ):
+):
     """Zhao & Qualls model (feat. multiple-scattering correction).
 
     All refs are to Zhao & Qualls (2005) unless otherwise noted.
@@ -40,27 +43,24 @@ def solve_zq(*, psi,
         """
         return 2.0/3 * (bl / (bl + tl)) + 1.0/3 * (tl / (bl + tl))
 
-
     K = K_b  # for black leaves
 
-    #> transmittance of direct and diffuse light through one layer
-    #  most dlai vals are the same, so just calculate one tau_i and tau_psi value for now
-    #  using Cambell & Norman eq. 15.5 fns defined above
+    # Transmittance of direct and diffuse light through one layer
+    # Most dlai vals are the same, so just calculate one tau_i and tau_psi value for now
+    # using Cambell & Norman eq. 15.5 fns defined above
     dlai_mean = np.abs(np.mean(dlai[dlai != 0]))
     tau_i_mean = tau_df_fn(K_b_fn, dlai_mean)
     tau_b_mean = tau_b_fn(K_b_fn, psi, dlai_mean)
 
-
 #        LAI = lai[0]  # total LAI
 #        G = G_fn(psi)
 
+    # lai subset??
+    #   since diffuse at top level is inflated above the measured value otherwise...
+    # // lai_plot = np.copy(lai)
+    # // lai = lai[:-1]  # upper boundary included in model
 
-    #> lai subset??
-    #  since diffuse at top level is inflated above the measured value otherwise...
-    #lai_plot = np.copy(lai)
-    #lai = lai[:-1]  # upper boundary included in model
-
-    #> allocate arrays in which to save the solutions for each band
+    # Allocate arrays in which to save the solutions for each band
     nbands = I_dr0_all.size
     nz = lai.size
     s = (nz, nbands)  # to make pylint shut up until it supports _like()
@@ -78,7 +78,6 @@ def solve_zq(*, psi,
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
 
-
         # soil albedo/reflectance
         rho = soil_r[i]
         alpha0 = 1 - rho
@@ -87,7 +86,6 @@ def solve_zq(*, psi,
         beta_L  = leaf_r[i]  # leaf element reflectance
         tau_L   = leaf_t[i]  # leaf element transmittance
         alpha_L = 1 - (beta_L + tau_L)  # leaf element absorbance
-
 
         # ------------------------------------------
         # to form the matrix A we need:
@@ -124,7 +122,6 @@ def solve_zq(*, psi,
         A[2*li+1-1,2*li+2-1] = -(t[li] + (1 - t[li])*(1 - a[li])*(1 - r[li]))
         A[-1,-1] = 1
 
-
         # ------------------------------------------
         # to form C we need: (following p. 8 still)
         #   S: direct beam extinction
@@ -137,13 +134,14 @@ def solve_zq(*, psi,
 
         C = np.zeros((2*m+2, ))
 
-        C[0] = rho * S[0] #rho * S.min()#rho * I_dr0
-        C[2*li-1] =   (1 - r[li-1]*r[li] * (1 - a[li-1]) * (1 - t[li-1]) * (1 - a[li]) * (1 - t[li])) * \
-                    r_psi * (1 - t_psi) * (1 - a[li]) * S
-        C[2*li] = (1 - r[li]*r[li+1] * (1 - a[li]) * (1 - t[li]) * (1 - a[li+1]) * (1 - t[li+1])) * \
-                    (1 - t_psi) * (1 - a[li]) * (1 - r_psi) * S
+        C[0] = rho * S[0]  # rho * S.min() # rho * I_dr0
+        C[2*li-1] = (
+            1 - r[li-1]*r[li] * (1 - a[li-1]) * (1 - t[li-1]) * (1 - a[li]) * (1 - t[li])
+        ) * r_psi * (1 - t_psi) * (1 - a[li]) * S
+        C[2*li] = (
+            1 - r[li]*r[li+1] * (1 - a[li]) * (1 - t[li]) * (1 - a[li+1]) * (1 - t[li+1])
+        ) * (1 - t_psi) * (1 - a[li]) * (1 - r_psi) * S
         C[-1] = I_df0  # top-of-canopy diffuse
-
 
         # ------------------------------------------
         # find soln to A x = C, where x is the radiation flux density (irradiance, hopefully)
@@ -166,9 +164,8 @@ def solve_zq(*, psi,
         assert A_sparse.data.shape == (3, A.shape[1])
         x = spsolve(A_sparse.tocsr(), C)  # needs CSR or CSC format
 
-        SWu0 = x[::2]  # "original downward and upward hemispherical shortwave radiation flux densities"
-        SWd0 = x[1::2] # i.e., before multiple scattering within layers is accounted for
-
+        SWu0 = x[::2]   # "original downward and upward hemispherical shortwave radiation flux densities"
+        SWd0 = x[1::2]  # i.e., before multiple scattering within layers is accounted for
 
         # ------------------------------------------
         # multiple scattering correction
@@ -182,14 +179,13 @@ def solve_zq(*, psi,
 
         # eq. 24; i+1 -> li, i -> li - 1
         SWd[li] = SWd0[li] / (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li])) + \
-                    r[li] * (1 - a[li]) * (1 - t[li]) * SWu0[li-1] / \
-                    (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li]))
+            r[li] * (1 - a[li]) * (1 - t[li]) * SWu0[li-1] / \
+            (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li]))
 
         # eq. 25
         SWu[li-1] = SWu0[li-1] / (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li])) + \
-                    r[li-1] * (1 - a[li-1]) * (1 - t[li-1]) * SWd0[li] / \
-                        (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li]))
-
+            r[li-1] * (1 - a[li-1]) * (1 - t[li-1]) * SWd0[li] / \
+            (1 - r[li-1]*r[li]*(1 - a[li-1])*(1 - t[li-1])*(1 - a[li])*(1 - t[li]))
 
         # -----------------------------------------
         # save
@@ -223,13 +219,12 @@ def solve_zq(*, psi,
 
         I_dr_all[:,i] = I_dr0 * np.exp(-K * lai)
 
-
     return dict(
-        I_dr = I_dr_all,
-        I_df_d = I_df_d_all,
-        I_df_u = I_df_u_all,
-        F = F_all,
-        I_df_d_ss = I_df_d_ss_all,
-        I_df_u_ss = I_df_u_ss_all,
-        F_ss = F_ss_all
+        I_dr=I_dr_all,
+        I_df_d=I_df_d_all,
+        I_df_u=I_df_u_all,
+        F=F_all,
+        I_df_d_ss=I_df_d_ss_all,
+        I_df_u_ss=I_df_u_ss_all,
+        F_ss=F_ss_all
     )

@@ -15,7 +15,6 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from .cases import load_default_case
@@ -476,7 +475,7 @@ def _plot_canopy(m):
         ncols = 3
         figsize = (6, 3.2)
 
-    figname = f"leaf-profiles"
+    figname = "leaf-profiles"
     fig, axs = plt.subplots(1, ncols, figsize=figsize, sharey=True, num=figname)
 
     fmt = ".-"

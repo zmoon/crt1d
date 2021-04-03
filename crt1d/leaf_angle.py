@@ -1,4 +1,4 @@
-"""
+r"""
 Parameterizations of the impact of leaf angles on canopy RT.
 
 Leaf angle factor :math:`G` and the black leaf extinction coeff :math:`K_b`
@@ -50,8 +50,7 @@ def mla_from_g(g_fn):
     r"""Calculate (estimate) the mean leaf inclination angle (deg.)
     by numerically integrating the distribution's PDF: g(psi).
     """
-    fun = lambda x: x * g_fn(x)
-    theta_l_bar = integrate.quad(fun, 0, PI / 2)[0]  # returns (y, err)
+    theta_l_bar = integrate.quad(lambda x: x * g_fn(x), 0, PI / 2)[0]  # returns (y, err)
     return np.rad2deg(theta_l_bar)
 
 
@@ -77,12 +76,12 @@ def g_ellipsoidal(theta_l, x):
     # note Campbell (1990) uses "Lambda" instead of Bonan's "l"
     if x < 1:
         e1 = np.sqrt(1 - x ** 2)
-        l = x + np.arcsin(e1) / e1
+        l = x + np.arcsin(e1) / e1  # noqa: E741 ambiguous name
     elif x == 1:  # => spherical
-        l = 2
+        l = 2  # noqa: E741
     else:  # x > 1
         e2 = np.sqrt(1 - x ** -2)
-        l = x + np.log((1 + e2) / (1 - e2)) / (2 * e2 * x)
+        l = x + np.log((1 + e2) / (1 - e2)) / (2 * e2 * x)  # noqa: E741
 
     # eq. 2.11 -- numerator and denominator
     p1 = 2 * x ** 3 * np.sin(theta_l)

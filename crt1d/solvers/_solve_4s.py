@@ -235,8 +235,8 @@ def solve_4s(
         x = np.linspace(0, LAI, 50)
         y0 = np.ones((4, x.size))  # initial guess
 
-        fun = lambda x, y: eqns(x, y, d, direct=1)
-        bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=1, R0=R_dr0)
+        fun = lambda x, y: eqns(x, y, d, direct=1)  # noqa: E731
+        bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=1, R0=R_dr0)  # noqa: E731
 
         res = integrate.solve_bvp(fun, bcs, x, y0, tol=1e-6)
 
@@ -254,8 +254,8 @@ def solve_4s(
         #    x = np.linspace(0, LAI, 50)
         #    y0 = np.ones((4, x.size))  # initial guess
 
-        fun = lambda x, y: eqns(x, y, d, direct=0)
-        bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=0, R0=R_df0)
+        fun = lambda x, y: eqns(x, y, d, direct=0)  # noqa: E731
+        bcs = lambda ya, yb: dfdr_bcs(ya, yb, d, direct=0, R0=R_df0)  # noqa: E731
 
         res = integrate.solve_bvp(fun, bcs, x, y0, tol=1e-6)
 
