@@ -9,41 +9,6 @@ short_name = "N79"
 long_name = "Norman (1979)"
 
 
-def tdma(a, b, c, d):
-    """Tridiagonal matrix algo.
-    for `a` below diagonal, `b` diagonal, `c` above diagonal and `d` RHS.
-
-    Parameters
-    ----------
-    a, b, c, d : array
-        Same size!
-
-    Reference: https://github.com/gbonan/bonanmodeling/blob/master/sp_14_03/tridiagonal_solver.m
-    """
-    # TODO: something is not right! soln not same as solving with scipy
-    n = a.size
-
-    # Forward sweep 1
-    e = np.zeros_like(a)
-    e[0] = c[0] / b[0]
-    for i in range(1, n-1):
-        e[i] = c[i] / (b[i] - a[i] * e[i-1])
-
-    # Forward sweep 2
-    f = np.zeros_like(a)
-    f[0] = d[0] / b[0]
-    for i in range(1, n-1):
-        f[i] = (d[i] - a[i] * f[i-1]) / (b[i] - a[i] * e[i-1])
-
-    # Backwards substitution for solution
-    u = np.zeros_like(a)
-    u[-1] = f[-1]
-    for i in range(n-2, -1, -1):
-        u[i] = f[i] - e[i] * u[i+1]
-
-    return u
-
-
 def solve_n79(
     *,
     psi,
@@ -52,6 +17,7 @@ def solve_n79(
     leaf_t, leaf_r,
     soil_r,
     K_b_fn,
+    tau_d_method="quad",  # set to '9sky' to compare to Bonan
 ):
     """Norman (1979) canopy radiation solution.
 
@@ -60,9 +26,7 @@ def solve_n79(
     * :cite:`bonan_climate_2019`
       `SP 14.3 <https://github.com/gbonan/bonanmodeling/tree/master/sp_14_03>`_
     """
-
-    # K_b = K_b_fn(psi)
-    K_b = 0.577350269  # Bonan value
+    K_b = K_b_fn(psi)
 
     # New variable names for consistency with Bonan
     albsoib = soil_r  # soil albedo for direct
@@ -77,7 +41,7 @@ def solve_n79(
     dlai = lai[:-1] - lai[1:]  # need 2nz for equation arrays
     # dlai = np.r_[lai[:-1] - lai[1:], 0]  # need 2(nz+1)
 
-    # tb (tau_b) - exponential transmittance of direct beam radiation through each layer
+    # `tb` (\tau_b) - exponential transmittance of direct beam radiation through each layer
     # Note: `lai[0]` is total LAI, `lai[-1]` is 0 (toc)
     tb = tau_b_fn(K_b_fn, psi, dlai)
     tbcum = np.exp(-K_b * lai)
@@ -86,17 +50,13 @@ def solve_n79(
     # Thus it has one more value than `tb`.
     assert tb.size == tbcum.size - 1
 
-    # td (tau_d) - exponential transmittance of diffuse radiation through each layer
-    td = tau_df_fn(K_b_fn, dlai)
-
-    # Change to Bonan values to check
-    tb[:] = 0.94390002
-    td[:] = 0.91323569
+    # `td` (\tau_d) - exponential transmittance of diffuse radiation through each layer
+    td = tau_df_fn(K_b_fn, dlai, method=tau_d_method)
 
     # Variables needed for absorption calc
-    omega = rho + tau
+    omega = rho + tau  # scattering coeff
     laim = (lai[:-1] + lai[1:]) / 2  # cumulative LAI midpts
-    fracsun = np.exp(-K_b * laim)
+    fracsun = np.exp(-K_b * laim)  # midlayer sunlit leaf fraction
     fracsha = 1 - fracsun
 
     # Preallocate solution arrays
@@ -112,7 +72,6 @@ def solve_n79(
 
         # Preallocate equation arrays
         a = np.zeros((2*nz,))
-        # a = np.zeros((2*(nz+1),))
         b = np.zeros_like(a)
         c = np.zeros_like(a)
         d = np.zeros_like(a)
@@ -134,7 +93,6 @@ def solve_n79(
         d[1] = swskyb[i] * tbcum[1] * (1 - tb[1]) * (tau[i] - rho[i] * biv)
 
         # Inner canopy layers (excluding toc LAI=0 layer)
-        # for j in range(nz - 1):
         for j in range(nz - 2):
 
             # Equation indices for this layer
@@ -178,9 +136,7 @@ def solve_n79(
         d[-1] = swskyd[i]
 
         # Solve system
-        # res = tdma(a, b, c, d)
-        import scipy
-        res = scipy.linalg.solve(scipy.sparse.diags([a[1:], b, c[:-1]], [-1, 0, 1]).toarray(), d[:,np.newaxis]).squeeze()
+        res = tdma(a, b, c, d)
 
         # Grab irradiance solutions
         swup = res[::2]   # upward flux above layer
@@ -192,14 +148,12 @@ def solve_n79(
         sun = diffuse * fracsun + direct  # absorbed by sunlit leaves
         shade = diffuse * fracsha  # shaded leaves
 
-        # Store
+        # Store results for band `i`
         I_dr[:,i] = swskyb[i] * tbcum
         I_df_d[:,i] = swdn
         I_df_u[:,i] = swup
         aI_lsl[:,i] = sun / (fracsun * dlai)
         aI_lsh[:,i] = shade / (fracsha * dlai)
-
-        # breakpoint()
 
     return {
         "I_dr": I_dr,
@@ -209,3 +163,39 @@ def solve_n79(
         "aI_lsl": aI_lsl,
         "aI_lsh": aI_lsh,
     }
+
+
+def tdma(a, b, c, d):
+    """Tridiagonal matrix algorithm
+    for `a` below diagonal, `b` diagonal, `c` above diagonal and `d` RHS.
+
+    Parameters
+    ----------
+    a, b, c, d : array
+        Same size!
+
+    References
+    ----------
+    * https://github.com/gbonan/bonanmodeling/blob/master/sp_14_03/tridiagonal_solver.m
+    """
+    n = a.size
+
+    # Forward sweep 1
+    e = np.zeros_like(a)
+    e[0] = c[0] / b[0]
+    for i in range(1, n-1):
+        e[i] = c[i] / (b[i] - a[i] * e[i-1])
+
+    # Forward sweep 2
+    f = np.zeros_like(a)
+    f[0] = d[0] / b[0]
+    for i in range(1, n):
+        f[i] = (d[i] - a[i] * f[i-1]) / (b[i] - a[i] * e[i-1])
+
+    # Backwards substitution for solution
+    u = np.zeros_like(a)
+    u[-1] = f[-1]
+    for i in range(n-2, -1, -1):
+        u[i] = f[i] - e[i] * u[i+1]
+
+    return u

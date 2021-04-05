@@ -84,12 +84,13 @@ def _construct_scheme_dicts():
         fullargspec = inspect.getfullargspec(scheme_dict["solver"])
         # scheme_dict['args'] = fullargspec.args
         scheme_dict["args"] = fullargspec.kwonlyargs
+        scheme_dict["options"] = []
         # scheme_dict['args'] = [k for k in fullargspec.kwonlyargs if k not in fullargspec.kwonlydefaults]
         kwd = fullargspec.kwonlydefaults
         if kwd is not None:
             for k in kwd:
                 scheme_dict["args"].remove(k)
-                # TODO: do something with these instead of just removing so we have the info
+                scheme_dict["options"].append(k)
         # drop scheme and warn if args don't match with expected
         if any(k not in CANOPY_RAD_STATE_INPUT_KEYS for k in scheme_dict["args"]):
             invalid_kwargs = [
@@ -105,7 +106,8 @@ def _construct_scheme_dicts():
             drop_list.append(name)
     # drop?
     if drop_list:
-        AVAILABLE_SCHEMES.pop(name)
+        for name in drop_list:
+            AVAILABLE_SCHEMES.pop(name)
 
 
 _construct_scheme_dicts()

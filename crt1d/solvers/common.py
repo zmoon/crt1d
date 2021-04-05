@@ -1,6 +1,8 @@
 """
 Common functions used by canopy RT solvers.
 """
+import math
+
 import numpy as np
 import scipy.integrate as integrate
 
@@ -25,7 +27,7 @@ def tau_b_fn(K_b_fn, psi, lai):
 
 
 def _tau_df_fn_scalar(K_b_fn, lai_val):
-    """tau_d for scalar LAI value."""
+    r""":math:`\tau_d` for scalar LAI value."""
     from functools import partial
 
     tau_b_psi = partial(tau_b_fn, K_b_fn=K_b_fn, lai=lai_val)
@@ -34,10 +36,23 @@ def _tau_df_fn_scalar(K_b_fn, lai_val):
     return 2 * integrate.quad(f, 0, np.pi / 2, epsrel=1e-9)[0]
 
 
-# TODO: tau_df 9 sky angle only option
+def _tau_df_fn_scalar_9sky(K_b_fn, lai_val):
+    r""":math:`\tau_d` for scalar LAI value using 9 angles only (common in land models)."""
+    from functools import partial
+
+    tau_b_psi = partial(tau_b_fn, K_b_fn=K_b_fn, lai=lai_val)
+
+    tau_d = 0
+    for sza in [5, 15, 25, 35, 45, 55, 65, 75, 85]:
+        psi = math.radians(sza)
+        tau_d += tau_b_psi(psi=psi) * math.sin(psi) * math.cos(psi)
+
+    tau_d *= 2 * math.radians(10)  # 90 -> 180; multiplication by dpsi
+
+    return tau_d
 
 
-def tau_df_fn(K_b_fn, lai):
+def tau_df_fn(K_b_fn, lai, *, method="quad"):
     r"""Transmittance of diffuse light through foliage layer(s) with LAI `lai`.
 
     Weighted hemispherical integral of direct beam transmissivity :math:`\tau_b`.
@@ -48,18 +63,25 @@ def tau_df_fn(K_b_fn, lai):
     ----------
     lai : float, array_like
         LAI, one or multiple values.
+    method : {'quad', '9sky'}
 
     References
     ----------
     * Campbell & Norman eq. 15.5
     """
-    if np.isscalar(lai):
-        res = _tau_df_fn_scalar(K_b_fn, lai)
+    if method == "quad":
+        f = _tau_df_fn_scalar
+    elif method == "9sky":
+        f = _tau_df_fn_scalar_9sky
+    else:
+        raise ValueError("invalid `method`. Valid options are 'quad' and '9sky'.")
 
+    if np.isscalar(lai):
+        res = f(K_b_fn, lai)
     else:
         res = np.zeros_like(lai)
         for i, lai_val in enumerate(lai):
-            res[i] = _tau_df_fn_scalar(K_b_fn, lai_val)
+            res[i] = f(K_b_fn, lai_val)
 
     return res
 

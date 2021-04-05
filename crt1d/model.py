@@ -292,25 +292,25 @@ class Model:
         """
         TODO: could add verbose option
         """
-        self._run_count += 1
-
         # check wavelengths are compatible etc.
         # should already have been done at least once by now, but whatever
         self._check_inputs()
 
         # construct dict of kwargs to pass to the solver
-        d = {**self._p, **extra_solver_kwargs}
         scheme = self.scheme
-        args = {k: d[k] for k in scheme["args"]}
+        p = self._p
+        args = {k: p[k] for k in scheme["args"]}
 
         # run
-        sol = scheme["solver"](**args)
+        sol = scheme["solver"](**args, **extra_solver_kwargs)
 
         # use the dict returned by the solver to update our state
         self.out.update({k: v for k, v in sol.items() if k in RET_KEYS_ALL_SCHEMES})
         self.out_extra.update(
             {f"{k}_scheme": v for k, v in sol.items() if k not in RET_KEYS_ALL_SCHEMES}
         )
+
+        self._run_count += 1
 
         return self  # for chaining
 
@@ -606,14 +606,13 @@ def _calc_absorption(m):
     #      actual W/m2 absorption, not per unit LAI
 
     # Absorbed direct depends on the sunlit leaf fraction
-    I_dr0 = I_dr[-1, :][np.newaxis, :]
+    # I_dr0 = I_dr[-1, :][np.newaxis, :]
     # a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
     # a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
     a_dr = (
-        I_dr0
-        * np.exp(-K_b * lai)[1:, np.newaxis]
-        * (1 - np.exp(-K_b * dlai))[:, np.newaxis]
-        * leaf_a
+        I_dr[1:, :]  # direct beam penetration above level
+        * (1 - np.exp(-K_b * dlai))[:, np.newaxis]  # 1 - tau_b (transmittance through layer)
+        * leaf_a  # frac absorbed (as opposed to scattered)
     )
     # ^ direct beam absorption (sunlit leaves only by definition)
     #
