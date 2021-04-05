@@ -105,9 +105,8 @@ def _construct_scheme_dicts():
             )
             drop_list.append(name)
     # drop?
-    if drop_list:
-        for name in drop_list:
-            AVAILABLE_SCHEMES.pop(name)
+    for name in drop_list:
+        AVAILABLE_SCHEMES.pop(name)
 
 
 _construct_scheme_dicts()
