@@ -61,7 +61,8 @@ def solve_n79(
       `SP 14.3 <https://github.com/gbonan/bonanmodeling/tree/master/sp_14_03>`_
     """
 
-    K_b = K_b_fn(psi)
+    # K_b = K_b_fn(psi)
+    K_b = 0.577350269  # Bonan value
 
     # New variable names for consistency with Bonan
     albsoib = soil_r  # soil albedo for direct
@@ -88,12 +89,24 @@ def solve_n79(
     # td (tau_d) - exponential transmittance of diffuse radiation through each layer
     td = tau_df_fn(K_b_fn, dlai)
 
+    # Change to Bonan values to check
+    tb[:] = 0.94390002
+    td[:] = 0.91323569
+
+    # Variables needed for absorption calc
+    omega = rho + tau
+    laim = (lai[:-1] + lai[1:]) / 2  # cumulative LAI midpts
+    fracsun = np.exp(-K_b * laim)
+    fracsha = 1 - fracsun
+
     # Preallocate solution arrays
     nz = lai.size
     nb = leaf_t.size
     I_dr = np.zeros((nz, nb))
     I_df_d = np.zeros_like(I_dr)
     I_df_u = np.zeros_like(I_dr)
+    aI_lsl = np.zeros((nz-1, nb))
+    aI_lsh = np.zeros_like(aI_lsl)
 
     for i in range(nb):  # waveband loop
 
@@ -111,14 +124,14 @@ def solve_n79(
         d[0] = swskyb[i] * tbcum[0] * albsoib[i]
 
         # Soil: downward flux
-        refld = (1 - td[0]) * rho[i]
-        trand = (1 - td[0]) * tau[i] + td[0]
+        refld = (1 - td[1]) * rho[i]
+        trand = (1 - td[1]) * tau[i] + td[1]
         aiv = refld - trand * trand / refld
         biv = trand / refld
         a[1] = -aiv
         b[1] = 1
         c[1] = -biv
-        d[1] = swskyb[i] * tbcum[0] * (1 - tb[0]) * (tau[i] - rho[i] * biv)
+        d[1] = swskyb[i] * tbcum[1] * (1 - tb[1]) * (tau[i] - rho[i] * biv)
 
         # Inner canopy layers (excluding toc LAI=0 layer)
         # for j in range(nz - 1):
@@ -169,18 +182,30 @@ def solve_n79(
         import scipy
         res = scipy.linalg.solve(scipy.sparse.diags([a[1:], b, c[:-1]], [-1, 0, 1]).toarray(), d[:,np.newaxis]).squeeze()
 
-        # Grab solutions
+        # Grab irradiance solutions
         swup = res[::2]   # upward flux above layer
         swdn = res[1::2]  # downward flux above layer (onto layer)
+
+        # Calculate irradiance absorbed by leaves as in the scheme
+        direct = swskyb[i] * tbcum[1:] * (1 - tb) * (1 - omega[i])  # absorbed direct
+        diffuse = (swdn[1:] + swup[:-1]) * (1 - td) * (1 - omega[i])  # absorbed diffuse
+        sun = diffuse * fracsun + direct  # absorbed by sunlit leaves
+        shade = diffuse * fracsha  # shaded leaves
 
         # Store
         I_dr[:,i] = swskyb[i] * tbcum
         I_df_d[:,i] = swdn
         I_df_u[:,i] = swup
+        aI_lsl[:,i] = sun / (fracsun * dlai)
+        aI_lsh[:,i] = shade / (fracsha * dlai)
+
+        # breakpoint()
 
     return {
         "I_dr": I_dr,
         "I_df_d": I_df_d,
         "I_df_u": I_df_u,
         "F": I_dr / np.cos(psi) + 2 * I_df_d + 2 * I_df_u,
+        "aI_lsl": aI_lsl,
+        "aI_lsh": aI_lsh,
     }

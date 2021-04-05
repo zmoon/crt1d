@@ -246,7 +246,7 @@ class Model:
         p["lai_tot"] = lai[0]
         p["lai_eff"] = lai * p["clump"]
         dlai = lai[:-1] - lai[1:]
-        assert dlai.sum() == lai[0]
+        # assert dlai.sum() == lai[0]
         p["dlai"] = dlai
         p["dlai_eff"] = dlai * p["clump"]
         p["zm"] = zm  # z for dlai, layer centers
@@ -573,6 +573,8 @@ def _calc_absorption(m):
     # G = p["G"]  # fractional leaf area projected in direction psi
     K_b = p["K_b"]  # G/cos(psi)
 
+    K_b = 0.577350269  # testing Bonan
+
     leaf_r = p["leaf_r"]
     leaf_t = p["leaf_t"]
     leaf_a = 1 - (leaf_r + leaf_t)  # leaf element absorption coeff
@@ -586,8 +588,12 @@ def _calc_absorption(m):
     # TODO: include clump factor in f_sl and absorption calculations
 
     # Sunlit leaf fraction
-    f_sl_interfaces = np.exp(-K_b * lai)  # at interface levels
-    f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)  # at mid levels (abs.)
+    # f_sl_interfaces = np.exp(-K_b * lai)  # at interface levels
+    # f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)  # at mid levels (abs.)
+    # TODO: better to use LAI midpts, not f_sl_interfaces midpts
+    # TODO: and `zm` then should be the corresponding z values from interp, not `z` midpts
+    laim = (lai[:-1] + lai[1:]) / 2
+    f_sl = np.exp(-K_b * laim)
     f_sh = 1 - f_sl
 
     # Compute total layerwise absorbed (by plant, but not per unit LAI)
@@ -602,7 +608,13 @@ def _calc_absorption(m):
     # Absorbed direct depends on the sunlit leaf fraction
     I_dr0 = I_dr[-1, :][np.newaxis, :]
     # a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
-    a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
+    # a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
+    a_dr = (
+        I_dr0
+        * np.exp(-K_b * lai)[1:, np.newaxis]
+        * (1 - np.exp(-K_b * dlai))[:, np.newaxis]
+        * leaf_a
+    )
     # ^ direct beam absorption (sunlit leaves only by definition)
     #
     # **technically should be computed with exp**
