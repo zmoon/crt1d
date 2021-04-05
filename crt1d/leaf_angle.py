@@ -9,7 +9,7 @@ have the following relationship:
 
 where :math:`\psi` is the solar zenith angle.
 
-:math:`G` is the mean projection of leaf area in the direction psi.
+:math:`G` is the mean relative projection of leaf area in the direction psi.
 """
 import numpy as np
 from scipy import integrate
@@ -28,7 +28,7 @@ def g_spherical(theta_l):
 
 
 def g_uniform(theta_l):
-    return 2 / PI  # note no theta_l dependence
+    return 2 / PI  # note no `theta_l` dependence
 
 
 def g_planophile(theta_l):
@@ -61,7 +61,7 @@ def G_horizontal(psi):
 
 def G_spherical(psi):
     """G for spherical leaf inclination angle distribution."""
-    return 0.5  # note no psi dependence
+    return 0.5  # note no `psi` dependence
 
 
 def G_vertical(psi):
@@ -73,7 +73,7 @@ def g_ellipsoidal(theta_l, x):
     """PDF of leaf inclination angle for ellipsoidal distribution.
     Following Bonan (2019) p. 30, eqs. 2.11-14
     """
-    # note Campbell (1990) uses "Lambda" instead of Bonan's "l"
+    # note Campbell (1990) uses "Λ" (Lambda) instead of Bonan's "l"
     if x < 1:
         e1 = np.sqrt(1 - x ** 2)
         l = x + np.arcsin(e1) / e1  # noqa: E741 ambiguous name
@@ -138,6 +138,25 @@ def G_ellipsoidal_approx(psi, x):
     K = p1 / p2
 
     return K * np.cos(psi)  # K = G / cos(psi)
+
+
+def G_ellipsoidal_approx_bonan(psi, xl):
+    """Campbell G approximate form -- Bonan version.
+
+    .. warning::
+       `xl` is not the same parameter as the ``x`` used elsewhere in this module.
+       ``xl=0`` gives spherical, whereas ``x=1`` gives spherical.
+    """
+    # TODO: add converter fn from `xl` to `x`?
+
+    # Clip $\chi_l$ to [-0.4, 0.6]
+    chil = min(max(xl, -0.4), 0.6)
+
+    # Ross-Goudriaan function terms
+    phi1 = 0.5 - 0.633 * chil - 0.330 * chil ** 2
+    phi2 = 0.877 * (1 - 2 * phi1)
+
+    return phi1 + phi2 * np.cos(psi)
 
 
 def x_to_mla_approx(x):
