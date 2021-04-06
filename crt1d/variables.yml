@@ -380,6 +380,22 @@ variables:
     ln: Height above ground
 
 
+  f_slm:
+    type: array_like
+    shape: *shape_zm
+    desc: Fraction of leaf area within mass layer that is sunlit.
+    units: 1
+    ln: Sunlit leaf fraction
+
+  laim:
+    type: array_like
+    shape: *shape_zm
+    desc: LAI at mass levels.
+    units: m2 m-2
+    units_long: (m2 leaf) (m2 ground area)-1
+    ln: Leaf area index (cumulative)
+
+
   sza:
     type: float
     desc: Solar zenith angle (SZA). $\psi$ is the SZA in radians.

@@ -7,9 +7,9 @@ have the following relationship:
 .. math::
    K_b = G / \cos(\psi)
 
-where :math:`\psi` is the solar zenith angle.
+where :math:`\psi` is the solar zenith angle and :math:`K_b = K_b(\psi), G = G(\psi)`.
 
-:math:`G` is the mean projection of leaf area in the direction psi.
+:math:`G` is the mean relative projection of leaf area in the direction :math:`\psi`.
 """
 import numpy as np
 from scipy import integrate
@@ -28,7 +28,7 @@ def g_spherical(theta_l):
 
 
 def g_uniform(theta_l):
-    return 2 / PI  # note no theta_l dependence
+    return 2 / PI  # note no `theta_l` dependence
 
 
 def g_planophile(theta_l):
@@ -48,7 +48,7 @@ def g_plagiophile(theta_l):
 
 def mla_from_g(g_fn):
     r"""Calculate (estimate) the mean leaf inclination angle (deg.)
-    by numerically integrating the distribution's PDF: g(psi).
+    by numerically integrating the distribution's PDF: :math:`g(\psi)`.
     """
     theta_l_bar = integrate.quad(lambda x: x * g_fn(x), 0, PI / 2)[0]  # returns (y, err)
     return np.rad2deg(theta_l_bar)
@@ -61,7 +61,7 @@ def G_horizontal(psi):
 
 def G_spherical(psi):
     """G for spherical leaf inclination angle distribution."""
-    return 0.5  # note no psi dependence
+    return 0.5  # note no `psi` dependence
 
 
 def G_vertical(psi):
@@ -71,9 +71,9 @@ def G_vertical(psi):
 
 def g_ellipsoidal(theta_l, x):
     """PDF of leaf inclination angle for ellipsoidal distribution.
-    Following Bonan (2019) p. 30, eqs. 2.11-14
+    Following Bonan (2019) p. 30, eqs. 2.11--14
     """
-    # note Campbell (1990) uses "Lambda" instead of Bonan's "l"
+    # note Campbell (1990) uses "Λ" (Lambda) instead of Bonan's "l"
     if x < 1:
         e1 = np.sqrt(1 - x ** 2)
         l = x + np.arcsin(e1) / e1  # noqa: E741 ambiguous name
@@ -93,15 +93,15 @@ def g_ellipsoidal(theta_l, x):
 def G_ellipsoidal(psi, x):
     """G for the ellipsoidal leaf angle distribution.
 
-    ref: Campbell (1986) eqs. 5, 6 (:cite:`campbell_extinction_1986`)
+    ref: Campbell (1986) eqs. 5, 6 :cite:`campbell_extinction_1986`
 
     Parameters
     ----------
     psi : float
-        zenith angle in radians
+        Solar zenith angle in radians.
     x : float
-        b/a, ratio of horizontal semixaxis length to vertical,
-        s.t. x > 1 indicates oblate spheroid
+        b/a -- the ratio of ellipse horizontal semixaxis length to vertical,
+        s.t. `x` > 1 indicates an oblate spheroid.
     """
     if x == 1:  # => spherical
         res = np.full_like(psi, G_spherical(psi))  # allow psi array input
@@ -129,9 +129,8 @@ def G_ellipsoidal_approx(psi, x):
 
     References
     ----------
-    area ratio term: Campbell (1990) eq. 14
-    exact formula: Campbell & Norman (1996) eq. 15.4
-
+    * area ratio term: Campbell (1990) eq. 14 :cite:`campbellDerivationAngleDensity1990`
+    * exact formula: Campbell & Norman eq. 15.4 :cite:`campbell_introduction_2012`
     """
     p1 = np.sqrt(x ** 2 + np.tan(psi) ** 2)
     p2 = x + 1.774 * (x + 1.182) ** -0.733
@@ -140,8 +139,27 @@ def G_ellipsoidal_approx(psi, x):
     return K * np.cos(psi)  # K = G / cos(psi)
 
 
+def G_ellipsoidal_approx_bonan(psi, xl):
+    """Campbell G approximate form -- Bonan version.
+
+    .. warning::
+       `xl` is not the same parameter as the ``x`` used elsewhere in this module.
+       ``xl=0`` gives spherical, whereas ``x=1`` gives spherical.
+    """
+    # TODO: add converter fn from `xl` to `x`?
+
+    # Clip $\chi_l$ to [-0.4, 0.6]
+    chil = min(max(xl, -0.4), 0.6)
+
+    # Ross-Goudriaan function terms
+    phi1 = 0.5 - 0.633 * chil - 0.330 * chil ** 2
+    phi2 = 0.877 * (1 - 2 * phi1)
+
+    return phi1 + phi2 * np.cos(psi)
+
+
 def x_to_mla_approx(x):
-    r"""Convert x to mean leaf angle (deg.)
+    r"""Convert `x` to mean leaf angle (deg.)
     for the ellipsoidal leaf angle distribution.
     Using Campbell (1990) eq. 16.
     """
@@ -150,7 +168,7 @@ def x_to_mla_approx(x):
 
 
 def x_to_mla_integ(x):
-    """Convert x to mean leaf angle (deg.)
+    """Convert `x` to mean leaf angle (deg.)
     for the ellipsoidal leaf angle distribution
     by numerically integrating the leaf angle PDF.
     """
@@ -158,7 +176,7 @@ def x_to_mla_integ(x):
 
 
 def mla_to_x_approx(mla):
-    r"""Convert mean leaf angle (deg.) to x
+    r"""Convert mean leaf angle (deg.) to `x`
     for the ellipsoidal leaf angle distribution.
     Using Campbell (1990) eq. 16 inverted.
     """

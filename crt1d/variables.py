@@ -241,7 +241,10 @@ def _vmd_from_yaml():
     vmdes = []
     for name, params in variables.items():
         if any(k not in params_allowed for k in params):
-            raise Exception(f"a param in {name} is not allowed")
+            raise Exception(
+                f"param(s) in `{name}` not allowed: "
+                f"{', '.join(f'`{k}`' for k in set(params)-set(params_allowed))}"
+            )
 
         vmdes.append(VmdEntry(name, params, param_defaults))
 

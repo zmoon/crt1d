@@ -1,4 +1,4 @@
-name: docs-examples
+name: CI
 
 on:
   push:
@@ -7,10 +7,9 @@ on:
   pull_request:
     branches: [ master ]
     paths: [ '**.py', '.github/workflows/docs-examples.yml' ]
+  workflow_dispatch:  # allow manual triggering
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
     runs-on: ubuntu-latest
 
@@ -18,7 +17,6 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -30,7 +28,10 @@ jobs:
           set -xe
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install .[data]
-          python -m pip install jupytext
+          python -m pip install jupytext pytest
+
+      - name: Test (pytest)
+        run: pytest -v tests
 
       - name: Run the docs examples
         run: |

@@ -246,7 +246,7 @@ class Model:
         p["lai_tot"] = lai[0]
         p["lai_eff"] = lai * p["clump"]
         dlai = lai[:-1] - lai[1:]
-        assert dlai.sum() == lai[0]
+        # assert dlai.sum() == lai[0]
         p["dlai"] = dlai
         p["dlai_eff"] = dlai * p["clump"]
         p["zm"] = zm  # z for dlai, layer centers
@@ -292,25 +292,25 @@ class Model:
         """
         TODO: could add verbose option
         """
-        self._run_count += 1
-
         # check wavelengths are compatible etc.
         # should already have been done at least once by now, but whatever
         self._check_inputs()
 
         # construct dict of kwargs to pass to the solver
-        d = {**self._p, **extra_solver_kwargs}
         scheme = self.scheme
-        args = {k: d[k] for k in scheme["args"]}
+        p = self._p
+        args = {k: p[k] for k in scheme["args"]}
 
         # run
-        sol = scheme["solver"](**args)
+        sol = scheme["solver"](**args, **extra_solver_kwargs)
 
         # use the dict returned by the solver to update our state
         self.out.update({k: v for k, v in sol.items() if k in RET_KEYS_ALL_SCHEMES})
         self.out_extra.update(
             {f"{k}_scheme": v for k, v in sol.items() if k not in RET_KEYS_ALL_SCHEMES}
         )
+
+        self._run_count += 1
 
         return self  # for chaining
 
@@ -570,46 +570,52 @@ def _calc_absorption(m):
 
     lai = p["lai"]
     dlai = p["dlai"]
-    # G = p["G"]  # fractional leaf area projected in direction psi
     K_b = p["K_b"]  # G/cos(psi)
 
     leaf_r = p["leaf_r"]
     leaf_t = p["leaf_t"]
     leaf_a = 1 - (leaf_r + leaf_t)  # leaf element absorption coeff
 
-    # wl = p["wl"]
     I_dr = out["I_dr"]
     I_df_d = out["I_df_d"]
     I_df_u = out["I_df_u"]
-    # I_d = I_dr + I_df_d  # direct+diffuse downward irradiance
 
     # TODO: include clump factor in f_sl and absorption calculations
 
     # Sunlit leaf fraction
-    f_sl_interfaces = np.exp(-K_b * lai)  # at interface levels
-    f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)  # at mid levels (abs.)
+    # // f_sl_interfaces = np.exp(-K_b * lai)  # at interface levels
+    # // f_sl = f_sl_interfaces[:-1] + 0.5 * np.diff(f_sl_interfaces)  # at mid levels (abs.)
+    # Note
+    # - It is probably better to use LAI midpts, not midpts of f_sl at the interface levels,
+    #   though the two aren't much different when number of layers is >> LAI
+    # TODO: `zm` then should be the corresponding z values from interp, not `z` midpts
+    #       LAI(z) fns could easily return this info
+    # TODO: maybe a 2nd z coord for LAI midpts and smear or interpolate to get the values at z midpts (zm)
+    laim = (lai[:-1] + lai[1:]) / 2
+    f_sl = np.exp(-K_b * laim)
     f_sh = 1 - f_sl
 
-    # Compute total layerwise absorbed (by plant, but not per unit LAI)
+    # Compute total layerwise absorbed (W/m2 by plant, but not per unit LAI!)
     nlev = lai.size
     i = np.arange(nlev - 1)
     ip1 = i + 1
     a = I_dr[ip1] - I_dr[i] + I_df_d[ip1] - I_df_d[i] + I_df_u[i] - I_df_u[ip1]
     # ^ a: layerwise irradiance absorption in all bands
     #      as inputs - outputs
-    #      actual W/m2 absorption, not per unit LAI
 
-    # Absorbed direct depends on the sunlit leaf fraction
-    I_dr0 = I_dr[-1, :][np.newaxis, :]
-    # a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
-    a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
-    # ^ direct beam absorption (sunlit leaves only by definition)
-    #
-    # **technically should be computed with exp**
-    #   1 - exp(-K_b*L)
-    # K_b*L is an approximation for small L
-    # e.g.,
-    #   K=1, L=0.01, 1-exp(-K*L)=0.00995
+    # Compute absorbed direct irradiance
+    # // I_dr0 = I_dr[-1, :][np.newaxis, :]
+    # // a_dr =  I_dr0 * (K_b*f_sl*dlai)[:,np.newaxis] * leaf_a
+    # // a_dr = I_dr0 * (1 - np.exp(-K_b * f_sl * dlai))[:, np.newaxis] * leaf_a
+    a_dr = (
+        I_dr[1:, :]  # direct beam penetration above mass layer
+        * (1 - np.exp(-K_b * dlai))[:, np.newaxis]  # 1 - tau_b (transmittance through layer)
+        * leaf_a  # frac absorbed (as opposed to scattered)
+    )
+    # Note
+    # - by definition/convention, only sunlit leaves receive direct irradiance
+    # - `K_b*L` is an approximation to `1-exp(-K_b*L)` for small `L`,
+    #   e.g., `K=1, L=0.01` -> `1-exp(-K*L) = 0.00995`
 
     # Absorbed diffuse is the remaining fraction of absorbed radiation
     a_df = a - a_dr
@@ -619,7 +625,7 @@ def _calc_absorption(m):
     a_df_sh = a_df * f_sh[:, np.newaxis]
     a_sl = a_df_sl + a_dr
     a_sh = a_df_sh
-    assert np.allclose(a_sl + a_sh, a)
+    assert np.allclose(a_sl + a_sh, a)  # sanity check
 
     return {
         "aI": a,
@@ -629,10 +635,8 @@ def _calc_absorption(m):
         "aI_sl": a_sl,
         "aI_df_sl": a_df_sl,
         "aI_df_sh": a_df_sh,
-        # "I_d": I_d,
-        # "I_dr": I_dr,
-        # "I_df_d": I_df_d,
-        # "I_df_u": I_df_u,
+        "laim": laim,
+        "f_slm": f_sl,
     }
 
 
