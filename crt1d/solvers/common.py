@@ -8,16 +8,16 @@ import scipy.integrate as integrate
 
 
 def tau_b_fn(K_b_fn, psi, lai):
-    """Transmittance of direct beam through foliage layers(s) with LAI `lai`.
+    r"""Transmittance of direct beam through foliage layers(s) with LAI `lai`.
 
-    We need to be able to integrate over different zenith angles (to calulate tau_df),
-    so we supply K_b_fn instead of K_b
+    We need to be able to integrate over different zenith angles (to calulate :math:`\tau_d`),
+    so we supply `K_b_fn` instead of ``K_b`` (:math:`K_b`) itself.
 
     Parameters
     ----------
     K_b_fn : function
         := ``G_fn(psi)/cos(psi)`` where ``G_fn`` computes :math:`G`
-        for the chosen leaf angle distribution function.
+        for the chosen leaf angle distribution function based on :math:`\psi`.
     psi : float or array_like
         Solar zenith angle (radians).
     lai : float or array_like
@@ -61,13 +61,13 @@ def tau_df_fn(K_b_fn, lai, *, method="quad"):
 
     Parameters
     ----------
-    lai : float, array_like
+    lai : float or array_like
         LAI, one or multiple values.
     method : {'quad', '9sky'}
 
     References
     ----------
-    * Campbell & Norman eq. 15.5
+    * Campbell & Norman eq. 15.5 :cite:`campbell_introduction_2012`
     """
     if method == "quad":
         f = _tau_df_fn_scalar
@@ -86,9 +86,11 @@ def tau_df_fn(K_b_fn, lai, *, method="quad"):
     return res
 
 
-def K_df_fn(K_b_fn, lai_tot):
-    r""":math:`K_d` from :math:`K_b(\psi)` and total LAI, using :func:`tau_df_fn`."""
-    tau_df = tau_df_fn(K_b_fn, lai_tot)
+def K_df_fn(K_b_fn, lai_tot, **kwargs):
+    r""":math:`K_d` from :math:`K_b(\psi)` and total LAI, using :func:`tau_df_fn`.
+    `**kwargs` passed on to :func:`tau_df_fn`.
+    """
+    tau_df = tau_df_fn(K_b_fn, lai_tot, **kwargs)
     return -np.log(tau_df) / lai_tot
 
 
