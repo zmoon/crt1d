@@ -13,14 +13,14 @@ Zhao & Qualls multi-scattering | ``zq`` | {cite}`zhao_multiple-layer_2005`
 Bodin & Franklin 1.5 stream | ``bf`` | {cite}`bodin_efficient_2012`
 Goudriaan one-stream | ``gd`` | {cite}`goudriaan_crop_1977,bodin_efficient_2012`
 Zhao & Qualls from pyAPES | ``zq_pa`` |
+Norman (1979) | ``n79`` | {cite}`normanModelingCompleteCrop1979,bonan_climate_2019`
 
-Dickinson--Sellers ({cite}`dickinson_land_1983,sellers_canopy_1985`) is quite common.
+Dickinson--Sellers {cite:p}`dickinson_land_1983,sellers_canopy_1985` is quite common.
 
 
 ## References
 
-Bonan's 2019 book ({cite}`bonan_climate_2019`) is an excellent reference for many of the concepts,
-and the implementation of the Norman scheme will be included here at some point.
+Bonan's 2019 book {cite:p}`bonan_climate_2019` is an excellent reference for many of the concepts.
 
 ```{bibliography} crt1d-refs.bib
 :all:
