@@ -149,7 +149,7 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
 
         Can be an array-like of weights (e.g., irradiances).
 
-        TODO: Can be function that can take `x` as its first parameter to provide
+        Can be function that can take `x` as its first parameter to provide
         a weight for `y`\(`x`).
     **light_kwargs
         For the `light` method.
@@ -158,21 +158,23 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
     y = np.asarray(y)
     if x is not None and xe is not None:
         raise ValueError("only provide one of `x` and `xe`.")
+    if x is None and xe is None:
+        raise ValueError("`x` or `xe` must be provided!")
 
-    # Spectrum
+    # Spectrum -- `y` defined at `x`
     if x is not None:
         x = np.asarray(x)
         assert x.size == y.size
-
         # Now bin (temporary!? until working weights into smear)
         # TODO: arg to control nbins and/or dx resolution (1 nm?)?
         xe = np.linspace(*bounds, 201)
         y = smear_tuv(x, y, xe)
 
-    # Already been binned -- use the edges
+    # Already been binned -- use the `xe` edges
     if xe is not None:
         xe = np.asarray(xe)
         assert xe.size == y.size + 1
+        x = (xe[:-1] + xe[1:]) / 2  # midpts
 
     w = _x_frac_in_bounds(xe, bounds)  # initial weights
 
@@ -185,6 +187,8 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
             w *= np.ones_like(y)
         else:
             raise ValueError("invalid choice of `light`")
+    elif callable(light):
+        w *= light(x, **light_kwargs)
     else:  # assume array-like
         w *= np.asarray(light)
 
