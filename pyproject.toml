@@ -6,3 +6,9 @@ requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
 
 [tool.setuptools_scm]
 write_to = "crt1d/_version.py"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # ignore pywintypes deprecation warning about `imp`
+    'ignore::DeprecationWarning:pywintypes',
+]
