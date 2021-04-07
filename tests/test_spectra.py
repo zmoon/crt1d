@@ -24,10 +24,27 @@ def test_l_wl_planck_integ_T(T_K):
 @pytest.mark.parametrize(
     "xe,bounds,expected",
     [
-        pytest.param(np.r_[0, 1, 2, 3], (0, 3), np.r_[1, 1, 1], id="all in"),
-        pytest.param(np.r_[0, 1, 2, 3], (0.5, 2.2), np.r_[0.5, 1, 0.2], id="fractions"),
-        pytest.param(np.r_[0, 1, 2, 3], (0.5, 2.0), np.r_[0.5, 1, 0], id="one out (edge in)"),
+        pytest.param(np.r_[0, 1, 2, 3], (0, 3), [1, 1, 1], id="all in"),
+        pytest.param(np.r_[0, 1, 2, 3], (0.5, 2.2), [0.5, 1, 0.2], id="fractions"),
+        pytest.param(np.r_[0, 1, 2, 3], (0.5, 2.0), [0.5, 1, 0], id="one out (edge in)"),
     ],
 )
 def test_x_frac_in_bounds(xe, bounds, expected):
-    np.testing.assert_allclose(crt.spectra._x_frac_in_bounds(xe, bounds), expected)
+    actual = crt.spectra._x_frac_in_bounds(xe, bounds)
+    np.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "x,bins,expected",
+    [
+        pytest.param(np.r_[0, 1, 2, 3, 4], (0, 2, 4), [1, 3], id="equal bin edges in x"),
+        pytest.param(np.r_[0, 1, 2, 3, 4], (0, 1, 4), [0.5, 2.5], id="unequal bin edges in x"),
+        pytest.param(np.r_[0, 1, 2, 3, 4], (0, 1, 6), [0.5, 7.5 / (6 - 1)], id="bin edge beyond x"),
+        pytest.param(np.r_[0, 1], (2, 3), [0], id="single bin fully outside"),
+    ],
+)
+def test_smear_tuv(x, bins, expected):
+    # We use the function y = x as the original spectrum to be smeared
+    y = x
+    actual = crt.spectra.smear_tuv(x, y, bins)
+    np.testing.assert_allclose(actual, expected)

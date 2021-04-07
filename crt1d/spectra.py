@@ -266,6 +266,7 @@ def smear_tuv(x, y, bins):
     It works by applying cumulative trapezoidal integration to the original data,
     interpolating within `x` so that :math:`x_l` and :math:`x_u` don't have to be on the original `x` grid.
     """
+    bins = np.asarray(bins)
     ynew = np.zeros(bins.size - 1)
     # TODO: more efficient looping, maybe `while` over `x`
     for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
