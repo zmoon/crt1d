@@ -176,7 +176,10 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
         assert xe.size == y.size + 1
         x = (xe[:-1] + xe[1:]) / 2  # midpts
 
-    w = _x_frac_in_bounds(xe, bounds)  # initial weights
+    # TODO: Define `bounds` as `xe` edge values if not defined
+
+    # Construct initial weights (not including light)
+    w = _x_frac_in_bounds(xe, bounds) * np.diff(xe)
 
     # Add weights based on light spectrum
     if isinstance(light, str):
