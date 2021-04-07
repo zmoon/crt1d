@@ -88,6 +88,7 @@ def _x_frac_in_bounds(xe, bounds):
     array
         Weights, size ``xe.size - 1``.
     """
+    xe = np.asarray(xe, dtype=float)
     x1, x2 = xe[:-1], xe[1:]  # left and right
 
     b1, b2 = bounds[0], bounds[1]
