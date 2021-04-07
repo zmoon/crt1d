@@ -2,7 +2,8 @@
 
 Testbed/framework for 1-D canopy radiative transfer schemes.
 
-[![Documentation Status](https://readthedocs.org/projects/crt1d/badge/?version=latest)](https://crt1d.readthedocs.io/en/latest/?badge=latest)
+[![Documentation build status](https://readthedocs.org/projects/crt1d/badge/?version=latest)](https://crt1d.readthedocs.io/en/latest/?badge=latest)
+[![CI](https://github.com/zmoon/crt1d/actions/workflows/ci.yml/badge.svg)](https://github.com/zmoon/crt1d/actions/workflows/ci.yml)
 
 ## Installation
 
