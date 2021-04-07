@@ -48,3 +48,15 @@ def test_smear_tuv(x, bins, expected):
     y = x
     actual = crt.spectra.smear_tuv(x, y, bins)
     np.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "x,expected",
+    [
+        pytest.param(np.r_[0.5, 1.5, 2.5], [0, 1, 2, 3], id="equal spacing"),
+        pytest.param(np.r_[0.5, 1.5, 2], [0, 1, 1.75, 2.25], id="variable spacing"),
+    ],
+)
+def test_edges_from_centers(x, expected):
+    actual = crt.spectra._edges_from_centers(x)
+    np.testing.assert_allclose(actual, expected)
