@@ -199,7 +199,7 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
     return (y * w).sum() / w.sum()  # weighted average
 
 
-def _smear_tuv_1(x, y, bin):
+def _smear_tuv_1(x, y, bin, *, return_last_index=False):
     r"""Smear `y` values at positions `x` over the region defined by `bin`.
     Returns a single value, corresponding to the (trapezoidally) integrated average of
     :math:`y(x)` in the bin.
@@ -208,6 +208,8 @@ def _smear_tuv_1(x, y, bin):
     ----------
     x : array_like
         the original grid
+        .. warning::
+           Assumed to be in increasing order.
     y : array_like
         the values :math:`y(x)` to be smeared
     bin : array_like
@@ -215,9 +217,11 @@ def _smear_tuv_1(x, y, bin):
     """
     xl, xu = bin  # shadowing a builtin but whatever
     area = 0
-    for k in range(x.size - 1):  # TODO: could try subsetting first instead of over whole grid
-        if x[k + 1] < xl or x[k] > xu:  # outside window
+    for k in range(x.size - 1):
+        if x[k + 1] < xl:  # trapezoid R side is L of bin
             continue
+        if x[k] > xu:  # trapezoid L side is R of bin
+            break
 
         a1 = max(x[k], xl)
         a2 = min(x[k + 1], xu)
@@ -227,7 +231,11 @@ def _smear_tuv_1(x, y, bin):
         b2 = y[k] + slope * (a2 - x[k])
         area = area + (a2 - a1) * (b2 + b1) / 2
 
-    return area / (xu - xl)
+    res = area / (xu - xl)
+    if return_last_index:
+        return res, k
+    else:
+        return res
 
 
 def smear_tuv(x, y, bins):
@@ -268,10 +276,27 @@ def smear_tuv(x, y, bins):
     """
     bins = np.asarray(bins)
     ynew = np.zeros(bins.size - 1)
-    # TODO: more efficient looping, maybe `while` over `x`
     for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
         ynew[i] = _smear_tuv_1(x, y, bin_)
-    return ynew  # valid for band, not at left edge
+    return ynew  # valid for band, including one edge, depending on interpretation
+
+
+def smear_tuv2(x, y, bins):
+    """WIP: more-efficient version of :func:`smear_tuv`."""
+    bins = np.asarray(bins)
+    ynew = np.zeros(bins.size - 1)
+
+    # In this version, we remember where we have already been,
+    # instead of passing the whole range of `x` and `y` to `_smear_tuv_1` every time.
+    # ~ 5x faster smearing 1 nm leaf spectrum to 200 bands
+    i = 0  # `ynew` index
+    k = 0  # index of start of `y` & `x` values to pass
+    while i < ynew.size:
+        res_i, k_rel = _smear_tuv_1(x[k:], y[k:], bins[i : i + 2], return_last_index=True)
+        ynew[i] = res_i
+        i += 1
+        k += k_rel - 1
+    return ynew
 
 
 def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):

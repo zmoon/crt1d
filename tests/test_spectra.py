@@ -48,6 +48,8 @@ def test_smear_tuv(x, bins, expected):
     y = x
     actual = crt.spectra.smear_tuv(x, y, bins)
     np.testing.assert_allclose(actual, expected)
+    actual2 = crt.spectra.smear_tuv2(x, y, bins)
+    np.testing.assert_allclose(actual2, expected)
 
 
 @pytest.mark.parametrize(
