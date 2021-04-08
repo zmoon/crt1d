@@ -1,6 +1,7 @@
 """
 Spectral manipulations.
 """
+import math
 import warnings
 
 import numpy as np
@@ -121,7 +122,9 @@ def _x_frac_in_bounds(xe, bounds):
     return w_all
 
 
-def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwargs):
+def avg_optical_prop(
+    y, bounds, *, x=None, xe=None, x_smear_nb=None, light="planck", **light_kwargs
+):
     r"""Average reflectance or transmittance over some region,
     from a spectrum or binned (smeared) spectrum.
 
@@ -142,6 +145,12 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
     xe : array_like, optional
         Bin edges.
         Don't provide `x` if using `xe`.
+    x_smear_nb : int, optional
+        Number of equally-spaced bands to use when smearing `x` to determine edges.
+        Default: band widths of 5 nm or minimum spacing between `x` values---\
+        whichever gives a smaller number of bands.
+        .. warning::
+           The default assumes `x` is in μm.
     light : str, array_like, callable
         Method for constructing the light weights used in the weighted average.
 
@@ -167,8 +176,12 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
         x = np.asarray(x)
         assert x.size == y.size
         # Now bin (temporary!? until working weights into smear)
-        # TODO: arg to control nbins and/or dx resolution (1 nm?)?
-        xe = np.linspace(*bounds, 201)
+        if x_smear_nb is None:
+            dx_smear = max(np.diff(x).min(), 5e-3)
+            nb = math.ceil((bounds[1] - bounds[0]) / dx_smear)
+        else:
+            nb = x_smear_nb
+        xe = np.linspace(*bounds, nb + 1)
         y = smear_tuv(x, y, xe)
 
     # Already been binned -- use the `xe` edges
