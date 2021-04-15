@@ -147,10 +147,12 @@ def avg_optical_prop(
         Don't provide `x` if using `xe`.
     x_smear_nb : int, optional
         Number of equally-spaced bands to use when smearing `x` to determine edges.
+
         Default: band widths of 5 nm or minimum spacing between `x` values---\
         whichever gives a smaller number of bands.
+
         .. warning::
-           The default assumes `x` is in μm.
+           The default method assumes `x` is in μm when assessing spacing between `x` values.
     light : str, array_like, callable
         Method for constructing the light weights used in the weighted average.
 
