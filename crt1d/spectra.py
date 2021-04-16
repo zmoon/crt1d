@@ -473,7 +473,8 @@ def smear(y, bins, *, x="wl", xname_out="wl", method="tuv", **method_kwargs):
     """Smear `y` into `bins`.
 
     This function dispatches to the different smearing method functions,
-    which take array-like inputs and can be used directly instead if desired.
+    which take array-like inputs and can be used directly instead if desired
+    (e.g., :func:`smear_tuv`).
 
     If `y` is array-like, this returns a :class:`numpy.ndarray`.
 
@@ -526,13 +527,20 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     and then compute in-bin irradiance in the new bins.
     `**kwargs` can include ``method`` and ``**method_kwargs`` (see :func:`smear`).
 
-    .. note::
-       `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
-       and ``'SI_df'`` (diffuse).
-
     Parameters
     ----------
     ds : xr.Dataset
+        Input dataset, containing spectral irradiance.
+
+        .. note::
+           `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
+           and ``'SI_df'`` (diffuse).
+    bins : array_like
+        Bin edges.
+    xname_out : str
+        Variable name to use for the *x* variable in the output dataset.
+    **kwargs
+        Passed on to :func:`smear`.
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
@@ -626,11 +634,15 @@ def plot_binned(x, y, xc, yc, dx, *, ax=None, xtight="orig"):
     Parameters
     ----------
     x, y : array_like
-        original/actual values at wavelengths (original spectra)
+        Original/actual values at wavelengths (original spectra).
     xc, yc : array_like
-        values at wave band centers
+        Values at wave band centers.
     dx : array_like
-        wave band widths, same size as `xc`, `yc`.
+        Wave band widths, same size as `xc`, `yc`.
+    ax : plt.Axes, optional
+        By default, a new ax is created.
+    xtight : {'orig', 'bins'}
+        Whether to set the *x* limits based on the original spectrum or the binned spectrum.
     """
     import matplotlib.pyplot as plt
     from .utils import cf_units_to_tex
