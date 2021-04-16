@@ -1,10 +1,10 @@
 import numpy as np
 
-short_name = "Gou"
-long_name = "Goudriaan"
+short_name = "G77"
+long_name = "Goudriaan (1977)"
 
 
-def solve_gd(
+def solve_g77(
     *,
     psi,
     I_dr0_all,

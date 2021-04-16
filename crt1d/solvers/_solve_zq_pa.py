@@ -17,7 +17,7 @@ from .common import tau_df_fn
 EPS = np.finfo(float).eps
 
 short_name = "ZQ-pA"
-long_name = "Zhao & Qualls multi-scattering pyAPES"
+long_name = "Zhao & Qualls multi-scattering (pyAPES)"
 
 
 def solve_zq_pa(

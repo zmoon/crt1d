@@ -2,7 +2,7 @@ import numpy as np
 import scipy.integrate as integrate
 
 short_name = "4s"
-long_name = "four-stream"
+long_name = "Tian et al. four-stream"
 
 
 def solve_4s(

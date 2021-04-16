@@ -69,7 +69,7 @@ def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
 
     for vn in vns:
         da = ds[vn]
-        ln_new = f"{da.attrs['long_name']} - {band_name}"
+        ln_new = f"{da.attrs['long_name']} \u2013 {band_name}"
         units = da.attrs["units"]
         ds[vn] = (da * w).sum(dim="wl")
         ds[vn].attrs.update(
@@ -80,7 +80,7 @@ def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
         )
         if calc_PFD:
             da_pfd = _E_to_PFD_da(da)
-            ln_new = f"{da_pfd.attrs['long_name']} - {band_name}"
+            ln_new = f"{da_pfd.attrs['long_name']} \u2013 {band_name}"
             units = da_pfd.attrs["units"]
             vn_pfd = vn.replace("I", "PFD")
             ds[vn_pfd] = (da_pfd * w).sum(dim="wl")
@@ -101,7 +101,17 @@ def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
     return ds.drop("wl")
 
 
-def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
+def plot_compare_band(
+    dsets,
+    *,
+    band_name="PAR",
+    bounds=None,
+    ref=None,
+    ref_relative=False,
+    marker=".",
+    legend_outside=True,
+    legend_labels="long_name",
+):
     """Multi-panel plot of profiles for specified band.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
 
@@ -111,18 +121,51 @@ def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
     ----------
     dsets : list of xr.Dataset
         Created using :meth:`~crt1d.Model.to_xr`.
+    ref : str, xr.Dataset, optional
+        Scheme ``name`` to be used as the reference
+        (it will be subtracted from the others in the plot).
+        Default: no reference used.
+    ref_relative : bool
+        Whether to present relative error when using a `ref`.
+        If false, absolute error is presented.
+    marker : str, optional
+        Marker to be used when plotting the lines.
+        Pass `None` to get no markers.
+    legend_outside : bool
+        Whether to place the legend outside the axes area or within.
+        If outside, it will be placed upper right.
+        If within, it will be placed on top of the lower left ax.
+    legend_labels : {'long_name', 'short_name', 'name'}
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
 
-    # integrate over the band
+    # Integrate over the band
     dsets = [band(ds, band_name=band_name, bounds=bounds) for ds in dsets]
 
-    # variables to show in each panel
+    # Variables to show in each panel
     varnames = [
         ["aI", "aI_sl", "aI_sh"],
         ["I_dr", "I_df_d", "I_df_u"],
     ]  # rows, cols
+
+    # Reference?
+    if ref is not None:
+        if isinstance(ref, str):
+            names = [ds.scheme_name for ds in dsets]
+            dsref = dsets[names.index(ref)]
+        elif isinstance(ref, xr.Dataset):
+            dsref = band(ref, band_name=band_name, bounds=bounds)
+        else:
+            raise TypeError("invalid type for `ref`.")
+    else:
+        dsref = None
+
+    # Reference relative?
+    if ref_relative:
+        ref_sym = r"$\Delta_r$"
+    else:
+        ref_sym = r"$\Delta$"
 
     nrows = len(varnames)
     ncols = len(varnames[0])
@@ -133,16 +176,32 @@ def plot_compare_band(dsets, *, band_name="PAR", bounds=None):
     for i, vn in enumerate(vns):
         ax = axs.flat[i]
         for dset in dsets:
-            da = dset[vn]
+            da0 = dset[vn]
+            if ref is not None:
+                da = da0 - dsref[vn]
+                if ref_relative:
+                    da = da / dsref[vn]
+                da.attrs.update(da0.attrs)
+                da.attrs["long_name"] = f"{ref_sym} {da.long_name}"
+            else:
+                da = da0
             y = da.dims[0]
-            da.plot(y=y, ax=ax, label=dset.attrs["scheme_long_name"], marker=".")
+            da.plot(y=y, ax=ax, label=dset.attrs[f"scheme_{legend_labels}"], marker=marker)
+
+    if ref is not None:
+        axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
 
     for ax in axs.flat:
         ax.grid(True)
+        ax.set_ylim(ymin=0)
 
-    # legend in lower left
     h, _ = axs.flat[0].get_legend_handles_labels()
-    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=9)
+    if legend_outside:
+        # upper right outside axes
+        fig.legend(handles=h, loc="upper left", bbox_to_anchor=(0.98, 0.987))
+    else:
+        # lower left inside ax
+        fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=9)
 
     fig.tight_layout()
 
