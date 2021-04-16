@@ -19,10 +19,11 @@ and so does not have an impact.
 """
 import numpy as np
 from scipy import integrate
+from scipy import optimize
 
 PI = np.pi
 
-# note that Bonan uses g for azimuth angle dist and f for inclination angle dist
+# note that Bonan uses $g$ for azimuth angle dist and $f$ for inclination angle dist
 # here we neglect any azimuth angle preference
 
 
@@ -55,29 +56,6 @@ def g_plagiophile(theta_l):
     return 2 / PI * (1 - np.cos(4 * theta_l))
 
 
-def mla_from_g(g_fn):
-    r"""Calculate (estimate) the mean leaf inclination angle (deg.)
-    by numerically integrating the distribution's PDF: :math:`g(\psi)`.
-    """
-    theta_l_bar = integrate.quad(lambda x: x * g_fn(x), 0, PI / 2)[0]  # returns (y, err)
-    return np.rad2deg(theta_l_bar)
-
-
-def G_horizontal(psi):
-    r""":math:`G(\psi)` for horizontal leaves."""
-    return np.cos(psi)
-
-
-def G_spherical(psi):
-    r""":math:`G(\psi)` for the spherical leaf inclination angle distribution."""
-    return 0.5  # note no `psi` dependence
-
-
-def G_vertical(psi):
-    r""":math:`G(\psi)` for vertical leaves."""
-    return 2 / PI * np.sin(psi)
-
-
 def g_ellipsoidal(theta_l, x):
     r"""PDF of :math:`\theta_l` for the ellipsoidal distribution
     with parameter `x`.
@@ -98,6 +76,54 @@ def g_ellipsoidal(theta_l, x):
     p2 = (np.cos(theta_l) ** 2 + x ** 2 * np.sin(theta_l) ** 2) ** 2
 
     return p1 / (l * p2)
+
+
+def mla_from_g(g_fn):
+    r"""Calculate (estimate) the mean leaf inclination angle (deg.)
+    by numerically integrating the distribution's PDF: :math:`g(\psi)`.
+    """
+    theta_l_bar = integrate.quad(lambda x: x * g_fn(x), 0, PI / 2)[0]  # returns (y, err)
+    return np.rad2deg(theta_l_bar)
+
+
+def xl_from_g(g_fn):
+    r"""Compute :math:`\chi_l`, an index which quantifies the departure of the
+    leaf angle distribution from spherical.
+
+    Vertical leaves have :math:`\chi_l = -1` and horizontal leaves :math:`\chi_l = +1`.
+
+    Bonan eq. 2.16
+    """
+    xl = 0.5 * integrate.quad(
+        lambda theta_l: np.abs(np.sin(theta_l) - g_fn(theta_l)),
+        0,
+        PI / 2,
+    )[0]
+
+    # Per Bonan, sign should be determined using the [60, 90] region
+    F3 = integrate.quad(
+        lambda theta_l: np.sin(theta_l) - g_fn(theta_l),
+        PI / 3,
+        PI / 2,
+    )[0]
+    sign = np.sign(F3)
+
+    return xl * sign
+
+
+def G_horizontal(psi):
+    r""":math:`G(\psi)` for horizontal leaves."""
+    return np.cos(psi)
+
+
+def G_spherical(psi):
+    r""":math:`G(\psi)` for the spherical leaf inclination angle distribution."""
+    return 0.5  # note no `psi` dependence
+
+
+def G_vertical(psi):
+    r""":math:`G(\psi)` for vertical leaves."""
+    return 2 / PI * np.sin(psi)
 
 
 def G_ellipsoidal(psi, x):
@@ -151,7 +177,10 @@ def G_ellipsoidal_approx(psi, x):
 
 
 def G_ellipsoidal_approx_bonan(psi, xl):
-    """Campbell :math:`G` approximate form -- Bonan version.
+    r"""Campbell :math:`G` approximate form -- Bonan version.
+
+    This uses :math:`\chi_l`, an index which quantifies the departure of the
+    leaf angle distribution from spherical.
 
     .. warning::
        `xl` is not the same parameter as the ``x`` used elsewhere in this module.
@@ -196,34 +225,17 @@ def mla_to_x_approx(mla):
     return x
 
 
-# TODO: better mla_to_x
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    plt.close("all")
-
-    # TODO: leaf angle distribution PDFs
-
-    # x to mla
-    fig, ax = plt.subplots()
-    ax.set_title("Ellipsoidal mean leaf angle from $x$")
-    x = np.linspace(1, 10, 200)
-    ax.plot(x, [x_to_mla_integ(xi) for xi in x], label="numerical integration of exact PDF")
-    ax.plot(x, x_to_mla_approx(x), label="approximation")
-    ax.set(xlabel="$x$", ylabel="mean leaf angle (deg.)")
-    ax.legend()
-    fig.tight_layout()
-
-    # G ellipsoidal exact formulation vs approx
-    fig, ax = plt.subplots()
-    ax.set_title("Ellipsoidal $G$")
-    sza = np.linspace(0, 85, 200)
-    psi = np.deg2rad(sza)
-    for xval in [0.5, 1, 2, 4]:
-        ax.plot(sza, G_ellipsoidal(psi, xval), label=f"analytical, $x={xval}$")
-        ax.plot(sza, G_ellipsoidal_approx(psi, xval), label=f"approx., $x={xval}$")
-    ax.set(xlabel="solar zenith angle (deg.)", ylabel="$G$")
-    ax.legend()
-    fig.tight_layout()
+def mla_to_x_integ(mla):
+    r"""Convert mean leaf angle (deg.) to `x`
+    for the ellipsoidal leaf angle distribution
+    by optimization.
+    """
+    res = optimize.minimize_scalar(
+        lambda x: np.abs(x_to_mla_integ(x) - mla),
+        bounds=(0, 999),  # note arbitrary `x` upper bound (setting `None` doesn't work)
+        method="bounded",
+        options=dict(
+            xatol=1e-8,  # default: 1e-5
+        ),
+    )
+    return res.x
