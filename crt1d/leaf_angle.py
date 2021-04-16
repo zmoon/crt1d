@@ -92,7 +92,7 @@ def xl_from_g(g_fn):
 
     Vertical leaves have :math:`\chi_l = -1` and horizontal leaves :math:`\chi_l = +1`.
 
-    Bonan eq. 2.16
+    :cite:t:`bonan_climate_2019` eq. 2.16
     """
     xl = 0.5 * integrate.quad(
         lambda theta_l: np.abs(np.sin(theta_l) - g_fn(theta_l)),
@@ -130,7 +130,7 @@ def G_ellipsoidal(psi, x):
     r""":math:`G(\psi)` for the ellipsoidal leaf angle distribution
     with parameter `x`.
 
-    ref: Campbell (1986) eqs. 5, 6 :cite:`campbell_extinction_1986`
+    *Reference*: Campbell (1986) eqs. 5, 6 :cite:`campbell_extinction_1986`
 
     Parameters
     ----------
@@ -201,7 +201,7 @@ def G_ellipsoidal_approx_bonan(psi, xl):
 def x_to_mla_approx(x):
     r"""Convert `x` to mean leaf angle (deg.)
     for the ellipsoidal leaf angle distribution.
-    Using Campbell (1990) eq. 16.
+    Using Campbell (1990) :cite:`campbellDerivationAngleDensity1990` eq. 16.
     """
     theta_l_bar = 9.65 * (3 + x) ** (-1.65)
     return np.rad2deg(theta_l_bar)
@@ -218,7 +218,7 @@ def x_to_mla_integ(x):
 def mla_to_x_approx(mla):
     r"""Convert mean leaf angle (deg.) to `x`
     for the ellipsoidal leaf angle distribution.
-    Using Campbell (1990) eq. 16 inverted.
+    Using Campbell (1990) :cite:`campbellDerivationAngleDensity1990` eq. 16 inverted.
     """
     x = (np.deg2rad(mla) / 9.65) ** (-1.0 / 1.65) - 3.0
     assert x > 0
