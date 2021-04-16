@@ -98,6 +98,8 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
             elif field == "name":
                 hash_link = f"#{p.lower().replace('_', '-')}"  # or could use URL tools
                 p = f"[``{p}``]({hash_link})"
+            elif field == "s_shape":
+                p = _math_shape_from_s_shape(p)
 
             lines.append(f"{pre}{p}")
 
@@ -112,6 +114,7 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
             if self.s_units_long is not None
             else ""
         )
+        shape = f"``{self.s_shape}``" if self.s_shape else f"``{self.dims}``"
         return f"""
 {header}
 
@@ -122,7 +125,7 @@ Attributes:
 * units: {cf_units_to_tex(self.s_units)}
 {l_units_long}
 * type: ``{self.s_type}``
-* shape: ``{self.s_shape}``
+* shape: {shape}
 * dims: ``{self.dims}``
         """.strip()
 
@@ -187,7 +190,7 @@ def _dims_from_s_shape(s_shape):
     """Detect xarray dims tuple from shape string.
     Helper for `VmdEntry` initialization."""
     assert s_shape[0] == "(" and s_shape[-1] == ")"
-    shape_parts = s_shape[1:-1].split(",")
+    shape_parts = [s for s in s_shape[1:-1].split(",") if s]
 
     dims = []
     for shape_part_raw in shape_parts:
@@ -202,7 +205,16 @@ def _dims_from_s_shape(s_shape):
         else:
             dims.append(shape_part[2:])
 
-    return tuple(dims)
+    return dims  # tuple(dims)
+
+
+def _math_shape_from_s_shape(s_shape):
+    """Fancy shape repr for summary table."""
+    if s_shape:
+        s_shape = s_shape.replace("wl", r"\lambda")
+        return f"{{math}}`{s_shape}`"  # myst format
+    else:
+        return ""
 
 
 # TODO: def _s_shape_to_tex(s_shape):

@@ -1,10 +1,10 @@
 # Variable metadata
 
 aliases:
-  - &shape_z '(n_z)'
-  - &shape_zm '(n_z-1)'
-  - &shape_wl '(n_wl)'
-  - &shape_wle '(n_wl+1)'
+  - &shape_z '(n_z,)'
+  - &shape_zm '(n_z-1,)'
+  - &shape_wl '(n_wl,)'
+  - &shape_wle '(n_wl+1,)'
   - &shape_z_wl '(n_z, n_wl)'
   - &shape_zm_wl '(n_z-1, n_wl)'
   - &units_E 'W m-2'
