@@ -5,7 +5,6 @@ from pathlib import Path as _Path
 
 # directories
 BASE_DIR = _Path(__file__).parent
-DATA_BASE_DIR = BASE_DIR / "data"
 
 # include Model in pkg-level namespace
 from .model import Model  # noqa: F401 unused import
@@ -25,6 +24,7 @@ except ModuleNotFoundError:
 
 def print_config():
     """Print info about the schemes etc."""
+    from .data import DATA_BASE_DIR
     from .solvers import AVAILABLE_SCHEMES
 
     # config summary

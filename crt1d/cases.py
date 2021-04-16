@@ -4,7 +4,7 @@
 import numpy as np
 
 from . import data
-from . import DATA_BASE_DIR
+from .data import DATA_BASE_DIR
 from .leaf_angle import G_ellipsoidal_approx
 from .leaf_angle import mla_to_x_approx as mla_to_orient
 from .leaf_area import distribute_lai_beta

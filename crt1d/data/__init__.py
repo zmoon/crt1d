@@ -4,16 +4,19 @@ as well as functions that use external (not-required) libraries to compute more 
 
 Data are loaded as :class:`xarray.Dataset` for easy inspection.
 """
+from pathlib import Path as _Path
+
 import numpy as np
 import xarray as xr
 
-from .. import DATA_BASE_DIR
 from ..spectra import _edges_from_centers
 from ..variables import _tup
 from ..variables import _wl_coord_dict
 from ._external import leaf_ps5  # noqa: F401 unused import
 from ._external import solar_sp2  # noqa: F401 unused import
 
+
+DATA_BASE_DIR = _Path(__file__).parent
 DATA_DIR_STR = DATA_BASE_DIR.as_posix()
 
 
