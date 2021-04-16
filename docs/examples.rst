@@ -14,6 +14,15 @@ Notebooks that I use to test the code...
    examples/test_schemes_plot
 
 
+Geometry
+--------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/leaf-angle
+
+
 Data
 ----
 

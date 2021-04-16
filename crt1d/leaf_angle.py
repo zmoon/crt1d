@@ -35,7 +35,9 @@ def g_spherical(theta_l):
 
 def g_uniform(theta_l):
     r"""PDF of :math:`\theta_l` for a uniform distribution."""
-    return 2 / PI  # note no `theta_l` dependence
+    # note no `theta_l` dependence
+    val = 2 / PI
+    return val if np.isscalar(theta_l) else np.full_like(theta_l, val)
 
 
 def g_planophile(theta_l):
