@@ -1,6 +1,7 @@
 """
 Spectral manipulations.
 """
+import math
 import warnings
 
 import numpy as np
@@ -88,6 +89,7 @@ def _x_frac_in_bounds(xe, bounds):
     array
         Weights, size ``xe.size - 1``.
     """
+    xe = np.asarray(xe, dtype=float)
     x1, x2 = xe[:-1], xe[1:]  # left and right
 
     b1, b2 = bounds[0], bounds[1]
@@ -120,7 +122,9 @@ def _x_frac_in_bounds(xe, bounds):
     return w_all
 
 
-def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwargs):
+def avg_optical_prop(
+    y, bounds, *, x=None, xe=None, x_smear_nb=None, light="planck", **light_kwargs
+):
     r"""Average reflectance or transmittance over some region,
     from a spectrum or binned (smeared) spectrum.
 
@@ -141,6 +145,14 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
     xe : array_like, optional
         Bin edges.
         Don't provide `x` if using `xe`.
+    x_smear_nb : int, optional
+        Number of equally-spaced bands to use when smearing `x` to determine edges.
+
+        Default: band widths of 5 nm or minimum spacing between `x` values---\
+        whichever gives a smaller number of bands.
+
+        .. warning::
+           The default method assumes `x` is in μm when assessing spacing between `x` values.
     light : str, array_like, callable
         Method for constructing the light weights used in the weighted average.
 
@@ -166,8 +178,12 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
         x = np.asarray(x)
         assert x.size == y.size
         # Now bin (temporary!? until working weights into smear)
-        # TODO: arg to control nbins and/or dx resolution (1 nm?)?
-        xe = np.linspace(*bounds, 201)
+        if x_smear_nb is None:
+            dx_smear = max(np.diff(x).min(), 5e-3)
+            nb = math.ceil((bounds[1] - bounds[0]) / dx_smear)
+        else:
+            nb = x_smear_nb
+        xe = np.linspace(*bounds, nb + 1)
         y = smear_tuv(x, y, xe)
 
     # Already been binned -- use the `xe` edges
@@ -176,7 +192,10 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
         assert xe.size == y.size + 1
         x = (xe[:-1] + xe[1:]) / 2  # midpts
 
-    w = _x_frac_in_bounds(xe, bounds)  # initial weights
+    # TODO: Define `bounds` as `xe` edge values if not defined
+
+    # Construct initial weights (not including light)
+    w = _x_frac_in_bounds(xe, bounds) * np.diff(xe)
 
     # Add weights based on light spectrum
     if isinstance(light, str):
@@ -195,7 +214,7 @@ def avg_optical_prop(y, bounds, *, x=None, xe=None, light="planck", **light_kwar
     return (y * w).sum() / w.sum()  # weighted average
 
 
-def _smear_tuv_1(x, y, bin):
+def _smear_tuv_1(x, y, bin, *, return_last_index=False):
     r"""Smear `y` values at positions `x` over the region defined by `bin`.
     Returns a single value, corresponding to the (trapezoidally) integrated average of
     :math:`y(x)` in the bin.
@@ -204,6 +223,8 @@ def _smear_tuv_1(x, y, bin):
     ----------
     x : array_like
         the original grid
+        .. warning::
+           Assumed to be in increasing order.
     y : array_like
         the values :math:`y(x)` to be smeared
     bin : array_like
@@ -211,9 +232,11 @@ def _smear_tuv_1(x, y, bin):
     """
     xl, xu = bin  # shadowing a builtin but whatever
     area = 0
-    for k in range(x.size - 1):  # TODO: could try subsetting first instead of over whole grid
-        if x[k + 1] < xl or x[k] > xu:  # outside window
+    for k in range(x.size - 1):
+        if x[k + 1] < xl:  # trapezoid R side is L of bin
             continue
+        if x[k] > xu:  # trapezoid L side is R of bin
+            break
 
         a1 = max(x[k], xl)
         a2 = min(x[k + 1], xu)
@@ -223,7 +246,11 @@ def _smear_tuv_1(x, y, bin):
         b2 = y[k] + slope * (a2 - x[k])
         area = area + (a2 - a1) * (b2 + b1) / 2
 
-    return area / (xu - xl)
+    res = area / (xu - xl)
+    if return_last_index:
+        return res, k
+    else:
+        return res
 
 
 def smear_tuv(x, y, bins):
@@ -262,11 +289,29 @@ def smear_tuv(x, y, bins):
     It works by applying cumulative trapezoidal integration to the original data,
     interpolating within `x` so that :math:`x_l` and :math:`x_u` don't have to be on the original `x` grid.
     """
+    bins = np.asarray(bins)
     ynew = np.zeros(bins.size - 1)
-    # TODO: more efficient looping, maybe `while` over `x`
     for i, bin_ in enumerate(zip(bins[:-1], bins[1:])):
         ynew[i] = _smear_tuv_1(x, y, bin_)
-    return ynew  # valid for band, not at left edge
+    return ynew  # valid for band, including one edge, depending on interpretation
+
+
+def smear_tuv2(x, y, bins):
+    """WIP: more-efficient version of :func:`smear_tuv`."""
+    bins = np.asarray(bins)
+    ynew = np.zeros(bins.size - 1)
+
+    # In this version, we remember where we have already been,
+    # instead of passing the whole range of `x` and `y` to `_smear_tuv_1` every time.
+    # ~ 5x faster smearing 1 nm leaf spectrum to 200 bands
+    i = 0  # `ynew` index
+    k = 0  # index of start of `y` & `x` values to pass
+    while i < ynew.size:
+        res_i, k_rel = _smear_tuv_1(x[k:], y[k:], bins[i : i + 2], return_last_index=True)
+        ynew[i] = res_i
+        i += 1
+        k += k_rel - 1
+    return ynew
 
 
 def smear_trapz_interp(x, y, bins, *, k=3, interp="F"):
@@ -428,7 +473,8 @@ def smear(y, bins, *, x="wl", xname_out="wl", method="tuv", **method_kwargs):
     """Smear `y` into `bins`.
 
     This function dispatches to the different smearing method functions,
-    which take array-like inputs and can be used directly instead if desired.
+    which take array-like inputs and can be used directly instead if desired
+    (e.g., :func:`smear_tuv`).
 
     If `y` is array-like, this returns a :class:`numpy.ndarray`.
 
@@ -481,13 +527,20 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     and then compute in-bin irradiance in the new bins.
     `**kwargs` can include ``method`` and ``**method_kwargs`` (see :func:`smear`).
 
-    .. note::
-       `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
-       and ``'SI_df'`` (diffuse).
-
     Parameters
     ----------
     ds : xr.Dataset
+        Input dataset, containing spectral irradiance.
+
+        .. note::
+           `ds` must have variables ``'SI_dr'`` (direct spectral irradiance)
+           and ``'SI_df'`` (diffuse).
+    bins : array_like
+        Bin edges.
+    xname_out : str
+        Variable name to use for the *x* variable in the output dataset.
+    **kwargs
+        Passed on to :func:`smear`.
     """
     # coordinate variable for the spectral irradiances
     xname = list(ds["SI_dr"].coords)[0]
@@ -581,11 +634,15 @@ def plot_binned(x, y, xc, yc, dx, *, ax=None, xtight="orig"):
     Parameters
     ----------
     x, y : array_like
-        original/actual values at wavelengths (original spectra)
+        Original/actual values at wavelengths (original spectra).
     xc, yc : array_like
-        values at wave band centers
+        Values at wave band centers.
     dx : array_like
-        wave band widths, same size as `xc`, `yc`.
+        Wave band widths, same size as `xc`, `yc`.
+    ax : plt.Axes, optional
+        By default, a new ax is created.
+    xtight : {'orig', 'bins'}
+        Whether to set the *x* limits based on the original spectrum or the binned spectrum.
     """
     import matplotlib.pyplot as plt
     from .utils import cf_units_to_tex
