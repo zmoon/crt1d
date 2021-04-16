@@ -154,17 +154,50 @@ df.round(3)
 
 Most of the time we use the ellipsoidal $G(\psi)$. In the canopy RT schemes, this is used for constructing $K_b(\psi)$ and also used directly by some schemes.
 
-```{code-cell} ipython3
-fig, ax = plt.subplots()
+$$
+K_b(\psi) = G(\psi) / \cos(\psi)
+$$
 
-sza = np.linspace(0, 85, 200)
+```{code-cell} ipython3
+fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(10, 7))
+
+ax1.get_shared_y_axes().join(ax1, ax2)
+
+sza = np.linspace(0, 89, 200)
 psi = np.deg2rad(sza)
+mu = np.cos(psi)
 
 for x in ellipsoidal_xs:
-    l, = ax.plot(sza, crt.leaf_angle.G_ellipsoidal_approx(psi, x), ":", lw=3, label=f"approx., $x={x}$")
-    ax.plot(sza, crt.leaf_angle.G_ellipsoidal(psi, x), label=f"analytical, $x={x}$", c=l.get_color())
+    approx = crt.leaf_angle.G_ellipsoidal_approx(psi, x)
+    exact = crt.leaf_angle.G_ellipsoidal(psi, x)
 
-ax.set(xlabel="Solar zenith angle [deg.]", ylabel="$G$", title="Ellipsoidal $G$")
-fig.legend()
+    l, = ax1.plot(sza, approx, ":", lw=3, label=f"approx., $x={x}$")
+    c = c=l.get_color()
+    ax1.plot(sza, exact, label=f"analytical, $x={x}$", c=c)
+    ax2.plot(mu, exact, c=c)
+    ax3.plot(sza, approx - exact, c=c)
+    ax4.plot(mu, exact/mu, c=c)
+
+# Horizontal/vertical limits for reference
+for name, G_fn in {"horizontal": crt.leaf_angle.G_horizontal, "vertical": crt.leaf_angle.G_vertical}.items():
+    ax1.plot(sza, G_fn(psi), c="0.7", lw=1, zorder=0)
+    ax2.plot(mu, G_fn(psi), c="0.7", lw=1, zorder=0)
+
+ax1.set(xlabel="Solar zenith angle [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
+
+ax2.set(xlabel="$\mu = \cos \psi$", ylabel="$G$", title="Ellipsoidal $G$ vs $\mu$")
+
+ax3.set(xlabel="Solar zenith angle [deg.]", ylabel=r"$\delta G$", title="Approx. minus analytical")
+ax3.axhline(0, c="0.7", lw=1)
+
+ax4.set(xlabel="$\mu = \cos \psi$", ylabel="$K_b$", title="$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
+
+for ax in [ax1, ax2, ax4]:
+    ax.set_ylim(ymin=0)
+
+for ax in fig.get_axes():
+    ax.autoscale(True, "x", tight=True)
+
+fig.legend(bbox_to_anchor=(0.98, 0.5), loc="center left")
 fig.tight_layout();
 ```
