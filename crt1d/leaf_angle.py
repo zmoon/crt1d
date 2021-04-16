@@ -10,6 +10,12 @@ have the following relationship:
 where :math:`\psi` is the solar zenith angle and :math:`K_b = K_b(\psi), G = G(\psi)`.
 
 :math:`G` is the mean relative projection of leaf area in the direction :math:`\psi`.
+
+:math:`g(\theta_l)` is the PDF of leaf inclination angle :math:`\theta_l`
+(relative to the horizontal plane).
+:math:`G(\psi)` functions are derived from these distributions.
+The azimuth angle is usually assumed to have a uniform distribution
+and so does not have an impact.
 """
 import numpy as np
 from scipy import integrate
@@ -21,28 +27,29 @@ PI = np.pi
 
 
 def g_spherical(theta_l):
-    """PDF of leaf inclination angle for spherical distribution.
+    r"""PDF of :math:`\theta_l` for the spherical distribution.
     Vertical leaves are favored, but not as much so as for erectophile.
     """
     return np.sin(theta_l)
 
 
 def g_uniform(theta_l):
+    r"""PDF of :math:`\theta_l` for a uniform distribution."""
     return 2 / PI  # note no `theta_l` dependence
 
 
 def g_planophile(theta_l):
-    """Mostly horizontal."""
+    r"""PDF of :math:`\theta_l` for a mostly horizontal distribution."""
     return 2 / PI * (1 + np.cos(2 * theta_l))
 
 
 def g_erectophile(theta_l):
-    """Mostly vertical."""
+    r"""PDF of :math:`\theta_l` for a mostly vertical distribution."""
     return 2 / PI * (1 - np.cos(2 * theta_l))
 
 
 def g_plagiophile(theta_l):
-    """Between horizontal and vertical."""
+    r"""PDF of :math:`\theta_l` for a distribution between horizontal and vertical."""
     return 2 / PI * (1 - np.cos(4 * theta_l))
 
 
@@ -55,23 +62,24 @@ def mla_from_g(g_fn):
 
 
 def G_horizontal(psi):
-    """G for horizontal leaves."""
+    r""":math:`G(\psi)` for horizontal leaves."""
     return np.cos(psi)
 
 
 def G_spherical(psi):
-    """G for spherical leaf inclination angle distribution."""
+    r""":math:`G(\psi)` for the spherical leaf inclination angle distribution."""
     return 0.5  # note no `psi` dependence
 
 
 def G_vertical(psi):
-    """G for vertical leaves."""
+    r""":math:`G(\psi)` for vertical leaves."""
     return 2 / PI * np.sin(psi)
 
 
 def g_ellipsoidal(theta_l, x):
-    """PDF of leaf inclination angle for ellipsoidal distribution.
-    Following Bonan (2019) p. 30, eqs. 2.11--14
+    r"""PDF of :math:`\theta_l` for the ellipsoidal distribution
+    with parameter `x`.
+    Following :cite:t:`bonan_climate_2019` (p. 30, eqs. 2.11--14).
     """
     # note Campbell (1990) uses "Λ" (Lambda) instead of Bonan's "l"
     if x < 1:
@@ -91,7 +99,8 @@ def g_ellipsoidal(theta_l, x):
 
 
 def G_ellipsoidal(psi, x):
-    """G for the ellipsoidal leaf angle distribution.
+    r""":math:`G(\psi)` for the ellipsoidal leaf angle distribution
+    with parameter `x`.
 
     ref: Campbell (1986) eqs. 5, 6 :cite:`campbell_extinction_1986`
 
@@ -125,7 +134,7 @@ def G_ellipsoidal(psi, x):
 
 
 def G_ellipsoidal_approx(psi, x):
-    """Campbell G approximate form.
+    """Campbell :math:`G` approximate form.
 
     References
     ----------
@@ -140,7 +149,7 @@ def G_ellipsoidal_approx(psi, x):
 
 
 def G_ellipsoidal_approx_bonan(psi, xl):
-    """Campbell G approximate form -- Bonan version.
+    """Campbell :math:`G` approximate form -- Bonan version.
 
     .. warning::
        `xl` is not the same parameter as the ``x`` used elsewhere in this module.
