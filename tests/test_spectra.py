@@ -62,3 +62,10 @@ def test_smear_tuv(x, bins, expected):
 def test_edges_from_centers(x, expected):
     actual = crt.spectra._edges_from_centers(x)
     np.testing.assert_allclose(actual, expected)
+
+
+def test_e_wl_umol():
+    from scipy.constants import N_A
+
+    N_umol = N_A / 1e6
+    assert math.isclose(crt.spectra.e_wl_umol(3), 6.621e-20 * N_umol, rel_tol=1e-4)
