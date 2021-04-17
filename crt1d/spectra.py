@@ -575,6 +575,10 @@ def _edges_from_centers(x):
     .. warning::
        Note that the true bin edges could be different---this is just a guess!
 
+    .. note::
+       ``(edges[:-1] + edges[1:]) / 2`` won't (necessarily) be the same as `x`
+       when `x`\'s spacing is variable.
+
     From specutils:
     https://github.com/astropy/specutils/blob/9ce88d6be700a06e888d9d0cdd04c0afc2ae85f8/specutils/spectra/spectral_axis.py#L46-L55
     """

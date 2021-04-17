@@ -2,6 +2,8 @@
 Calculations/plots using the CRT solutions (irradiance spectral profiles),
 using the model output dataset created by :meth:`crt1d.Model.to_xr()`.
 """
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -57,8 +59,11 @@ def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
     try:
         wle = ds.wle.values
     except AttributeError:
-        # TODO: warn; use edges_from_centers instead?
-        wle = np.r_[wl - 0.5 * dwl, wl[-1] + 0.5 * dwl[-1]]
+        warnings.warn(
+            "`wle` was not present so we are computing the wave band edges "
+            "from the band centers (`wl`) and band widths (`dwl`)."
+        )
+        wle = np.r_[wl[0] - 0.5 * dwl[0], wl + 0.5 * dwl]
 
     # weights as a function of wavelength
     w = xr.DataArray(dims="wl", data=_x_frac_in_bounds(wle, bounds))

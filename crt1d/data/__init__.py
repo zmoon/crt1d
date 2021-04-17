@@ -150,6 +150,7 @@ def load_default_sp2(*, midpt=True):
         wle = _edges_from_centers(wl0)
         dwl = np.diff(wle)
         wl = wl0  # for in-band irradiance (and original spectral irradiance)
+        # ^ note: not the same as centers of the `wle` edges for all wavelengths
 
         I_dr = SI_dr0 * dwl
         I_df = SI_df0 * dwl

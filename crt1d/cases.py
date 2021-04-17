@@ -52,7 +52,6 @@ def load_default_case(nlayers):
         I_df0_all=ds.I_df.values,
         wl=ds.wl.values,
         dwl=ds.dwl.values,
-        wle=ds.wle.values,
     )
 
     return p

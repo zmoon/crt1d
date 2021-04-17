@@ -281,6 +281,10 @@ class Model:
             # or could convert, but which to choose as base?
         self.nwl = wl_toc.size  # precedence to the toc spectra one as definition
 
+        # compute wavelength band dges from centers and widths
+        assert p["wl"].size == p["dwl"].size
+        p["wle"] = np.r_[p["wl"][0] - 0.5 * p["dwl"][0], p["wl"] + 0.5 * p["dwl"]]
+
         # G_fn and K_b_fn ?
         # p['G_fn'] = p['G_fn']
         p["K_b_fn"] = lambda psi_: p["G_fn"](psi_) / np.cos(psi_)
@@ -356,6 +360,7 @@ class Model:
         # -- wavelength grid
         wl = p["wl"]
         dwl = p["dwl"]
+        wle = p["wle"]
         #
         # -- radiation geometry/setup
         psi = p["psi"]
@@ -410,6 +415,7 @@ class Model:
                 "z": tup("z", z),
                 "wl": tup("wl", wl),
                 "zm": tup("zm", zm),
+                "wle": tup("wle", wle),
             },
             data_vars={
                 "I_dr": tup("I_dr", Idr),

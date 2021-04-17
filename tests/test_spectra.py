@@ -63,6 +63,13 @@ def test_edges_from_centers(x, expected):
     actual = crt.spectra._edges_from_centers(x)
     np.testing.assert_allclose(actual, expected)
 
+    dx = np.diff(x)
+    xcnew = (actual[:-1] + actual[1:]) / 2  # new centers
+    if not all(dx == dx[0]):  # variable grid
+        assert not np.all(x == xcnew)
+    else:
+        np.testing.assert_allclose(x, xcnew)
+
 
 def test_e_wl_umol():
     from scipy.constants import N_A
