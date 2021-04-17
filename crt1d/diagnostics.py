@@ -117,6 +117,8 @@ def plot_compare_band(
 
     This uses :func:`band` to sum irradiances within the band.
 
+    Usage examples: :ref:`examples/run-all-schemes:plots <examples/run-all-schemes:plots>`.
+
     Parameters
     ----------
     dsets : list of xr.Dataset
@@ -136,6 +138,10 @@ def plot_compare_band(
         If outside, it will be placed upper right.
         If within, it will be placed on top of the lower left ax.
     legend_labels : {'long_name', 'short_name', 'name'}
+
+    See Also
+    --------
+    band : Related function that returns a dataset for a given spectral band.
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")

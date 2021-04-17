@@ -150,8 +150,6 @@ df.round(3)
 
 ## $G(\psi)$
 
-### Ellipsoidal
-
 Most of the time we use the ellipsoidal $G(\psi)$. In the canopy RT schemes, this is used for constructing $K_b(\psi)$ and also used directly by some schemes.
 
 $$
