@@ -225,6 +225,7 @@ def plot_compare_spectra(
     ref=None,
     ref_relative=False,
     dwl_relative=False,
+    ref_plot=False,
 ):
 
     # TODO: reduce duplicated code between this and `plot_compare_band`
@@ -250,15 +251,19 @@ def plot_compare_spectra(
     ncols = np.ceil(np.sqrt(len(dsets))).astype(int)
     nrows = np.ceil(len(dsets) / ncols).astype(int)
 
+    figw, figh = ncols * 2.8, nrows * 2.2
+    if ref_plot:
+        figw += 0.7
     fig, axs = plt.subplots(
         nrows,
         ncols,
         sharex=True,
         sharey=True,
-        figsize=(ncols * 2.8, nrows * 2.2),
+        figsize=(figw, figh),
         gridspec_kw=dict(hspace=0.025, wspace=0.03),
     )
 
+    imr = None
     ims = []
     for ds, ax in zip(dsets, axs.flat):
         da = ds[which]
@@ -284,14 +289,22 @@ def plot_compare_spectra(
             if dar is not None:
                 dar = dar / dar.isel(z=-1)
 
-        # TODO: maybe should plot ref normally as a reference? but then would need another cb
+        lnr = ln
+        unr = un
         if ref is not None:
             da = da - dar
             ln = f"{ref_sym} {ln}"
             if ref_relative:
                 da = da / dar
+                un = ""
 
-        im = da.plot(ax=ax, x="wl", add_colorbar=False)
+        if (da == 0).all():  # skip plotting the reference to avoid the bold teal color
+            if ref_plot:
+                imr = dar.plot(ax=ax, x="wl", add_colorbar=False)
+            else:
+                ax.set_facecolor("0.9")
+        else:
+            ims.append(da.plot(ax=ax, x="wl", add_colorbar=False))
 
         # Label
         ax.text(
@@ -307,8 +320,6 @@ def plot_compare_spectra(
         # Remove ax labels if not outer
         ax.label_outer()
 
-        ims.append(im)
-
     # Set all clims to be the same (so we can use a single colorbar)
     clims = list(zip(*[im.get_clim() for im in ims]))
     vmin_min = min(clims[0])
@@ -316,10 +327,16 @@ def plot_compare_spectra(
     for im in ims:
         im.set_clim(vmin_min, vmax_max)
 
+    # Add colorbar for reference if plotted
+    if imr is not None:
+        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=30)
+        cbr.set_label(f"{lnr} [{unr}]")
+
     # Add single colorbar
     cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=30)
     cb.set_label(f"{ln} [{un}]")
 
+    # Note reference in upper left
     if ref is not None:
         axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
 
