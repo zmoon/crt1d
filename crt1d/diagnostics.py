@@ -219,6 +219,8 @@ def plot_compare_band(
 
 def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, ref_relative=False):
 
+    # TODO: reduce duplicated code between this and `plot_compare_band`
+
     # Reference?
     if ref is not None:
         if isinstance(ref, str):
@@ -249,6 +251,7 @@ def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, re
         gridspec_kw=dict(hspace=0.025, wspace=0.03),
     )
 
+    ims = []
     for ds, ax in zip(dsets, axs.flat):
         da = ds[which]
         ln = da.long_name
@@ -284,6 +287,15 @@ def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, re
 
         # Remove ax labels if not outer
         ax.label_outer()
+
+        ims.append(im)
+
+    # Set all clims to be the same (so we can use a single colorbar)
+    clims = list(zip(*[im.get_clim() for im in ims]))
+    vmin_min = min(clims[0])
+    vmax_max = max(clims[1])
+    for im in ims:
+        im.set_clim(vmin_min, vmax_max)
 
     # Add single colorbar
     cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=30)
