@@ -129,7 +129,7 @@ def plot_compare_band(
     Parameters
     ----------
     dsets : list of xr.Dataset
-        Created using :meth:`~crt1d.Model.to_xr`.
+        Created using :meth:`crt1d.Model.to_xr`.
     marker : str, optional
         Marker to be used when plotting the lines.
         Pass `None` to get no markers
@@ -143,9 +143,9 @@ def plot_compare_band(
     ref_label : str, optional
         If not provided, a dataset attribute will be used
         (``scheme_short_name`` or the one being used for legend labels).
-    ref_relative : bool
+    ref_relative : bool, optional
         Whether to present relative error when using a `ref`.
-        If false, absolute error is presented.
+        If false (default), absolute error is presented.
     legend_outside : bool
         Whether to place the legend outside the axes area or within.
         If outside, it will be placed upper right.
@@ -261,8 +261,44 @@ def plot_compare_spectra(
     ref_relative=False,
     ref_plot=False,
     norm=None,
+    plot_type="pcolormesh",
 ):
+    """Multi-panel plot of spectra at each height.
+
+    :ref:`Usage examples <examples/run-all-schemes:plots -- spectra>`
+
+    Parameters
+    ----------
+    dsets : list of xr.Dataset
+        Created using :meth:`crt1d.Model.to_xr`.
+    which : str
+        Which spectrum to compare.
+        Default: ``"I_d"`` (downward irradiance).
+    dwl_relative : bool, optional
+        Whether to divide by the wavelength band width.
+        Default: true.
+    toc_relative : bool, optional
+        Whether to divide by the top-of-canopy spectrum.
+    ref : str, xr.Dataset, optional
+        Dataset to be used as the reference
+        (it will be subtracted from the others in the plot).
+        If ``str``, the first found with ``name`` `ref` will be used,
+        so ``str`` should only be used when comparing disparate schemes, like ``2s`` vs ``4s``).
+        Default: no reference.
+    ref_relative : bool, optional
+        Whether to present relative error when using a `ref`.
+        If false (default), absolute error is presented.
+    ref_plot : bool, optional
+        Whether to plot the reference.
+    norm : matplotlib.colors.Normalize, optional
+        Used if provided.
+    """
     # TODO: reduce duplicated code between this and `plot_compare_band`
+
+    if plot_type not in ["pcolormesh", "contourf"]:
+        raise ValueError
+    if plot_type != "pcolormesh":
+        raise NotImplementedError
 
     # Reference?
     if ref is not None:
