@@ -217,6 +217,89 @@ def plot_compare_band(
     fig.tight_layout()
 
 
+def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, ref_relative=False):
+
+    # Reference?
+    if ref is not None:
+        if isinstance(ref, str):
+            names = [ds.scheme_name for ds in dsets]
+            dsref = dsets[names.index(ref)]
+        elif isinstance(ref, xr.Dataset):
+            dsref = ref
+        else:
+            raise TypeError("invalid type for `ref`.")
+    else:
+        dsref = None
+
+    # Reference relative?
+    if ref_relative:
+        ref_sym = r"$\Delta_r$"
+    else:
+        ref_sym = r"$\Delta$"
+
+    ncols = np.ceil(np.sqrt(len(dsets))).astype(int)
+    nrows = np.ceil(len(dsets) / ncols).astype(int)
+
+    fig, axs = plt.subplots(
+        nrows,
+        ncols,
+        sharex=True,
+        sharey=True,
+        figsize=(ncols * 2.8, nrows * 2.2),
+        gridspec_kw=dict(hspace=0.025, wspace=0.03),
+    )
+
+    for ds, ax in zip(dsets, axs.flat):
+        da = ds[which]
+        ln = da.long_name
+        un = da.units
+
+        dar = dsref[which] if dsref else None
+
+        if toc_relative:
+            da = da / da.isel(z=-1)
+            ln = f"{ln} (ToC-relative)"
+
+            if dar is not None:
+                dar = dar / dar.isel(z=-1)
+
+        if ref is not None:
+            da = da - dar
+            ln = f"{ref_sym} {ln}"
+            if ref_relative:
+                da = da / dar
+
+        im = da.plot(ax=ax, x="wl", add_colorbar=False)
+
+        # Label
+        ax.text(
+            0.022,
+            0.975,
+            ds.scheme_short_name,
+            va="top",
+            ha="left",
+            transform=ax.transAxes,
+            bbox={"facecolor": "0.7", "alpha": 0.6, "pad": 3},
+        )
+
+        # Remove ax labels if not outer
+        ax.label_outer()
+
+    # Add single colorbar
+    cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=30)
+    cb.set_label(f"{ln} [{un}]")
+
+    if ref is not None:
+        axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
+
+    # Remove any extras axes
+    for ax in axs.flat[len(dsets) :]:
+        ax.remove()
+        # TODO: add xlabel to row above in this column
+
+    fig.set_tight_layout(False)  # disable since used gridspec
+
+
 # TODO: def plot_E_closure_spectra():
 
 
