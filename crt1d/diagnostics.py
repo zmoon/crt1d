@@ -217,7 +217,15 @@ def plot_compare_band(
     fig.tight_layout()
 
 
-def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, ref_relative=False):
+def plot_compare_spectra(
+    dsets,
+    which="I_d",
+    *,
+    toc_relative=False,
+    ref=None,
+    ref_relative=False,
+    dwl_relative=False,
+):
 
     # TODO: reduce duplicated code between this and `plot_compare_band`
 
@@ -259,13 +267,24 @@ def plot_compare_spectra(dsets, which="I_d", *, toc_relative=False, ref=None, re
 
         dar = dsref[which] if dsref else None
 
+        # TODO: maybe should be default
+        if dwl_relative:  # conversion to spectral units
+            da = da / ds.dwl
+            un = f"{un} {ds.dwl.units}-1"
+            # Note: has no impact of toc-relative used
+
+            if dar is not None:
+                dar = dar / dsref.dwl
+
         if toc_relative:
             da = da / da.isel(z=-1)
             ln = f"{ln} (ToC-relative)"
+            un = ""
 
             if dar is not None:
                 dar = dar / dar.isel(z=-1)
 
+        # TODO: maybe should plot ref normally as a reference? but then would need another cb
         if ref is not None:
             da = da - dar
             ln = f"{ref_sym} {ln}"
