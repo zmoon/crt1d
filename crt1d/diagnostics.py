@@ -116,8 +116,8 @@ def plot_compare_band(
     ref=None,
     ref_label=None,
     ref_relative=False,
+    ds_labels="scheme_long_name",
     legend_outside=True,
-    legend_labels="scheme_long_name",
 ):
     """Multi-panel plot of profiles for specified band.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
@@ -146,13 +146,13 @@ def plot_compare_band(
     ref_relative : bool, optional
         Whether to present relative error when using a `ref`.
         If false (default), absolute error is presented.
-    legend_outside : bool
+    ds_labels : str or list of str, optional
+        If ``str``, must be a dataset attribute (that all in `dsets` have).
+        If ``list``, should be same length as `dsets`.
+    legend_outside : bool, optional
         Whether to place the legend outside the axes area or within.
         If outside, it will be placed upper right.
         If within, it will be placed on top of the lower left ax.
-    legend_labels : str or list of str
-        If ``str``, must be a dataset attribute (that all in `dsets` have).
-        If ``list``, should be same length as `dsets`.
 
     See Also
     --------
@@ -189,12 +189,12 @@ def plot_compare_band(
         ref_sym = r"$\Delta$"
 
     # Dataset labels
-    if isinstance(legend_labels, str):
-        labels = [ds.attrs[legend_labels] for ds in dsets]
+    if isinstance(ds_labels, str):
+        labels = [ds.attrs[ds_labels] for ds in dsets]
         if ref and ref_label is None:
-            ref_label = dsref.attrs[legend_labels]
-    elif isinstance(legend_labels, list):
-        labels = legend_labels[:]
+            ref_label = dsref.attrs[ds_labels]
+    elif isinstance(ds_labels, list):
+        labels = ds_labels[:]
         if ref and ref_label is None:
             iref = None
             for i, ds in enumerate(dsets):
@@ -258,8 +258,10 @@ def plot_compare_spectra(
     dwl_relative=True,
     toc_relative=False,
     ref=None,
+    ref_label=None,
     ref_relative=False,
     ref_plot=False,
+    ds_labels="scheme_short_name",
     norm=None,
     plot_type="pcolormesh",
 ):
@@ -285,11 +287,17 @@ def plot_compare_spectra(
         If ``str``, the first found with ``name`` `ref` will be used,
         so ``str`` should only be used when comparing disparate schemes, like ``2s`` vs ``4s``).
         Default: no reference.
+    ref_label : str, optional
+        If not provided, a dataset attribute will be used
+        (``scheme_short_name`` or the one being used for legend labels).
     ref_relative : bool, optional
         Whether to present relative error when using a `ref`.
         If false (default), absolute error is presented.
     ref_plot : bool, optional
         Whether to plot the reference.
+    ds_labels : str or list of str, optional
+        If ``str``, must be a dataset attribute (that all in `dsets` have).
+        If ``list``, should be same length as `dsets`.
     norm : matplotlib.colors.Normalize, optional
         Used if provided.
     """
@@ -318,6 +326,24 @@ def plot_compare_spectra(
     else:
         ref_sym = r"$\Delta$"
 
+    # Dataset labels
+    if isinstance(ds_labels, str):
+        labels = [ds.attrs[ds_labels] for ds in dsets]
+        if ref and ref_label is None:
+            ref_label = dsref.attrs[ds_labels]
+    elif isinstance(ds_labels, list):
+        labels = ds_labels[:]
+        if ref and ref_label is None:
+            iref = None
+            for i, ds in enumerate(dsets):
+                if ds is dsref:
+                    iref = i
+                    break
+            ref_label = labels[i] if iref is not None else dsref.attrs["scheme_short_name"]
+    else:
+        raise TypeError
+    assert len(labels) == len(dsets)
+
     ncols = np.ceil(np.sqrt(len(dsets))).astype(int)
     nrows = np.ceil(len(dsets) / ncols).astype(int)
 
@@ -335,7 +361,7 @@ def plot_compare_spectra(
 
     imr = None
     ims = []
-    for ds, ax in zip(dsets, axs.flat):
+    for label, ds, ax in zip(labels, dsets, axs.flat):
         da = ds[which]
         ln = da.long_name
         un = da.units
@@ -380,7 +406,7 @@ def plot_compare_spectra(
         ax.text(
             0.022,
             0.975,
-            ds.scheme_short_name,
+            label,
             va="top",
             ha="left",
             transform=ax.transAxes,
@@ -408,7 +434,7 @@ def plot_compare_spectra(
 
     # Note reference in upper left
     if ref is not None:
-        axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
+        axs.flat[0].set_title(f"Reference: {ref_label}", loc="left", fontsize=10)
 
     # Remove any extras axes
     for ax in axs.flat[len(dsets) :]:
