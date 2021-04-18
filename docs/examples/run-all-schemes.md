@@ -21,6 +21,7 @@ We test the following:
 * plots for output {class}`xarray.Dataset`s
 
 ```{code-cell} ipython3
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -52,7 +53,7 @@ df_schemes.drop(columns=["args", "solver"])  # solver memory address not very in
 
 +++
 
-## Run (just once)
+## Run
 Run the default case (which is loaded automatically when model object is created).
 
 ```{code-cell} ipython3
@@ -82,7 +83,7 @@ m0.plot_toc_spectra()
 
 In {mod}`crt1d.diagnostics`, there are some functions that can be used to compare a set of model output datasets.
 
-### Plots
+### Plots -- single band
 
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
@@ -116,6 +117,34 @@ crt.diagnostics.plot_compare_band(
 ```
 
 👆 Note that the reference does not have to belong to `dsets` if passed as an {class}`xarray.Dataset`.
+
+### Plots -- spectra
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(dsets)
+```
+
+👆 It is hard to see differences this way. Like with {func}`crt1d.diagnostics.plot_compare_band`, we have some options to help illuminate the differences.
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(dsets, ref="2s")
+
+crt.diagnostics.plot_compare_spectra(
+    dsets,
+    ref="2s",
+    norm=mpl.colors.SymLogNorm(10, base=10),
+)
+```
+
+Optionally, we can plot the reference spectra like normal, so that it is clear what the differences are relative to. In the plot below, we highlight how the spectrum changes from top-of-canopy to below by using the `toc_relative` option.
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(
+    dsets[:3] + dsets[5:],
+    toc_relative=True,
+    ref="2s", ref_plot=True
+)
+```
 
 ### Other diagnostic tools
 

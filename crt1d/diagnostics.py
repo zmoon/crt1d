@@ -124,7 +124,7 @@ def plot_compare_band(
 
     This uses :func:`band` to sum irradiances within the band.
 
-    :ref:`Usage examples <examples/run-all-schemes:plots>`
+    :ref:`Usage examples <examples/run-all-schemes:plots -- single band>`
 
     Parameters
     ----------
@@ -255,11 +255,12 @@ def plot_compare_spectra(
     dsets,
     which="I_d",
     *,
+    dwl_relative=True,
     toc_relative=False,
-    dwl_relative=False,
     ref=None,
     ref_relative=False,
     ref_plot=False,
+    norm=None,
 ):
     # TODO: reduce duplicated code between this and `plot_compare_band`
 
@@ -337,7 +338,7 @@ def plot_compare_spectra(
             else:
                 ax.set_facecolor("0.9")
         else:
-            ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False))
+            ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False, norm=norm))
 
         # Label
         ax.text(
