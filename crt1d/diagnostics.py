@@ -12,6 +12,7 @@ import xarray as xr
 from .spectra import _x_frac_in_bounds
 from .spectra import BAND_DEFNS_UM
 from .spectra import e_wl_umol
+from .utils import cf_units_to_tex as _cf_units_to_tex
 
 
 def _E_to_PFD_da(da):
@@ -223,7 +224,9 @@ def plot_compare_band(
                 da.attrs["long_name"] = f"{ref_sym} {da0.long_name}"
                 da.attrs["units"] = da0.units if not ref_relative else ""
             else:
-                da = da0
+                da = da0.copy()
+
+            da.attrs["units"] = _cf_units_to_tex(da.units)
 
             da.plot(y=da.dims[0], ax=ax, label=label, marker=marker)
 
@@ -253,12 +256,11 @@ def plot_compare_spectra(
     which="I_d",
     *,
     toc_relative=False,
+    dwl_relative=False,
     ref=None,
     ref_relative=False,
-    dwl_relative=False,
     ref_plot=False,
 ):
-
     # TODO: reduce duplicated code between this and `plot_compare_band`
 
     # Reference?
@@ -361,11 +363,11 @@ def plot_compare_spectra(
     # Add colorbar for reference if plotted
     if imr is not None:
         cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=30)
-        cbr.set_label(f"{lnr} [{unr}]")
+        cbr.set_label(f"{lnr} [{_cf_units_to_tex(unr)}]" if unr else lnr)
 
     # Add single colorbar
     cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=30)
-    cb.set_label(f"{ln} [{un}]")
+    cb.set_label(f"{ln} [{_cf_units_to_tex(un)}]" if un else ln)
 
     # Note reference in upper left
     if ref is not None:
