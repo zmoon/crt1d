@@ -111,38 +111,47 @@ def plot_compare_band(
     *,
     band_name="PAR",
     bounds=None,
-    ref=None,
-    ref_relative=False,
     marker=".",
+    ref=None,
+    ref_label=None,
+    ref_relative=False,
     legend_outside=True,
-    legend_labels="long_name",
+    legend_labels="scheme_long_name",
 ):
     """Multi-panel plot of profiles for specified band.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
 
     This uses :func:`band` to sum irradiances within the band.
 
-    Usage examples: :ref:`examples/run-all-schemes:plots <examples/run-all-schemes:plots>`.
+    :ref:`Usage examples <examples/run-all-schemes:plots>`
 
     Parameters
     ----------
     dsets : list of xr.Dataset
         Created using :meth:`~crt1d.Model.to_xr`.
+    marker : str, optional
+        Marker to be used when plotting the lines.
+        Pass `None` to get no markers
+        (this can make it easier to see what's going on if there are many levels).
     ref : str, xr.Dataset, optional
-        Scheme ``name`` to be used as the reference
+        Dataset to be used as the reference
         (it will be subtracted from the others in the plot).
-        Default: no reference used.
+        If ``str``, the first found with ``name`` `ref` will be used,
+        so ``str`` should only be used when comparing disparate schemes, like ``2s`` vs ``4s``).
+        Default: no reference.
+    ref_label : str, optional
+        If not provided, a dataset attribute will be used
+        (``scheme_short_name`` or the one being used for legend labels).
     ref_relative : bool
         Whether to present relative error when using a `ref`.
         If false, absolute error is presented.
-    marker : str, optional
-        Marker to be used when plotting the lines.
-        Pass `None` to get no markers.
     legend_outside : bool
         Whether to place the legend outside the axes area or within.
         If outside, it will be placed upper right.
         If within, it will be placed on top of the lower left ax.
-    legend_labels : {'long_name', 'short_name', 'name'}
+    legend_labels : str or list of str
+        If ``str``, must be a dataset attribute (that all in `dsets` have).
+        If ``list``, should be same length as `dsets`.
 
     See Also
     --------
@@ -178,6 +187,24 @@ def plot_compare_band(
     else:
         ref_sym = r"$\Delta$"
 
+    # Dataset labels
+    if isinstance(legend_labels, str):
+        labels = [ds.attrs[legend_labels] for ds in dsets]
+        if ref and ref_label is None:
+            ref_label = dsref.attrs[legend_labels]
+    elif isinstance(legend_labels, list):
+        labels = legend_labels[:]
+        if ref and ref_label is None:
+            iref = None
+            for i, ds in enumerate(dsets):
+                if ds is dsref:
+                    iref = i
+                    break
+            ref_label = labels[i] if iref is not None else dsref.attrs["scheme_short_name"]
+    else:
+        raise TypeError
+    assert len(labels) == len(dsets)
+
     nrows = len(varnames)
     ncols = len(varnames[0])
 
@@ -186,21 +213,25 @@ def plot_compare_band(
     vns = [vn for row in varnames for vn in row]
     for i, vn in enumerate(vns):
         ax = axs.flat[i]
-        for dset in dsets:
+        for label, dset in zip(labels, dsets):
             da0 = dset[vn]
+
             if ref is not None:
                 da = da0 - dsref[vn]
                 if ref_relative:
                     da = da / dsref[vn]
-                da.attrs.update(da0.attrs)
-                da.attrs["long_name"] = f"{ref_sym} {da.long_name}"
+                da.attrs["long_name"] = f"{ref_sym} {da0.long_name}"
+                da.attrs["units"] = da0.units if not ref_relative else ""
             else:
                 da = da0
-            y = da.dims[0]
-            da.plot(y=y, ax=ax, label=dset.attrs[f"scheme_{legend_labels}"], marker=marker)
+
+            da.plot(y=da.dims[0], ax=ax, label=label, marker=marker)
+
+        if not ax.is_first_col():
+            ax.set_ylabel("")
 
     if ref is not None:
-        axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
+        axs.flat[0].set_title(f"Reference: {ref_label}", loc="left", fontsize=10)
 
     for ax in axs.flat:
         ax.grid(True)
@@ -300,11 +331,11 @@ def plot_compare_spectra(
 
         if (da == 0).all():  # skip plotting the reference to avoid the bold teal color
             if ref_plot:
-                imr = dar.plot(ax=ax, x="wl", add_colorbar=False)
+                imr = dar.plot(ax=ax, x=da.dims[1], add_colorbar=False)
             else:
                 ax.set_facecolor("0.9")
         else:
-            ims.append(da.plot(ax=ax, x="wl", add_colorbar=False))
+            ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False))
 
         # Label
         ax.text(

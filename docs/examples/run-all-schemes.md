@@ -91,7 +91,7 @@ crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name"
+    legend_outside=False, legend_labels="scheme_short_name"
 )
 ```
 
@@ -100,20 +100,22 @@ Optionally, we can compare to a reference, in order to better see the difference
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name",
+    legend_outside=False, legend_labels="scheme_short_name",
     ref="2s"
 )
 ```
 
-With `ref_relative=True`, the differences are computed as relative error. Otherwise (above), they are absolute. Relative error allows us to better see the differences in the lower regions of the canopy where there is less light.
+With `ref_relative=True`, the differences are computed as relative error (indicated by $\Delta_r$). Otherwise (above), they are absolute (indicated by $\Delta$). Relative error allows us to better see the differences in the lower regions of the canopy where there is less light.
 
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
-    dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name",
-    ref="2s", ref_relative=True
+    dsets[1:], band_name="solar", marker=None,
+    legend_outside=False, legend_labels="scheme_short_name",
+    ref=dsets[0], ref_relative=True, ref_label="a fancy 2s run"
 )
 ```
+
+👆 Note that the reference does not have to belong to `dsets` if passed as an {class}`xarray.Dataset`.
 
 ### Other diagnostic tools
 
