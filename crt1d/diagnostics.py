@@ -425,11 +425,11 @@ def plot_compare_spectra(
 
     # Add colorbar for reference if plotted
     if imr is not None:
-        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=30)
+        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=15 * nrows)
         cbr.set_label(f"{lnr} [{_cf_units_to_tex(unr)}]" if unr else lnr)
 
     # Add single colorbar
-    cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=30)
+    cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=15 * nrows)
     cb.set_label(f"{ln} [{_cf_units_to_tex(un)}]" if un else ln)
 
     # Note reference in upper left
