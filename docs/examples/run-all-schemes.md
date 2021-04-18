@@ -92,7 +92,7 @@ crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="scheme_short_name"
+    legend_outside=False, ds_labels="scheme_short_name"
 )
 ```
 
@@ -101,7 +101,7 @@ Optionally, we can compare to a reference, in order to better see the difference
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="scheme_short_name",
+    legend_outside=False, ds_labels="scheme_short_name",
     ref="2s"
 )
 ```
@@ -111,7 +111,7 @@ With `ref_relative=True`, the differences are computed as relative error (indica
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets[1:], band_name="solar", marker=None,
-    legend_outside=False, legend_labels="scheme_short_name",
+    legend_outside=False, ds_labels="scheme_short_name",
     ref=dsets[0], ref_relative=True, ref_label="a fancy 2s run"
 )
 ```

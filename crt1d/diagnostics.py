@@ -119,7 +119,7 @@ def plot_compare_band(
     ds_labels="scheme_long_name",
     legend_outside=True,
 ):
-    """Multi-panel plot of profiles for specified band.
+    """Multi-panel plot to compare profiles for the specified band for a set of datasets.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
 
     This uses :func:`band` to sum irradiances within the band.
@@ -265,7 +265,7 @@ def plot_compare_spectra(
     norm=None,
     plot_type="pcolormesh",
 ):
-    """Multi-panel plot of spectra at each height.
+    """Multi-panel plot to compare spectra at each height for a set of datasets.
 
     :ref:`Usage examples <examples/run-all-schemes:plots -- spectra>`
 
