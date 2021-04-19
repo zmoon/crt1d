@@ -146,6 +146,21 @@ crt.diagnostics.plot_compare_spectra(
 )
 ```
 
+### Plots -- xarray
+
+Note that with the magic of {class}`xarray.plot.FacetGrid` (examples [here](https://xarray.pydata.org/en/stable/plotting.html#faceting)), we can make similar plots to the above.
+
+```{code-cell} ipython3
+xr.concat(
+    [ds["I_d"] for ds in dsets],
+    dim=xr.DataArray(name="exp", dims="exp", data=scheme_names)
+).plot(
+    x="wl", y="z", col="exp", col_wrap=3
+);
+```
+
+👆 Merging the whole dataset is a bit more awkward since we have dataset attribute conflicts (though we can use `combine_attrs='drop_conflicts'` if we have xarray v0.17+) and some datasets have extra variables. Above we get around these problems by merging a selected variable instead.
+
 ### Other diagnostic tools
 
 ```{code-cell} ipython3
