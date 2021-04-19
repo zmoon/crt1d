@@ -157,6 +157,8 @@ def plot_compare_band(
     See Also
     --------
     band : Related function that returns a dataset for a given spectral band.
+    plot_compare_spectra :
+        Similar routine, but plots one spectral variable as function of height and wavelength.
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
@@ -300,6 +302,11 @@ def plot_compare_spectra(
         If ``list``, should be same length as `dsets`.
     norm : matplotlib.colors.Normalize, optional
         Used if provided.
+
+    See Also
+    --------
+    plot_compare_band :
+        Similar routine, but integrates over a wave band and plots profiles of multiple variables.
     """
     # TODO: reduce duplicated code between this and `plot_compare_band`
 

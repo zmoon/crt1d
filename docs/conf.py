@@ -53,6 +53,7 @@ intersphinx_mapping = {
 # napoleon
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
+napoleon_use_rtype = False
 napoleon_preprocess_types = True
 napoleon_type_aliases = {
     "xr.Dataset": "xarray.Dataset",
