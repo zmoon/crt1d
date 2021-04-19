@@ -232,7 +232,7 @@ def plot_compare_band(
 
             da.plot(y=da.dims[0], ax=ax, label=label, marker=marker)
 
-        if not ax.is_first_col():
+        if i % ncols:  # not in first column
             ax.set_ylabel("")
 
     if ref is not None:
