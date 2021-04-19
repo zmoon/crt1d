@@ -85,6 +85,8 @@ In {mod}`crt1d.diagnostics`, there are some functions that can be used to compar
 
 ### Plots -- single band
 
+We demonstrate the function {func}`crt1d.diagnostics.plot_compare_band`.
+
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
 ```
@@ -119,6 +121,8 @@ crt.diagnostics.plot_compare_band(
 👆 Note that the reference does not have to belong to `dsets` if passed as an {class}`xarray.Dataset`.
 
 ### Plots -- spectra
+
+We demonstrate the function {func}`crt1d.diagnostics.plot_compare_spectra`.
 
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_spectra(dsets)
