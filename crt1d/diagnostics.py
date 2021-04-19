@@ -12,6 +12,7 @@ import xarray as xr
 from .spectra import _x_frac_in_bounds
 from .spectra import BAND_DEFNS_UM
 from .spectra import e_wl_umol
+from .utils import cf_units_to_tex as _cf_units_to_tex
 
 
 def _E_to_PFD_da(da):
@@ -111,42 +112,53 @@ def plot_compare_band(
     *,
     band_name="PAR",
     bounds=None,
-    ref=None,
-    ref_relative=False,
     marker=".",
+    ref=None,
+    ref_label=None,
+    ref_relative=False,
+    ds_labels="scheme_long_name",
     legend_outside=True,
-    legend_labels="long_name",
 ):
-    """Multi-panel plot of profiles for specified band.
+    """Multi-panel plot to compare profiles for the specified band for a set of datasets.
     `bounds` does not have to be provided if `band_name` is one of the known bands.
 
     This uses :func:`band` to sum irradiances within the band.
 
-    Usage examples: :ref:`examples/run-all-schemes:plots <examples/run-all-schemes:plots>`.
+    :ref:`Usage examples <examples/run-all-schemes:plots -- single band>`
 
     Parameters
     ----------
     dsets : list of xr.Dataset
-        Created using :meth:`~crt1d.Model.to_xr`.
-    ref : str, xr.Dataset, optional
-        Scheme ``name`` to be used as the reference
-        (it will be subtracted from the others in the plot).
-        Default: no reference used.
-    ref_relative : bool
-        Whether to present relative error when using a `ref`.
-        If false, absolute error is presented.
+        Created using :meth:`crt1d.Model.to_xr`.
     marker : str, optional
         Marker to be used when plotting the lines.
-        Pass `None` to get no markers.
-    legend_outside : bool
+        Pass `None` to get no markers
+        (this can make it easier to see what's going on if there are many levels).
+    ref : str, xr.Dataset, optional
+        Dataset to be used as the reference
+        (it will be subtracted from the others in the plot).
+        If ``str``, the first found with ``name`` `ref` will be used,
+        so ``str`` should only be used when comparing disparate schemes, like ``2s`` vs ``4s``).
+        Default: no reference.
+    ref_label : str, optional
+        If not provided, a dataset attribute will be used
+        (``scheme_short_name`` or the one being used for legend labels).
+    ref_relative : bool, optional
+        Whether to present relative error when using a `ref`.
+        If false (default), absolute error is presented.
+    ds_labels : str or list of str, optional
+        If ``str``, must be a dataset attribute (that all in `dsets` have).
+        If ``list``, should be same length as `dsets`.
+    legend_outside : bool, optional
         Whether to place the legend outside the axes area or within.
         If outside, it will be placed upper right.
         If within, it will be placed on top of the lower left ax.
-    legend_labels : {'long_name', 'short_name', 'name'}
 
     See Also
     --------
     band : Related function that returns a dataset for a given spectral band.
+    plot_compare_spectra :
+        Similar routine, but plots one spectral variable as function of height and wavelength.
     """
     if not isinstance(dsets, list):
         raise Exception("A list of dsets must be provided")
@@ -178,6 +190,24 @@ def plot_compare_band(
     else:
         ref_sym = r"$\Delta$"
 
+    # Dataset labels
+    if isinstance(ds_labels, str):
+        labels = [ds.attrs[ds_labels] for ds in dsets]
+        if ref and ref_label is None:
+            ref_label = dsref.attrs[ds_labels]
+    elif isinstance(ds_labels, list):
+        labels = ds_labels[:]
+        if ref and ref_label is None:
+            iref = None
+            for i, ds in enumerate(dsets):
+                if ds is dsref:
+                    iref = i
+                    break
+            ref_label = labels[i] if iref is not None else dsref.attrs["scheme_short_name"]
+    else:
+        raise TypeError
+    assert len(labels) == len(dsets)
+
     nrows = len(varnames)
     ncols = len(varnames[0])
 
@@ -186,21 +216,27 @@ def plot_compare_band(
     vns = [vn for row in varnames for vn in row]
     for i, vn in enumerate(vns):
         ax = axs.flat[i]
-        for dset in dsets:
+        for label, dset in zip(labels, dsets):
             da0 = dset[vn]
+
             if ref is not None:
                 da = da0 - dsref[vn]
                 if ref_relative:
                     da = da / dsref[vn]
-                da.attrs.update(da0.attrs)
-                da.attrs["long_name"] = f"{ref_sym} {da.long_name}"
+                da.attrs["long_name"] = f"{ref_sym} {da0.long_name}"
+                da.attrs["units"] = da0.units if not ref_relative else ""
             else:
-                da = da0
-            y = da.dims[0]
-            da.plot(y=y, ax=ax, label=dset.attrs[f"scheme_{legend_labels}"], marker=marker)
+                da = da0.copy()
+
+            da.attrs["units"] = _cf_units_to_tex(da.units)
+
+            da.plot(y=da.dims[0], ax=ax, label=label, marker=marker)
+
+        if not ax.is_first_col():
+            ax.set_ylabel("")
 
     if ref is not None:
-        axs.flat[0].set_title(f"Reference: {dsref.scheme_name}", loc="left", fontsize=10)
+        axs.flat[0].set_title(f"Reference: {ref_label}", loc="left", fontsize=10)
 
     for ax in axs.flat:
         ax.grid(True)
@@ -215,6 +251,204 @@ def plot_compare_band(
         fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.1, 0.13), fontsize=9)
 
     fig.tight_layout()
+
+
+def plot_compare_spectra(
+    dsets,
+    which="I_d",
+    *,
+    dwl_relative=True,
+    toc_relative=False,
+    ref=None,
+    ref_label=None,
+    ref_relative=False,
+    ref_plot=False,
+    ds_labels="scheme_short_name",
+    norm=None,
+    plot_type="pcolormesh",
+):
+    """Multi-panel plot to compare spectra at each height for a set of datasets.
+
+    :ref:`Usage examples <examples/run-all-schemes:plots -- spectra>`
+
+    Parameters
+    ----------
+    dsets : list of xr.Dataset
+        Created using :meth:`crt1d.Model.to_xr`.
+    which : str
+        Which spectrum to compare.
+        Default: ``"I_d"`` (downward irradiance).
+    dwl_relative : bool, optional
+        Whether to divide by the wavelength band width.
+        Default: true.
+    toc_relative : bool, optional
+        Whether to divide by the top-of-canopy spectrum.
+    ref : str, xr.Dataset, optional
+        Dataset to be used as the reference
+        (it will be subtracted from the others in the plot).
+        If ``str``, the first found with ``name`` `ref` will be used,
+        so ``str`` should only be used when comparing disparate schemes, like ``2s`` vs ``4s``).
+        Default: no reference.
+    ref_label : str, optional
+        If not provided, a dataset attribute will be used
+        (``scheme_short_name`` or the one being used for legend labels).
+    ref_relative : bool, optional
+        Whether to present relative error when using a `ref`.
+        If false (default), absolute error is presented.
+    ref_plot : bool, optional
+        Whether to plot the reference.
+    ds_labels : str or list of str, optional
+        If ``str``, must be a dataset attribute (that all in `dsets` have).
+        If ``list``, should be same length as `dsets`.
+    norm : matplotlib.colors.Normalize, optional
+        Used if provided.
+
+    See Also
+    --------
+    plot_compare_band :
+        Similar routine, but integrates over a wave band and plots profiles of multiple variables.
+    """
+    # TODO: reduce duplicated code between this and `plot_compare_band`
+
+    if plot_type not in ["pcolormesh", "contourf"]:
+        raise ValueError
+    if plot_type != "pcolormesh":
+        raise NotImplementedError
+
+    # Reference?
+    if ref is not None:
+        if isinstance(ref, str):
+            names = [ds.scheme_name for ds in dsets]
+            dsref = dsets[names.index(ref)]
+        elif isinstance(ref, xr.Dataset):
+            dsref = ref
+        else:
+            raise TypeError("invalid type for `ref`.")
+    else:
+        dsref = None
+
+    # Reference relative?
+    if ref_relative:
+        ref_sym = r"$\Delta_r$"
+    else:
+        ref_sym = r"$\Delta$"
+
+    # Dataset labels
+    if isinstance(ds_labels, str):
+        labels = [ds.attrs[ds_labels] for ds in dsets]
+        if ref and ref_label is None:
+            ref_label = dsref.attrs[ds_labels]
+    elif isinstance(ds_labels, list):
+        labels = ds_labels[:]
+        if ref and ref_label is None:
+            iref = None
+            for i, ds in enumerate(dsets):
+                if ds is dsref:
+                    iref = i
+                    break
+            ref_label = labels[i] if iref is not None else dsref.attrs["scheme_short_name"]
+    else:
+        raise TypeError
+    assert len(labels) == len(dsets)
+
+    ncols = np.ceil(np.sqrt(len(dsets))).astype(int)
+    nrows = np.ceil(len(dsets) / ncols).astype(int)
+
+    figw, figh = ncols * 2.8, nrows * 2.2
+    if ref_plot:
+        figw += 0.7
+    fig, axs = plt.subplots(
+        nrows,
+        ncols,
+        sharex=True,
+        sharey=True,
+        figsize=(figw, figh),
+        gridspec_kw=dict(hspace=0.025, wspace=0.03),
+    )
+
+    imr = None
+    ims = []
+    for label, ds, ax in zip(labels, dsets, axs.flat):
+        da = ds[which]
+        ln = da.long_name
+        un = da.units
+
+        dar = dsref[which] if dsref else None
+
+        # TODO: maybe should be default
+        if dwl_relative:  # conversion to spectral units
+            da = da / ds.dwl
+            un = f"{un} {ds.dwl.units}-1"
+            # Note: has no impact of toc-relative used
+
+            if dar is not None:
+                dar = dar / dsref.dwl
+
+        if toc_relative:
+            da = da / da.isel(z=-1)
+            ln = f"{ln} (ToC-relative)"
+            un = ""
+
+            if dar is not None:
+                dar = dar / dar.isel(z=-1)
+
+        lnr = ln
+        unr = un
+        if ref is not None:
+            da = da - dar
+            ln = f"{ref_sym} {ln}"
+            if ref_relative:
+                da = da / dar
+                un = ""
+
+        if (da == 0).all():  # skip plotting the reference to avoid the bold teal color
+            if ref_plot:
+                imr = dar.plot(ax=ax, x=da.dims[1], add_colorbar=False)
+            else:
+                ax.set_facecolor("0.9")
+        else:
+            ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False, norm=norm))
+
+        # Label
+        ax.text(
+            0.022,
+            0.975,
+            label,
+            va="top",
+            ha="left",
+            transform=ax.transAxes,
+            bbox={"facecolor": "0.7", "alpha": 0.6, "pad": 3},
+        )
+
+        # Remove ax labels if not outer
+        ax.label_outer()
+
+    # Set all clims to be the same (so we can use a single colorbar)
+    clims = list(zip(*[im.get_clim() for im in ims]))
+    vmin_min = min(clims[0])
+    vmax_max = max(clims[1])
+    for im in ims:
+        im.set_clim(vmin_min, vmax_max)
+
+    # Add colorbar for reference if plotted
+    if imr is not None:
+        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=15 * nrows)
+        cbr.set_label(f"{lnr} [{_cf_units_to_tex(unr)}]" if unr else lnr)
+
+    # Add single colorbar
+    cb = fig.colorbar(im, ax=axs, use_gridspec=True, pad=0.015, aspect=15 * nrows)
+    cb.set_label(f"{ln} [{_cf_units_to_tex(un)}]" if un else ln)
+
+    # Note reference in upper left
+    if ref is not None:
+        axs.flat[0].set_title(f"Reference: {ref_label}", loc="left", fontsize=10)
+
+    # Remove any extras axes
+    for ax in axs.flat[len(dsets) :]:
+        ax.remove()
+        # TODO: add xlabel to row above in this column
+
+    fig.set_tight_layout(False)  # disable since used gridspec
 
 
 # TODO: def plot_E_closure_spectra():

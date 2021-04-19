@@ -21,6 +21,7 @@ We test the following:
 * plots for output {class}`xarray.Dataset`s
 
 ```{code-cell} ipython3
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -52,7 +53,7 @@ df_schemes.drop(columns=["args", "solver"])  # solver memory address not very in
 
 +++
 
-## Run (just once)
+## Run
 Run the default case (which is loaded automatically when model object is created).
 
 ```{code-cell} ipython3
@@ -82,7 +83,9 @@ m0.plot_toc_spectra()
 
 In {mod}`crt1d.diagnostics`, there are some functions that can be used to compare a set of model output datasets.
 
-### Plots
+### Plots -- single band
+
+We demonstrate the function {func}`crt1d.diagnostics.plot_compare_band`.
 
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
@@ -91,7 +94,7 @@ crt.diagnostics.plot_compare_band(dsets, band_name="PAR", marker=None)
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name"
+    legend_outside=False, ds_labels="scheme_short_name"
 )
 ```
 
@@ -100,20 +103,67 @@ Optionally, we can compare to a reference, in order to better see the difference
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
     dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name",
+    legend_outside=False, ds_labels="scheme_short_name",
     ref="2s"
 )
 ```
 
-With `ref_relative=True`, the differences are computed as relative error. Otherwise (above), they are absolute. Relative error allows us to better see the differences in the lower regions of the canopy where there is less light.
+With `ref_relative=True`, the differences are computed as relative error (indicated by $\Delta_r$). Otherwise (above), they are absolute (indicated by $\Delta$). Relative error allows us to better see the differences in the lower regions of the canopy where there is less light.
 
 ```{code-cell} ipython3
 crt.diagnostics.plot_compare_band(
-    dsets, band_name="solar", marker=None,
-    legend_outside=False, legend_labels="short_name",
-    ref="2s", ref_relative=True
+    dsets[1:], band_name="solar", marker=None,
+    legend_outside=False, ds_labels="scheme_short_name",
+    ref=dsets[0], ref_relative=True, ref_label="a fancy 2s run"
 )
 ```
+
+👆 Note that the reference does not have to belong to `dsets` if passed as an {class}`xarray.Dataset`.
+
+### Plots -- spectra
+
+We demonstrate the function {func}`crt1d.diagnostics.plot_compare_spectra`.
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(dsets)
+```
+
+👆 It is hard to see differences this way. Like with {func}`crt1d.diagnostics.plot_compare_band`, we have some options to help illuminate the differences.
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(dsets, ref="2s")
+
+crt.diagnostics.plot_compare_spectra(
+    dsets,
+    ref="2s",
+    norm=mpl.colors.SymLogNorm(10, base=10),
+)
+```
+
+Optionally, we can plot the reference spectra like normal, so that it is clear what the differences are relative to. In the plot below, we highlight how the spectrum changes from top-of-canopy to below by using the `toc_relative` option.
+
+```{code-cell} ipython3
+crt.diagnostics.plot_compare_spectra(
+    dsets[:3] + dsets[5:],
+    toc_relative=True,
+    ref="2s", ref_plot=True
+)
+```
+
+### Plots -- xarray
+
+Note that with the magic of {class}`xarray.plot.FacetGrid` (examples [here](https://xarray.pydata.org/en/stable/plotting.html#faceting)), we can make similar plots to the above.
+
+```{code-cell} ipython3
+xr.concat(
+    [ds["I_d"] for ds in dsets],
+    dim=xr.DataArray(name="exp", dims="exp", data=scheme_names)
+).plot(
+    x="wl", y="z", col="exp", col_wrap=3
+);
+```
+
+👆 Merging the whole dataset is a bit more awkward since we have dataset attribute conflicts (though we can use `combine_attrs='drop_conflicts'` if we have xarray v0.17+) and some datasets have extra variables. Above we get around these problems by merging a selected variable instead.
 
 ### Other diagnostic tools
 
