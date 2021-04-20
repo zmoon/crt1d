@@ -356,7 +356,7 @@ def plot_compare_spectra(
 
     figw, figh = ncols * 2.8, nrows * 2.2
     if ref_plot:
-        figw += 0.7
+        figw += 1.7
     fig, axs = plt.subplots(
         nrows,
         ncols,
@@ -405,6 +405,7 @@ def plot_compare_spectra(
             if ref_plot:
                 imr = dar.plot(ax=ax, x=da.dims[1], add_colorbar=False)
             else:
+                da.plot(ax=ax, x=da.dims[1], add_colorbar=False).remove()
                 ax.set_facecolor("0.9")
         else:
             ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False, norm=norm))
@@ -432,7 +433,7 @@ def plot_compare_spectra(
 
     # Add colorbar for reference if plotted
     if imr is not None:
-        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, aspect=15 * nrows)
+        cbr = fig.colorbar(imr, ax=axs, use_gridspec=True, pad=0.02, aspect=15 * nrows)
         cbr.set_label(f"{lnr} [{_cf_units_to_tex(unr)}]" if unr else lnr)
 
     # Add single colorbar
