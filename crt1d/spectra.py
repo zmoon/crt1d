@@ -257,9 +257,9 @@ def smear_tuv(x, y, bins):
     r"""Smear `y`\(`x`) into `bins`,
     using the TUV method.
     Returns an array of in-bin *y*-values ``ynew``, such that
-    :math:`\sum_i y_{\text{new}, i} \Delta x_i` (``(ynew * np.diff(dx)).sum()``)
+    :math:`\sum_i y_{\text{new}, i} \Delta x_i` (``(ynew * dx).sum()``, where ``dx = np.diff(bins)``)
     is equal to the original trapezoidal integral of *y(x)*
-    over the range [``bins[0]``, ``bins[-1]``], ie.,
+    over the range [``bins[0]``, ``bins[-1]``].
 
     Each value in the result is the (trapezoidally) integrated average of :math:`y(x)`
     in the corresponding bin (:math:`x_{l,i}`, :math:`x_{u,i}`).

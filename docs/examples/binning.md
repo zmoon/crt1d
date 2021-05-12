@@ -132,7 +132,7 @@ for method, ax in zip(["tuv", "avg_optical_prop"], axs.flat):
 
 Below, we can see that when we compute the average reflectance, over certain regions the above doesn't matter much (PAR/visible). In the NIR, however, there is a strong preference for smaller wavelengths, which overall weights leaf reflectance towards higher values.
 
-In the below, `'unifrom'` corresponds to standard smearing, with no solar weighting.
+In the below, `'uniform'` corresponds to standard smearing, with no solar weighting.
 
 First, we calculate average values using the original spectrum, loaded [above](leafsoil).
 
