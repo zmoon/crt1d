@@ -266,6 +266,9 @@ def plot_compare_spectra(
     ds_labels="scheme_short_name",
     norm=None,
     plot_type="pcolormesh",
+    shading="auto",
+    hspace=0.025,
+    wspace=0.03,
 ):
     """Multi-panel plot to compare spectra at each height for a set of datasets.
 
@@ -302,6 +305,12 @@ def plot_compare_spectra(
         If ``list``, should be same length as `dsets`.
     norm : matplotlib.colors.Normalize, optional
         Used if provided.
+    plot_type : {"pcolormesh"}
+        Currently only one `plot_type` is supported.
+    shading : str
+        For pcolormesh.
+    hspace, wspace : float
+        For the figure gridspec.
 
     See Also
     --------
@@ -363,7 +372,7 @@ def plot_compare_spectra(
         sharex=True,
         sharey=True,
         figsize=(figw, figh),
-        gridspec_kw=dict(hspace=0.025, wspace=0.03),
+        gridspec_kw=dict(hspace=hspace, wspace=wspace),
     )
 
     imr = None
@@ -401,14 +410,22 @@ def plot_compare_spectra(
                 da = da / dar
                 un = ""
 
+        infer_intervals = shading not in ["nearest", "gouraud"]
+        shared_kwargs = dict(
+            ax=ax,
+            x=da.dims[1],
+            shading=shading,
+            infer_intervals=infer_intervals,
+            add_colorbar=False,
+        )
         if (da == 0).all():  # skip plotting the reference to avoid the bold teal color
             if ref_plot:
-                imr = dar.plot(ax=ax, x=da.dims[1], add_colorbar=False)
+                imr = dar.plot.pcolormesh(**shared_kwargs)
             else:
-                da.plot(ax=ax, x=da.dims[1], add_colorbar=False).remove()
+                # da.plot.pcolormesh(ax=ax, x=da.dims[1], add_colorbar=False).remove()
                 ax.set_facecolor("0.9")
         else:
-            ims.append(da.plot(ax=ax, x=da.dims[1], add_colorbar=False, norm=norm))
+            ims.append(da.plot.pcolormesh(norm=norm, **shared_kwargs))
 
         # Label
         ax.text(
