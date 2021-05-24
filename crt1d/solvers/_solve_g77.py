@@ -82,13 +82,25 @@ def solve_g77(
 
         # > scattered radiation (one stream only)
         #  B&F eq. 5
-        I_sc = I_dr0 * (1 - rho_c) * np.exp(-k_prime * k_b * lai) + -I_dr0 * (1 - sigma) * np.exp(
-            -k_b * lai
+        I_sc = (
+            I_dr0 * (1 - rho_c) * np.exp(-k_prime * k_b * lai) 
+            - I_dr0 * (1 - sigma) * np.exp(-k_b * lai)
         )
 
-        #  assuming up/down scattered from leaves equal for now..
-        I_sc_d = 0.5 * I_sc
-        I_sc_u = 0.5 * I_sc
+        # Assign scattered beam radiation to streams
+        # I_sc_d = 0.5 * I_sc
+        # I_sc_u = 0.5 * I_sc
+        I_sc_d = t_l/sigma * I_sc
+        I_sc_u = r_l/sigma * I_sc
+        # I_sc_d = 0 * I_sc
+        # I_sc_u = 0 * I_sc
+
+        # Correct downward scattered so we match with obs at ToC
+        d = (I_df[-1] + I_sc_d[-1]) - I_df0
+        dprof = A_sl * d
+        I_sc_d -= dprof
+        I_sc_u += dprof
+        # assert np.all(I_sc_d >= 0) and np.all(I_sc_u >= 0)
 
         # > ground-sfc reflectance term (upward)
         #  B&F eq. 11
