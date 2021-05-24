@@ -84,7 +84,7 @@ def solve_bf(
         # > attenuation of incoming diffuse
         #  B&F eq. 1
         # I_df = I_df0 * (1-rho_c) * np.exp(-k_d*lai)
-        I_df = I_df0 * np.exp(-k_d * lai)
+        I_df = I_df0 * np.exp(-k_d * lai)  # ensure top I_df_d is correct
 
         # > attenuation of direct beam due to absorption and scattering
         #
@@ -96,6 +96,7 @@ def solve_bf(
         # > downwelling scattered radiation (from direct beam)
         #  B&F eq. 8
         I_sc_d = I_dr0 * t_l * ((np.exp(-k_b * lai) - np.exp(-k_d * lai)) / (k_d - k_b))
+        assert I_sc_d[-1] == 0
 
         # > upwelling scattered radiation (from direct beam)
         #  B&F eq. 9

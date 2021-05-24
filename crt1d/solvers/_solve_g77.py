@@ -71,7 +71,8 @@ def solve_g77(
 
         # > attenuation of incoming diffuse
         #  B&F eq. 1
-        I_df = I_df0 * (1 - rho_c) * np.exp(-k_d * lai)
+        # I_df = I_df0 * (1 - rho_c) * np.exp(-k_d * lai)
+        I_df = I_df0 * np.exp(-k_d * lai)  # ensure top I_df_d is correct
 
         # > attenuation of direct beam due to absorption and scattering
         #
@@ -90,17 +91,21 @@ def solve_g77(
         # Assign scattered beam radiation to streams
         # I_sc_d = 0.5 * I_sc
         # I_sc_u = 0.5 * I_sc
-        I_sc_d = t_l/sigma * I_sc
-        I_sc_u = r_l/sigma * I_sc
+        # I_sc_d = t_l/sigma * I_sc
+        # I_sc_u = r_l/sigma * I_sc
+        I_sc_d = (1 - A_sl) * I_sc
+        I_sc_u = A_sl * I_sc
         # I_sc_d = 0 * I_sc
         # I_sc_u = 0 * I_sc
 
         # Correct downward scattered so we match with obs at ToC
-        d = (I_df[-1] + I_sc_d[-1]) - I_df0
-        dprof = A_sl * d
-        I_sc_d -= dprof
-        I_sc_u += dprof
+        # d = (I_df[-1] + I_sc_d[-1]) - I_df0
+        # dprof = A_sl * d
+        # I_sc_d -= dprof
+        # I_sc_u += dprof
         # assert np.all(I_sc_d >= 0) and np.all(I_sc_u >= 0)
+
+        assert I_sc_d[-1] == 0
 
         # > ground-sfc reflectance term (upward)
         #  B&F eq. 11
