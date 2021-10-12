@@ -555,12 +555,12 @@ def smear_si(ds, bins, *, xname_out="wl", **kwargs):
     units = "W m-2"
     ds_new["I_dr"] = (
         xname_out,
-        ds_new.SI_dr * dwl,
+        (ds_new.SI_dr * dwl).data,
         {"units": units, "long_name": "Direct irradiance"},
     )
     ds_new["I_df"] = (
         xname_out,
-        ds_new.SI_df * dwl,
+        (ds_new.SI_df * dwl).data,
         {"units": units, "long_name": "Diffuse irradiance"},
     )
     ds_new["dwl"] = (xname_out, dwl, {"units": "μm", "long_name": "Wavelength band width"})
