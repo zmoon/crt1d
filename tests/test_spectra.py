@@ -18,7 +18,7 @@ def test_l_wl_planck_integ_T(T_K):
         est = math.pi * 1e-6 * crt.spectra.l_wl_planck_integ(T_K, 0, math.inf)
 
     # Compare to theoretical
-    assert math.isclose(est, sigma * T_K ** 4)
+    assert math.isclose(est, sigma * T_K**4)
 
 
 @pytest.mark.parametrize(

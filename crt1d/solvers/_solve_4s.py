@@ -185,8 +185,8 @@ def solve_4s(
         # note: assuming constant P for now, so many params have the same value
         #   should move the integration outside loop and store the value since it is the same
 
-        mu_1 = 0.5 * mu_s ** 2
-        mu_2 = 0.5 * (1 - mu_s ** 2)
+        mu_1 = 0.5 * mu_s**2
+        mu_2 = 0.5 * (1 - mu_s**2)
         alpha_p = 0.5 * omega * P * (1 - mu_s) * G_int_2
         alpha_m = alpha_p
         beta_p = 0.5 * omega * P * (1 - mu_s) * G_int_1

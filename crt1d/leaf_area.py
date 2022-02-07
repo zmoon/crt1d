@@ -453,7 +453,7 @@ class layer:
         dhdx = self.h2 - self.hmax
         a = self.f_lw(self.hmax, self.lai_mult) - self.lad_h2
         b = self.lad_h2
-        return x * (-1.0 / 3 * a * x ** 2 + a + b) * dhdx
+        return x * (-1.0 / 3 * a * x**2 + a + b) * dhdx
 
     def pdf0(self, h, lai_mult=1):
         """

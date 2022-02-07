@@ -46,7 +46,7 @@ def l_wl_planck(T_K, wl_um):
         Wavelength (μm).
     """
     wl = wl_um * 1e-6  # um -> m
-    return (2 * h * c ** 2) / (wl ** 5 * (np.exp(h * c / (wl * k_B * T_K)) - 1))
+    return (2 * h * c**2) / (wl**5 * (np.exp(h * c / (wl * k_B * T_K)) - 1))
 
 
 def l_wl_planck_integ(T_K, wla_um, wlb_um):
