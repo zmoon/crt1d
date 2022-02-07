@@ -63,17 +63,17 @@ def g_ellipsoidal(theta_l, x):
     """
     # note Campbell (1990) uses "Λ" (Lambda) instead of Bonan's "l"
     if x < 1:
-        e1 = np.sqrt(1 - x ** 2)
+        e1 = np.sqrt(1 - x**2)
         l = x + np.arcsin(e1) / e1  # noqa: E741 ambiguous name
     elif x == 1:  # => spherical
         l = 2  # noqa: E741
     else:  # x > 1
-        e2 = np.sqrt(1 - x ** -2)
+        e2 = np.sqrt(1 - x**-2)
         l = x + np.log((1 + e2) / (1 - e2)) / (2 * e2 * x)  # noqa: E741
 
     # eq. 2.11 -- numerator and denominator
-    p1 = 2 * x ** 3 * np.sin(theta_l)
-    p2 = (np.cos(theta_l) ** 2 + x ** 2 * np.sin(theta_l) ** 2) ** 2
+    p1 = 2 * x**3 * np.sin(theta_l)
+    p2 = (np.cos(theta_l) ** 2 + x**2 * np.sin(theta_l) ** 2) ** 2
 
     return p1 / (l * p2)
 
@@ -94,11 +94,14 @@ def xl_from_g(g_fn):
 
     :cite:t:`bonan_climate_2019` eq. 2.16
     """
-    xl = 0.5 * integrate.quad(
-        lambda theta_l: np.abs(np.sin(theta_l) - g_fn(theta_l)),
-        0,
-        PI / 2,
-    )[0]
+    xl = (
+        0.5
+        * integrate.quad(
+            lambda theta_l: np.abs(np.sin(theta_l) - g_fn(theta_l)),
+            0,
+            PI / 2,
+        )[0]
+    )
 
     # Per Bonan, sign should be determined using the [60, 90] region
     F3 = integrate.quad(
@@ -147,13 +150,13 @@ def G_ellipsoidal(psi, x):
 
     phi = PI / 2 - psi  # elevation angle
 
-    p1 = np.sqrt(x ** 2 + 1 / (np.tan(phi) ** 2))  # numerator
+    p1 = np.sqrt(x**2 + 1 / (np.tan(phi) ** 2))  # numerator
     if x > 1:
-        eps1 = np.sqrt(1 - x ** -2)
+        eps1 = np.sqrt(1 - x**-2)
         p2 = x + 1 / (2 * eps1 * x) * np.log((1 + eps1) / (1 - eps1))  # denom
         # ^ note: the paper says (1 / 2 eps1 x) but it should be 1/(2 eps1 x)
     else:
-        eps2 = np.sqrt(1 - x ** 2)
+        eps2 = np.sqrt(1 - x**2)
         p2 = x + np.arcsin(eps2) / eps2  # denom
 
     K = p1 / p2
@@ -169,7 +172,7 @@ def G_ellipsoidal_approx(psi, x):
     * area ratio term: Campbell (1990) eq. 14 :cite:`campbellDerivationAngleDensity1990`
     * exact formula: Campbell & Norman eq. 15.4 :cite:`campbell_introduction_2012`
     """
-    p1 = np.sqrt(x ** 2 + np.tan(psi) ** 2)
+    p1 = np.sqrt(x**2 + np.tan(psi) ** 2)
     p2 = x + 1.774 * (x + 1.182) ** -0.733
     K = p1 / p2
 
@@ -192,7 +195,7 @@ def G_ellipsoidal_approx_bonan(psi, xl):
     chil = min(max(xl, -0.4), 0.6)
 
     # Ross-Goudriaan function terms
-    phi1 = 0.5 - 0.633 * chil - 0.330 * chil ** 2
+    phi1 = 0.5 - 0.633 * chil - 0.330 * chil**2
     phi2 = 0.877 * (1 - 2 * phi1)
 
     return phi1 + phi2 * np.cos(psi)
