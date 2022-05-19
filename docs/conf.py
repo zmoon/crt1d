@@ -20,7 +20,8 @@ release = get_distribution("crt1d").version
 version = ".".join(release.split(".")[:2])
 
 # Create some docs content
-crt1d.variables._write_params_docs_snippets()
+crt1d.variables._write_params_docs_snippets()  # links don't work with newer myst
+# crt1d.variables._write_variables_doc()
 
 
 # -- General configuration ---------------------------------------------------
@@ -97,7 +98,12 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store", "../crt1d/*"]
+exclude_patterns = ["_build", "conf.py", "Thumbs.db", ".DS_Store"]
+
+source_suffix = [".rst", ".md"]
+
+myst_enable_extensions = ["dollarmath"]
+myst_heading_anchors = 3
 
 
 # -- Options for HTML output -------------------------------------------------

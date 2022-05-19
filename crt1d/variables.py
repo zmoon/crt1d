@@ -96,7 +96,8 @@ class VmdEntry:  # TODO: base on NamedTuple or dataclass??
             elif field == "long_name":
                 p = p or ""
             elif field == "name":
-                hash_link = f"#{p.lower().replace('_', '-')}"  # or could use URL tools
+                # hash_link = f"#{p.lower().replace('_', '-')}"  # or could use URL tools
+                hash_link = f"#{p.lower()}"
                 p = f"[``{p}``]({hash_link})"
             elif field == "s_shape":
                 p = _math_shape_from_s_shape(p)
@@ -309,6 +310,7 @@ def _params_list_table(vmdes=None):
   - shape
   - long_name
 {entries}
+```
     """.rstrip()
 
 
@@ -332,6 +334,39 @@ def _write_params_docs_snippets():
     p = Path(__file__).parent / "../docs" / "_variables_details_snippet.txt"
     with open(p, "wb") as f:
         f.write(_params_details().encode("utf-8"))
+
+
+_variables_tpl = """
+# Variables
+
+The summary table and detailed descriptions are auto-generated
+using the data from ``variables.yml`` and module {{mod}}`crt1d.variables`.
+
+## Summary
+
+Click on a "name" to jump to the details.
+
+{summary_table:s}
+
+## Detailed
+
+Detailed descriptions.
+
+{details:s}
+"""
+
+
+def _write_variables_doc():
+    from pathlib import Path
+
+    p = Path(__file__).parent / "../docs" / "variables.md"
+    with open(p, "wb") as f:
+        f.write(
+            _variables_tpl.format(
+                summary_table=_params_list_table(),
+                details=_params_details(),
+            ).encode("utf-8")
+        )
 
 
 # hack module docstring
