@@ -9,7 +9,7 @@ Testbed/framework for 1-D canopy radiative transfer schemes.
 
 Latest:
 ```
-pip install git+https://github.com/zmoon/crt1d
+pip install https://github.com/zmoon/crt1d/archive/master.zip
 ```
 
 ## Documentation
