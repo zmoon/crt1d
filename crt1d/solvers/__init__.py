@@ -57,7 +57,6 @@ def _construct_scheme_dicts():
 
     # extract info
     for name, scheme_dict in AVAILABLE_SCHEMES.items():
-
         module_name = _solver_modules[name]
 
         scheme_dict["module_name"] = module_name

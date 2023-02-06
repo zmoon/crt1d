@@ -519,7 +519,6 @@ class canopy_lai_dist:
         h1 = h_bottom
         lad_h1 = 0
         for ld in layers:  # loop through the layer dicts (lds)
-
             hmax = ld["h_max"]
             LAI = ld["fLAI"] * self.LAItot
             h2 = ld["h_top"]
@@ -620,7 +619,6 @@ def distribute_lai_from_cdd(cdd, n):
     ub = h_canopy
     LAIcum = 0
     for i in range(n - 2, -1, -1):  # build from top down
-
         if LAI - LAIcum < dlai:
             assert i == 0
             z[0] = h_bottom
