@@ -46,7 +46,6 @@ def solve_g77(
     aI_sh_all = np.zeros(s)
 
     for i in range(nbands):  # run for each band individually
-
         # > calculate top-of-canopy irradiance present in the band
         I_dr0 = I_dr0_all[i]  # W / m^2
         I_df0 = I_df0_all[i]
