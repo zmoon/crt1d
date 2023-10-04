@@ -159,7 +159,7 @@ $$
 ```{code-cell} ipython3
 fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(10, 7))
 
-ax1.get_shared_y_axes().join(ax1, ax2)
+ax1.sharey(ax2)
 
 sza = np.linspace(0, 89, 200)
 psi = np.deg2rad(sza)
