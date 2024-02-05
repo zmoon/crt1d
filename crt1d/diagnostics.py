@@ -2,6 +2,7 @@
 Calculations/plots using the CRT solutions (irradiance spectral profiles),
 using the model output dataset created by :meth:`crt1d.Model.to_xr()`.
 """
+
 import warnings
 
 import matplotlib.pyplot as plt

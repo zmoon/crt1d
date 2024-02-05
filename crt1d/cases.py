@@ -1,6 +1,7 @@
 """
 (Complete) sets of input parameters.
 """
+
 import numpy as np
 
 from . import data

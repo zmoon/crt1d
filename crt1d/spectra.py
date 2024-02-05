@@ -1,6 +1,7 @@
 """
 Spectral manipulations.
 """
+
 import math
 import warnings
 
