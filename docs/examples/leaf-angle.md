@@ -3,10 +3,10 @@ jupytext:
   text_representation:
     extension: .md
     format_name: myst
-    format_version: 0.12
-    jupytext_version: 1.9.1
+    format_version: 0.13
+    jupytext_version: 1.15.2
 kernelspec:
-  display_name: Python 3
+  display_name: Python 3 (ipykernel)
   language: python
   name: python3
 ---
@@ -177,9 +177,14 @@ for x in ellipsoidal_xs:
     ax4.plot(mu, exact/mu, c=c)
 
 # Horizontal/vertical limits for reference
-for name, G_fn in {"horizontal": crt.leaf_angle.G_horizontal, "vertical": crt.leaf_angle.G_vertical}.items():
-    ax1.plot(sza, G_fn(psi), c="0.7", lw=1, zorder=0)
-    ax2.plot(mu, G_fn(psi), c="0.7", lw=1, zorder=0)
+for name, G_fn, color, lw in [
+    ("horizontal", crt.leaf_angle.G_horizontal, "0.25", 0.8),
+    ("vertical", crt.leaf_angle.G_vertical, "0.75", 1),
+]:
+    G = G_fn(psi)
+    ax1.plot(sza, G, c=color, lw=lw, zorder=0, label=name)
+    ax2.plot(mu, G, c=color, lw=lw, zorder=0)
+    ax4.plot(mu, G/mu, c=color, lw=lw, zorder=0)
 
 ax1.set(xlabel="Solar zenith angle [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
 
