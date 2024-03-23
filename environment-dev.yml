@@ -19,7 +19,7 @@ dependencies:
   - jupyterlab>=3
   - myst-nb
   - numba  # for prosail
-  - sphinx=6
+  - sphinx=7
   - sphinx-autobuild
   - sphinx-autoapi=3
   - sphinxcontrib-bibtex
