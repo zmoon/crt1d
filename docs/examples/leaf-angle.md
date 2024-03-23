@@ -248,6 +248,12 @@ df["mu"] = np.cos(df["psi"])
 )
 ```
 
+👆 "SZA" and "psi" ($\psi$) above are both the solar zenith angle,
+but the former is in degrees while the latter is in radians.
+"mu": $\mu = \cos{\psi}$.
+
++++
+
 ### Where does $K_b = 1$?
 
 For horizontal ($G(\psi) = \cos{\psi}$), $K_b = 1$ for all SZA. But for the others, it varies.
