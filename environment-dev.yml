@@ -1,6 +1,7 @@
 name: crt1d-dev
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python=3.10
   #
@@ -13,15 +14,21 @@ dependencies:
   - xarray
   #
   # for docs work
+  - furo
   - jupytext
   - jupyterlab>=3
+  - myst-nb
+  - numba  # for prosail
   - sphinx=6
   - sphinx-autobuild
+  - sphinx-autoapi
+  - sphinxcontrib-bibtex
   #
   - pip  # otherwise conda nags
   - pip:
-    # the package, including extras
-    - '-e .[docs]'
+    # the package
+    - '-e .[all]'
   #
   # dev tools
+  - pytest
   - rope
