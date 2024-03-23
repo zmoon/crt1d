@@ -14,9 +14,12 @@ kernelspec:
 # Leaf angles
 
 ```{code-cell} ipython3
+from functools import partial
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy import optimize
 
 import crt1d as crt
 ```
@@ -191,7 +194,7 @@ ax1.set(xlabel="Solar zenith angle $\psi$ [deg.]", ylabel="$G$", title="Ellipsoi
 ax2.set(xlabel="$\mu = \cos \psi$", ylabel="$G$", title="Ellipsoidal $G$ vs $\mu$")
 
 ax3.set(xlabel="Solar zenith angle $\psi$ [deg.]", ylabel=r"$\delta G$", title="Approx. minus analytical")
-ax3.axhline(0, c="0.7", lw=1)
+ax3.axhline(0, ls=":", c="0.7", lw=1)
 
 ax4.set(xlabel="$\mu = \cos \psi$", ylabel="$K_b$", title="$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
 
@@ -203,4 +206,36 @@ for ax in fig.get_axes():
 
 fig.legend(bbox_to_anchor=(0.98, 0.5), loc="center left")
 fig.tight_layout();
+```
+
+### Where does $K_b = 1$?
+
+For horizontal ($G(\psi) = \cos{\psi}$), $K_b = 1$ for all SZA. But for the others, it varies.
+
+```{code-cell} ipython3
+data = []
+for x in ellipsoidal_xs:
+
+    G_fn = partial(crt.leaf_angle.G_ellipsoidal, x=x)
+
+    def f(sza):
+        psi = np.deg2rad(sza)
+        G = G_fn(psi)
+        return G / np.cos(psi) - 1
+
+    sol = optimize.root_scalar(f, x0=60, bracket=(45, 75), method="bisect", xtol=1e-5)
+
+    data.append((f"ellipsoidal x={x}", sol.root))
+
+data.append(("vertical (analytical)", np.rad2deg(np.arctan(np.pi/2))))
+data.append(("spherical (analytical)", np.rad2deg(np.arccos(0.5))))
+
+df = pd.DataFrame(data, columns=["G fn", "SZA"])
+df["psi"] = np.deg2rad(df["SZA"])
+df["mu"] = np.cos(df["psi"])
+(
+    df
+    .set_index("G fn")
+    .sort_values("SZA")
+)
 ```
