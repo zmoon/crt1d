@@ -325,13 +325,20 @@ def _params_details(vmdes=None):
 
 # python -c 'import crt1d; crt1d.variables._write_params_docs_snippets()'
 def _write_params_docs_snippets():
+    import os
     from pathlib import Path
 
-    p = Path(__file__).parent / "../docs" / "_variables_summary_table_snippet.txt"
+    rtd = os.environ.get("READTHEDOCS", None)
+    if rtd is not None:  # on RTD, non-editable package install
+        docs = Path(".")
+    else:  # dev, editable install
+        docs = Path(__file__).parent / "../docs"
+
+    p = docs / "_variables_summary_table_snippet.txt"
     with open(p, "wb") as f:
         f.write(_params_list_table().encode("utf-8"))
 
-    p = Path(__file__).parent / "../docs" / "_variables_details_snippet.txt"
+    p = docs / "_variables_details_snippet.txt"
     with open(p, "wb") as f:
         f.write(_params_details().encode("utf-8"))
 
