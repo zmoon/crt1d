@@ -214,13 +214,47 @@ In the top left panel, note that although each curve does cross $G = 0.5$, they 
 
 +++
 
+### Where does $G = 0.5$?
+
+For spherical, $G = 0.5$ for all SZA. But for the others, it varies.
+
+```{code-cell} ipython3
+data = []
+for x in ellipsoidal_xs + [0.1, 3, 10]:
+    if x == 1:
+        continue
+
+    G_fn = partial(crt.leaf_angle.G_ellipsoidal, x=x)
+
+    def f(sza):
+        psi = np.deg2rad(sza)
+        G = G_fn(psi)
+        return G - 0.5
+
+    sol = optimize.root_scalar(f, x0=60, bracket=(45, 75), method="bisect", xtol=1e-5)
+
+    data.append((f"ellipsoidal x={x}", sol.root))
+
+data.append(("vertical (analytical)", np.rad2deg(np.arcsin(np.pi/4))))
+data.append(("horizontal (analytical)", np.rad2deg(np.arccos(0.5))))
+
+df = pd.DataFrame(data, columns=["G fn", "SZA"])
+df["psi"] = np.deg2rad(df["SZA"])
+df["mu"] = np.cos(df["psi"])
+(
+    df
+    .set_index("G fn")
+    .sort_values("SZA")
+)
+```
+
 ### Where does $K_b = 1$?
 
 For horizontal ($G(\psi) = \cos{\psi}$), $K_b = 1$ for all SZA. But for the others, it varies.
 
 ```{code-cell} ipython3
 data = []
-for x in ellipsoidal_xs:
+for x in ellipsoidal_xs + [0.1, 3, 10]:
 
     G_fn = partial(crt.leaf_angle.G_ellipsoidal, x=x)
 
