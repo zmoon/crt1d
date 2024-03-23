@@ -24,5 +24,4 @@ dependencies:
     - '-e .[docs]'
   #
   # dev tools
-  - pylint
   - rope
