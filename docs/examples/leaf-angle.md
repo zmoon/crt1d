@@ -189,14 +189,14 @@ for name, G_fn, color, lw in [
     ax2.plot(mu, G, c=color, lw=lw, zorder=0)
     ax4.plot(mu, G/mu, c=color, lw=lw, zorder=0)
 
-ax1.set(xlabel="Solar zenith angle $\psi$ [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
+ax1.set(xlabel=r"Solar zenith angle $\psi$ [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
 
-ax2.set(xlabel="$\mu = \cos \psi$", ylabel="$G$", title="Ellipsoidal $G$ vs $\mu$")
+ax2.set(xlabel=r"$\mu = \cos \psi$", ylabel="$G$", title=r"Ellipsoidal $G$ vs $\mu$")
 
 ax3.set(xlabel="Solar zenith angle $\psi$ [deg.]", ylabel=r"$\delta G$", title="Approx. minus analytical")
 ax3.axhline(0, ls=":", c="0.7", lw=1)
 
-ax4.set(xlabel="$\mu = \cos \psi$", ylabel="$K_b$", title="$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
+ax4.set(xlabel=r"$\mu = \cos \psi$", ylabel="$K_b$", title=r"$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
 
 for ax in [ax1, ax2, ax4]:
     ax.set_ylim(ymin=0)
