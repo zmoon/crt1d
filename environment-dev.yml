@@ -15,7 +15,7 @@ dependencies:
   # for docs work
   - jupytext
   - jupyterlab>=3
-  - sphinx=4
+  - sphinx=6
   - sphinx-autobuild
   #
   - pip  # otherwise conda nags
