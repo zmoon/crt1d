@@ -210,7 +210,7 @@ fig.tight_layout();
 
 👆 The bottom right panel can be compared to Bonan (2019) Fig. 14.9, although that figure's $x$ coordinate is SZA (degrees) instead of $\mu$.
 
-In the top left panel, note that although each curve does cross $G = 0.5$, they do this at different values of SZA.
+In the top left panel, note that although each curve (aside from $x = 1$) does cross $G = 0.5$, they do this at different values of SZA.
 
 +++
 
