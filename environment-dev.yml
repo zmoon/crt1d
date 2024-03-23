@@ -2,7 +2,7 @@ name: crt1d-dev
 channels:
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.10
   #
   # used by crt1d (prefer Conda versions though)
   - matplotlib
