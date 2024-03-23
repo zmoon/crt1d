@@ -21,7 +21,7 @@ dependencies:
   - numba  # for prosail
   - sphinx=6
   - sphinx-autobuild
-  - sphinx-autoapi
+  - sphinx-autoapi=3
   - sphinxcontrib-bibtex
   #
   - pip  # otherwise conda nags
