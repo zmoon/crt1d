@@ -208,6 +208,12 @@ fig.legend(bbox_to_anchor=(0.98, 0.5), loc="center left")
 fig.tight_layout();
 ```
 
+👆 The bottom right panel can be compared to Bonan (2019) Fig. 14.9, although that figure's $x$ coordinate is SZA (degrees) instead of $\mu$.
+
+In the top left panel, note that although each curve does cross $G = 0.5$, they do this at different values of SZA.
+
++++
+
 ### Where does $K_b = 1$?
 
 For horizontal ($G(\psi) = \cos{\psi}$), $K_b = 1$ for all SZA. But for the others, it varies.
