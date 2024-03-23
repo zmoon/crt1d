@@ -30,8 +30,7 @@ jobs:
         run: |
           set -xe
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install .[data]
-          python -m pip install jupytext pytest
+          python -m pip install .[test]
 
       - name: Test (pytest)
         run: pytest -v tests
