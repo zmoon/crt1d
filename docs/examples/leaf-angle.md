@@ -3,10 +3,10 @@ jupytext:
   text_representation:
     extension: .md
     format_name: myst
-    format_version: 0.12
-    jupytext_version: 1.9.1
+    format_version: 0.13
+    jupytext_version: 1.15.2
 kernelspec:
-  display_name: Python 3
+  display_name: Python 3 (ipykernel)
   language: python
   name: python3
 ---
@@ -14,9 +14,12 @@ kernelspec:
 # Leaf angles
 
 ```{code-cell} ipython3
+from functools import partial
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy import optimize
 
 import crt1d as crt
 ```
@@ -177,18 +180,23 @@ for x in ellipsoidal_xs:
     ax4.plot(mu, exact/mu, c=c)
 
 # Horizontal/vertical limits for reference
-for name, G_fn in {"horizontal": crt.leaf_angle.G_horizontal, "vertical": crt.leaf_angle.G_vertical}.items():
-    ax1.plot(sza, G_fn(psi), c="0.7", lw=1, zorder=0)
-    ax2.plot(mu, G_fn(psi), c="0.7", lw=1, zorder=0)
+for name, G_fn, color, lw in [
+    ("horizontal", crt.leaf_angle.G_horizontal, "0.25", 0.8),
+    ("vertical", crt.leaf_angle.G_vertical, "0.75", 1),
+]:
+    G = G_fn(psi)
+    ax1.plot(sza, G, c=color, lw=lw, zorder=0, label=name)
+    ax2.plot(mu, G, c=color, lw=lw, zorder=0)
+    ax4.plot(mu, G/mu, c=color, lw=lw, zorder=0)
 
-ax1.set(xlabel="Solar zenith angle [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
+ax1.set(xlabel=r"Solar zenith angle $\psi$ [deg.]", ylabel="$G$", title="Ellipsoidal $G$ vs SZA")
 
-ax2.set(xlabel="$\mu = \cos \psi$", ylabel="$G$", title="Ellipsoidal $G$ vs $\mu$")
+ax2.set(xlabel=r"$\mu = \cos \psi$", ylabel="$G$", title=r"Ellipsoidal $G$ vs $\mu$")
 
-ax3.set(xlabel="Solar zenith angle [deg.]", ylabel=r"$\delta G$", title="Approx. minus analytical")
-ax3.axhline(0, c="0.7", lw=1)
+ax3.set(xlabel="Solar zenith angle $\psi$ [deg.]", ylabel=r"$\delta G$", title="Approx. minus analytical")
+ax3.axhline(0, ls=":", c="0.7", lw=1)
 
-ax4.set(xlabel="$\mu = \cos \psi$", ylabel="$K_b$", title="$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
+ax4.set(xlabel=r"$\mu = \cos \psi$", ylabel="$K_b$", title=r"$K_b = G/\mu$ vs $\mu$", ylim=(None, 5))
 
 for ax in [ax1, ax2, ax4]:
     ax.set_ylim(ymin=0)
@@ -198,4 +206,82 @@ for ax in fig.get_axes():
 
 fig.legend(bbox_to_anchor=(0.98, 0.5), loc="center left")
 fig.tight_layout();
+```
+
+👆 The bottom right panel can be compared to Bonan (2019) Fig. 14.9, although that figure's $x$ coordinate is SZA (degrees) instead of $\mu$.
+
+In the top left panel, note that although each curve (aside from $x = 1$) does cross $G = 0.5$, they do this at different values of SZA.
+
++++
+
+### Where does $G = 0.5$?
+
+For spherical, $G = 0.5$ for all SZA. But for the others, it varies.
+
+```{code-cell} ipython3
+data = []
+for x in ellipsoidal_xs + [0.1, 3, 10]:
+    if x == 1:
+        continue
+
+    G_fn = partial(crt.leaf_angle.G_ellipsoidal, x=x)
+
+    def f(sza):
+        psi = np.deg2rad(sza)
+        G = G_fn(psi)
+        return G - 0.5
+
+    sol = optimize.root_scalar(f, x0=60, bracket=(45, 75), method="bisect", xtol=1e-5)
+
+    data.append((f"ellipsoidal x={x}", sol.root))
+
+data.append(("vertical (analytical)", np.rad2deg(np.arcsin(np.pi/4))))
+data.append(("horizontal (analytical)", np.rad2deg(np.arccos(0.5))))
+
+df = pd.DataFrame(data, columns=["G fn", "SZA"])
+df["psi"] = np.deg2rad(df["SZA"])
+df["mu"] = np.cos(df["psi"])
+(
+    df
+    .set_index("G fn")
+    .sort_values("SZA")
+)
+```
+
+👆 "SZA" and "psi" ($\psi$) above are both the solar zenith angle,
+but the former is in degrees while the latter is in radians.
+"mu": $\mu = \cos{\psi}$.
+
++++
+
+### Where does $K_b = 1$?
+
+For horizontal ($G(\psi) = \cos{\psi}$), $K_b = 1$ for all SZA. But for the others, it varies.
+
+```{code-cell} ipython3
+data = []
+for x in ellipsoidal_xs + [0.1, 3, 10]:
+
+    G_fn = partial(crt.leaf_angle.G_ellipsoidal, x=x)
+
+    def f(sza):
+        psi = np.deg2rad(sza)
+        G = G_fn(psi)
+        return G / np.cos(psi) - 1
+
+    sol = optimize.root_scalar(f, x0=60, bracket=(45, 75), method="bisect", xtol=1e-5)
+
+    data.append((f"ellipsoidal x={x}", sol.root))
+
+data.append(("vertical (analytical)", np.rad2deg(np.arctan(np.pi/2))))
+data.append(("spherical (analytical)", np.rad2deg(np.arccos(0.5))))
+
+df = pd.DataFrame(data, columns=["G fn", "SZA"])
+df["psi"] = np.deg2rad(df["SZA"])
+df["mu"] = np.cos(df["psi"])
+(
+    df
+    .set_index("G fn")
+    .sort_values("SZA")
+)
 ```
