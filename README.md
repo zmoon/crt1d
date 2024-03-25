@@ -4,6 +4,7 @@ Testbed/framework for 1-D canopy radiative transfer schemes.
 
 [![Documentation build status](https://readthedocs.org/projects/crt1d/badge/?version=latest)](https://crt1d.readthedocs.io/en/latest/?badge=latest)
 [![CI](https://github.com/zmoon/crt1d/actions/workflows/ci.yml/badge.svg)](https://github.com/zmoon/crt1d/actions/workflows/ci.yml)
+[![DOI](https://zenodo.org/badge/135664263.svg)](https://zenodo.org/doi/10.5281/zenodo.10869932)
 [![Project Status: Inactive – The project has reached a stable, usable state but is no longer being actively developed; support/maintenance will be provided as time allows.](https://www.repostatus.org/badges/latest/inactive.svg)](https://www.repostatus.org/#inactive)
 
 ## Installation
