@@ -8,6 +8,7 @@ and assign heights (z; m) to give the desired leaf area profile.
 
 LAI is cumulative and defined at the model interface levels.
 """
+
 from collections import namedtuple
 
 import numpy as np

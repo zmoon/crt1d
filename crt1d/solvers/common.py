@@ -1,6 +1,7 @@
 """
 Common functions used by canopy RT solvers.
 """
+
 import math
 
 import numpy as np

@@ -8,6 +8,7 @@ most of which are also attached as class methods.
 Functions that operate on :class:`xr.Dataset` s
 created by :meth:`Model.to_xr` are in :mod:`.diagnostics`.
 """
+
 # from dataclasses import dataclass
 import warnings
 from collections import namedtuple
