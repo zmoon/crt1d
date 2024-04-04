@@ -17,6 +17,7 @@ where :math:`\psi` is the solar zenith angle and :math:`K_b = K_b(\psi), G = G(\
 The azimuth angle is usually assumed to have a uniform distribution
 and so does not have an impact.
 """
+
 import numpy as np
 from scipy import integrate
 from scipy import optimize

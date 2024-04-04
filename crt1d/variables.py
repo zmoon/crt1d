@@ -1,6 +1,7 @@
 """
 Variable metadata from the ``variables.yml`` file.
 """
+
 from .utils import cf_units_to_tex
 
 
@@ -238,6 +239,7 @@ def _desc_for_list_table(desc):
 def _vmd_from_yaml():
     """Load the variable info from the yml file."""
     from pathlib import Path
+
     import yaml
 
     p = Path(__file__).parent / "variables.yml"

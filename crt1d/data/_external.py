@@ -1,6 +1,7 @@
 """
 Create spectral input data using external packages.
 """
+
 import warnings
 
 import numpy as np

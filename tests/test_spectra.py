@@ -1,6 +1,7 @@
 """
 Test crt1d.spectra
 """
+
 import math
 
 import numpy as np

@@ -4,10 +4,10 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import datetime
+
 from pkg_resources import get_distribution  # noreorder
 
 import crt1d
-
 
 # -- Project information -----------------------------------------------------
 
