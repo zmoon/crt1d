@@ -7,14 +7,13 @@ import warnings
 
 import numpy as np
 import xarray as xr
+from scipy.constants import N_A
 from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import k as k_B
-from scipy.constants import N_A
 from scipy.integrate import cumtrapz
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
-
 
 BAND_DEFNS_UM = {
     "PAR": (0.4, 0.7),
@@ -650,6 +649,7 @@ def plot_binned(x, y, xc, yc, dx, *, ax=None, xtight="orig"):
         Whether to set the *x* limits based on the original spectrum or the binned spectrum.
     """
     import matplotlib.pyplot as plt
+
     from .utils import cf_units_to_tex
 
     spectrum_ls = "r-" if x.size > 150 else "r.-"

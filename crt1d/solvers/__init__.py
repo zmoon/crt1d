@@ -52,9 +52,9 @@ and values are dicts of scheme info: ``short_name``, ``long_name``,
 
 def _construct_scheme_dicts():
     """Extract info from the individual solver modules to fill `AVAILABLE_SCHEMES` with info."""
-    from importlib import import_module
     import inspect
     import warnings
+    from importlib import import_module
 
     # extract info
     for name, scheme_dict in AVAILABLE_SCHEMES.items():

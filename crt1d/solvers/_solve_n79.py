@@ -4,7 +4,6 @@ import numpy as np
 from .common import tau_b_fn
 from .common import tau_df_fn
 
-
 short_name = "N79"
 long_name = "Norman (1979)"
 

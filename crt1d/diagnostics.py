@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from .spectra import _x_frac_in_bounds
 from .spectra import BAND_DEFNS_UM
+from .spectra import _x_frac_in_bounds
 from .spectra import e_wl_umol
 from .utils import cf_units_to_tex as _cf_units_to_tex
 

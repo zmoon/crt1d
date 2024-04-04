@@ -1,9 +1,6 @@
 import numpy as np
 
-from .common import (
-    # tau_b_fn as tau_b_fn_psi,
-    tau_df_fn,
-)
+from .common import tau_df_fn  # tau_b_fn as tau_b_fn_psi,
 
 short_name = "B–L"
 long_name = "Beer–Lambert"

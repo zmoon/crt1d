@@ -7,11 +7,11 @@ from pathlib import Path as _Path
 # directories
 BASE_DIR = _Path(__file__).parent
 
-# include Model in pkg-level namespace
-from .model import Model  # noqa: F401 unused import
-
 # include diagnostics module (not used by any of the others)
 from . import diagnostics  # noqa: F401 unused import
+
+# include Model in pkg-level namespace
+from .model import Model  # noqa: F401 unused import
 
 # set version
 try:

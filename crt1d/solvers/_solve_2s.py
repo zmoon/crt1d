@@ -4,7 +4,6 @@ import math
 import numpy as np
 import scipy.integrate as integrate
 
-
 short_name = '2s'
 long_name = 'Dickinson–Sellers two-stream'
 
