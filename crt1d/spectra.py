@@ -11,9 +11,13 @@ from scipy.constants import N_A
 from scipy.constants import c
 from scipy.constants import h
 from scipy.constants import k as k_B
-from scipy.integrate import cumtrapz
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
+
+try:
+    from scipy.integrate import cumtrapz
+except ImportError:
+    from scipy.integrate import cumulative_trapezoid as cumtrapz
 
 BAND_DEFNS_UM = {
     "PAR": (0.4, 0.7),
