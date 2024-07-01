@@ -18,6 +18,11 @@ from scipy.interpolate import interp1d
 from scipy.stats import beta
 from scipy.stats import gamma
 
+try:
+    from scipy.integrate import cumtrapz
+except ImportError:
+    from scipy.integrate import cumulative_trapezoid as cumtrapz
+
 # from scipy.special import beta as beta_fn
 # TODO: move to standard scipy imports
 
@@ -208,7 +213,7 @@ def distribute_lai_weibull_z(z, LAI, h, hb=0.0, *, b=None, c=None, species=None)
     LAD = LAI * a
 
     # numerically estimate the cumulative LAI profile from the LAD profile
-    lai = -1 * integrate.cumtrapz(LAD[::-1], z[::-1], initial=0)[::-1]
+    lai = -1 * cumtrapz(LAD[::-1], z[::-1], initial=0)[::-1]
 
     return _LeafAreaProfile(lai, LAD, z)
 

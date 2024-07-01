@@ -1,5 +1,10 @@
 import numpy as np
 
+try:
+    from numpy import DataSource
+except ImportError:
+    from numpy.lib.npyio import DataSource
+
 import crt1d as crt
 
 
@@ -44,7 +49,7 @@ def test_n79_against_bonan():
     # toc -> ground (initially, but we flip)
     # layer index, lai, sunlit absorbed PAR, shaded, sunlit absorbed NIR, shaded
     data0 = np.loadtxt(
-        np.DataSource(None).open(  # None -> temporary dir
+        DataSource(None).open(  # None -> temporary dir
             "https://raw.githubusercontent.com/zmoon/bonanmodeling/master/sp_14_03/data.txt"
         ),
         skiprows=1,
