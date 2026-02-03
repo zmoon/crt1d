@@ -199,7 +199,12 @@ def solar_sp2(
     specunits = "W m-2 μm-1"  # spectral units
 
     return xr.Dataset(
-        coords={"wl": _tup("wl", specx)},
+        coords={
+            "wl": _tup("wl", specx),
+            "time": ((), dt),
+            "lat": ((), float(lat), {"long_name": "Latitude", "units": "deg"}),
+            "lon": ((), float(lon), {"long_name": "Longitude", "units": "deg"}),
+        },
         data_vars={
             "SI_dr": (
                 "wl",
@@ -224,8 +229,5 @@ def solar_sp2(
                 inc,
                 {"long_name": "Direct beam incidence angle on collector panel", "units": "deg"},
             ),
-            "time": ((), dt),
-            "lat": ((), float(lat), {"long_name": "Latitude", "units": "deg"}),
-            "lon": ((), float(lon), {"long_name": "Longitude", "units": "deg"}),
         },
     )

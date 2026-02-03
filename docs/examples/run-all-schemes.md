@@ -39,7 +39,7 @@ crt.print_config()
 ```{code-cell} ipython3
 df_schemes = pd.DataFrame(crt.solvers.AVAILABLE_SCHEMES).T
 
-BL_args = set(a for a in df_schemes.loc[df_schemes.name == "bl"].args[0])
+BL_args = set(a for a in df_schemes.loc[df_schemes.name == "bl"].args.values[0])
 df_schemes["args_minus_BL"] = df_schemes["args"].apply(
     lambda x: list(set(x).symmetric_difference(BL_args))
 )
