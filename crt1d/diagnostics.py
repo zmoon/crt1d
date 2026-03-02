@@ -105,7 +105,7 @@ def band(ds, *, variables=None, band_name="PAR", bounds=None, calc_PFD=False):
         }
     )
 
-    return ds.drop("wl")
+    return ds.drop_vars(["wl"])
 
 
 def plot_compare_band(
