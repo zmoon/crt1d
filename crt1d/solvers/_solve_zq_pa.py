@@ -275,7 +275,7 @@ def solve_zq_pa(
         C[2 * M + 1] = IdSky
 
         # ---- solve A*SW = C
-        SW = np.linalg.solve(A, C)
+        SW = np.linalg.solve(A, C).squeeze()
 
         # upward and downward hemispherical radiation (Wm-2 ground)
         SWu0 = SW[0 : 2 * M + 2 : 2]
