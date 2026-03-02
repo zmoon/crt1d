@@ -4,8 +4,7 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import datetime
-
-from pkg_resources import get_distribution  # noreorder
+from importlib.metadata import version
 
 import crt1d
 
@@ -16,7 +15,7 @@ author = "Z. Moon"
 copyright = f"2020\u2013{datetime.datetime.now().year}, {author}"
 
 # Get version from metadata
-release = get_distribution("crt1d").version
+release = version("crt1d")
 version = ".".join(release.split(".")[:2])
 
 # Create some docs content
